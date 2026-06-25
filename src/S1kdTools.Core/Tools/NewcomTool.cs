@@ -455,23 +455,60 @@ public sealed class NewcomTool : ITool
             monthS = now.Month.ToString("D2", CultureInfo.InvariantCulture);
             dayS = now.Day.ToString("D2", CultureInfo.InvariantCulture);
         }
+        else if (TryScanDate(_issueDate, out yearS, out monthS, out dayS))
+        {
+            // parsed below
+        }
         else
         {
-            // sscanf("%4s-%2s-%2s") requires three '-'-separated fields.
-            string[] parts = _issueDate.Split('-');
-            if (parts.Length < 3 || parts[0].Length == 0 || parts[1].Length == 0 || parts[2].Length == 0)
-            {
-                stderr.WriteLine($"s1kd-{Name}: ERROR: Bad issue date: {_issueDate}");
-                throw new ExitException(ExitBadDate);
-            }
-            yearS = Take(parts[0], 4);
-            monthS = Take(parts[1], 2);
-            dayS = Take(parts[2], 2);
+            stderr.WriteLine($"s1kd-{Name}: ERROR: Bad issue date: {_issueDate}");
+            throw new ExitException(ExitBadDate);
         }
 
         issueDate.SetAttribute("year", yearS);
         issueDate.SetAttribute("month", monthS);
         issueDate.SetAttribute("day", dayS);
+    }
+
+    /// <summary>
+    /// Faithfully emulate the C <c>sscanf(issue_date, "%4s-%2s-%2s", ...)</c>
+    /// returning 3 on success. A <c>%Ns</c> conversion reads a run of
+    /// non-whitespace characters (it does NOT stop at <c>-</c>), bounded by the
+    /// width N; the literal <c>-</c> in the format must then match the next input
+    /// character. This rejects values like <c>"not-a-date"</c> (where <c>%4s</c>
+    /// greedily consumes <c>"not-"</c> and the following literal <c>-</c> fails).
+    /// </summary>
+    private static bool TryScanDate(string s, out string year, out string month, out string day)
+    {
+        year = month = day = "";
+        int pos = 0;
+
+        // C sscanf skips leading whitespace before a %s conversion.
+        while (pos < s.Length && char.IsWhiteSpace(s[pos])) pos++;
+
+        if (!ScanField(s, ref pos, 4, out year)) return false;
+        if (pos >= s.Length || s[pos] != '-') return false;
+        pos++;
+
+        if (!ScanField(s, ref pos, 2, out month)) return false;
+        if (pos >= s.Length || s[pos] != '-') return false;
+        pos++;
+
+        if (!ScanField(s, ref pos, 2, out day)) return false;
+
+        return true;
+    }
+
+    /// <summary>Read up to <paramref name="width"/> non-whitespace chars (a C %Ns field).</summary>
+    private static bool ScanField(string s, ref int pos, int width, out string value)
+    {
+        int start = pos;
+        while (pos < s.Length && pos - start < width && !char.IsWhiteSpace(s[pos]))
+        {
+            pos++;
+        }
+        value = s[start..pos];
+        return value.Length != 0;
     }
 
     private void SetBrex(XmlDocument doc, string code, TextWriter stderr)

@@ -618,9 +618,10 @@ public sealed class NewupfTool : ITool
         var updateIdent = (XmlElement)updateAddress.AppendChild(update.ImportNode(srcDmIdent, true))!;
         Rename(updateIdent, "updateIdent");
 
-        // updateIdent/dmCode -> updateCode with objectIdentCode="UPF"
-        var updateCode = (XmlElement)XmlUtils.XPathFirstNode(update, null, "//updateIdent/dmCode")!;
-        Rename(updateCode, "updateCode");
+        // updateIdent/dmCode -> updateCode with objectIdentCode="UPF".
+        // Rename returns the replacement node; the original is detached.
+        var dmCode = (XmlElement)XmlUtils.XPathFirstNode(update, null, "//updateIdent/dmCode")!;
+        var updateCode = Rename(dmCode, "updateCode");
         updateCode.SetAttribute("objectIdentCode", "UPF");
 
         var updateStatus = (XmlElement)XmlUtils.XPathFirstNode(update, null, "//updateStatus")!;
@@ -661,15 +662,22 @@ public sealed class NewupfTool : ITool
         }
     }
 
-    /// <summary>Rename an element in place (mirror xmlNodeSetName).</summary>
-    private static void Rename(XmlElement el, string newName)
+    /// <summary>
+    /// Rename an element (mirror xmlNodeSetName). <see cref="XmlElement"/> names
+    /// are immutable, so this creates a replacement element with the new name,
+    /// moves the attributes and children across, swaps it into the tree and
+    /// returns it. Callers must use the returned node, as the original is
+    /// detached.
+    /// </summary>
+    private static XmlElement Rename(XmlElement el, string newName)
     {
         XmlDocument doc = el.OwnerDocument;
         var renamed = doc.CreateElement(newName);
 
-        foreach (XmlAttribute attr in el.Attributes)
+        // Move attributes (preserving any namespaced ones, e.g. xsi:*).
+        while (el.Attributes.Count > 0)
         {
-            renamed.SetAttribute(attr.Name, attr.Value);
+            renamed.Attributes.Append(el.Attributes[0]!);
         }
         while (el.FirstChild != null)
         {
@@ -677,6 +685,7 @@ public sealed class NewupfTool : ITool
         }
 
         el.ParentNode!.ReplaceChild(renamed, el);
+        return renamed;
     }
 
     /* ----- automatic filename (mirror autoName) ----- */

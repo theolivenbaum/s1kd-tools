@@ -74,7 +74,8 @@ public class DmrlToolTests
 
         // First entry -> s1kd-newdm with the assembled code, issue, language, title, security, rpc.
         Assert.StartsWith("s1kd-newdm", lines[0]);
-        Assert.Contains("-# EX-A-00-00-00A-040A-D", lines[0]);
+        // Full S1000D DMC: model-sdc-sys-subSys+subSubSys-assy-disassy+variant-info+variant-itemLoc
+        Assert.Contains("-# EX-A-00-00-00-00A-040A-D", lines[0]);
         Assert.Contains("-n 001", lines[0]);
         Assert.Contains("-w 00", lines[0]);
         Assert.Contains("-L en", lines[0]);
