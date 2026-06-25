@@ -31,7 +31,9 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 
 ## 3. Tools (port of `tools/s1kd-*`)
 Generation / `new*` family (share template + .defaults plumbing):
-- [ ] s1kd-defaults (777) — read/convert `.defaults`/`.dmtypes`/`.fmtypes`
+- [x] s1kd-defaults (777) — text<->XML for .defaults/.dmtypes/.fmtypes, default
+      generation, sort, BREX-driven generation (DOM, no XSLT). TODO: -i init for
+      the non-BREX case shells out to newdm/fmgen (wire up once those exist).
 - [ ] s1kd-newdm (2110) — flagship "new" tool; establishes template engine
 - [ ] s1kd-newpm (1002)
 - [ ] s1kd-newcom (906)
@@ -43,15 +45,18 @@ Generation / `new*` family (share template + .defaults plumbing):
 - [ ] s1kd-dmrl (274) — drive new* from a DMRL
 
 Authoring:
-- [ ] s1kd-addicn (111) — easy
+- [x] s1kd-addicn (111) — ICN entity/notation declarations. NOTE: XmlDocument
+      can't add NOTATION/ENTITY via DOM; serialized DTD manually.
 - [~] s1kd-ls (1050) — type selection, official/inwork, latest/old, recursive,
       list input, writable/read-only, null output. TODO: -e/--exec, -N file
       inwork lookup.
 - [~] s1kd-metadata (3240) — list/edit metadata (big key table)
-- [ ] s1kd-mvref (768)
+- [x] s1kd-mvref (768) — recode dmRef/pmRef from a source object to a target.
 - [ ] s1kd-ref (2040)
 - [ ] s1kd-sns (468)
-- [ ] s1kd-upissue (1016)
+- [x] s1kd-upissue (1016) — inwork/official workflow, RFU/change marks, QA
+      reset, file renaming, issue 3.0 vs 4.x switching. TODO: bundled short
+      flags (-ife), libxml2 parser long-opts.
 
 Validation:
 - [ ] s1kd-validate (633) — XSD validation + IDREF checks + XML report
@@ -69,7 +74,8 @@ Publication:
 - [ ] s1kd-index (400)
 - [ ] s1kd-instance (5126) — applicability/CIR filtering (core algorithm)
 - [ ] s1kd-neutralize (292) — easy; IETP neutral metadata (XSLT)
-- [ ] s1kd-syncrefs (504)
+- [x] s1kd-syncrefs (504) — rebuild the References table (refs) from references
+      in a data module (DOM, no XSLT).
 - [ ] s1kd-uom (599) — unit-of-measure conversion
 
 ## 4. Cross-cutting
