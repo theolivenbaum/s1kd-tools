@@ -34,15 +34,16 @@ Generation / `new*` family (share template + .defaults plumbing):
 - [x] s1kd-defaults (777) — text<->XML for .defaults/.dmtypes/.fmtypes, default
       generation, sort, BREX-driven generation (DOM, no XSLT). TODO: -i init for
       the non-BREX case shells out to newdm/fmgen (wire up once those exist).
-- [ ] s1kd-newdm (2110) — flagship "new" tool; establishes template engine
-- [ ] s1kd-newpm (1002)
-- [ ] s1kd-newcom (906)
-- [ ] s1kd-newddn (797)
-- [ ] s1kd-newdml (1171)
-- [ ] s1kd-newimf (663)
-- [ ] s1kd-newsmc (965)
-- [ ] s1kd-newupf (852)
-- [ ] s1kd-dmrl (274) — drive new* from a DMRL
+- [x] s1kd-newdm (2110) — flagship; templates+SNS+dmtypes embedded, downgrade
+      via to*.xsl. TODO: interactive -p prompt (no-op), byte-exact output.
+- [x] s1kd-newpm (1002) — incl. dmRef generation and to*.xsl downgrade.
+- [x] s1kd-newcom (906) — TODO: pre-Issue-6 markup downgrade (to*.xsl).
+- [x] s1kd-newddn (797) — TODO: pre-Issue-6 downgrade; -p no-op.
+- [x] s1kd-newdml (1171) — incl. sort.xsl/sns2dmrl.xsl. TODO: pre-6 downgrade.
+- [x] s1kd-newimf (663) — TODO: 4.2/5.0 structural downgrade.
+- [x] s1kd-newsmc (965) — TODO: pre-Issue-6 downgrade.
+- [x] s1kd-newupf (852) — diff two issues → delete/insert/replace groups.
+- [x] s1kd-dmrl (274) — drives new* in-process via the registry.
 
 Authoring:
 - [x] s1kd-addicn (111) — ICN entity/notation declarations. NOTE: XmlDocument
@@ -53,7 +54,8 @@ Authoring:
 - [~] s1kd-metadata (3240) — list/edit metadata (big key table)
 - [x] s1kd-mvref (768) — recode dmRef/pmRef from a source object to a target.
 - [ ] s1kd-ref (2040)
-- [ ] s1kd-sns (468)
+- [x] s1kd-sns (468) — directory-tree generation from an SNS. NOTE: hard-link
+      mode falls back to copy (no portable BCL hard-link API).
 - [x] s1kd-upissue (1016) — inwork/official workflow, RFU/change marks, QA
       reset, file renaming, issue 3.0 vs 4.x switching. TODO: bundled short
       flags (-ife), libxml2 parser long-opts.
@@ -70,13 +72,17 @@ Publication:
 - [ ] s1kd-aspp (929) — applicability preprocessing
 - [ ] s1kd-flatten (765)
 - [ ] s1kd-fmgen (1021)
-- [ ] s1kd-icncatalog (577)
-- [ ] s1kd-index (400)
+- [x] s1kd-icncatalog (577) — resolve ICN refs via catalog; media groups; regex
+      pattern rules (DOM). NOTE: DTD serialized manually like addicn.
+- [x] s1kd-index (400) — keyword flagging from .indexflags; issue-3.0 rename
+      (DOM; XSLTs reimplemented).
 - [ ] s1kd-instance (5126) — applicability/CIR filtering (core algorithm)
-- [ ] s1kd-neutralize (292) — easy; IETP neutral metadata (XSLT)
+- [x] s1kd-neutralize (292) — IETP neutral metadata via embedded XSLT
+      (xlink/rdf/namespace/delete; no EXSLT).
 - [x] s1kd-syncrefs (504) — rebuild the References table (refs) from references
       in a data module (DOM, no XSLT).
-- [ ] s1kd-uom (599) — unit-of-measure conversion
+- [x] s1kd-uom (599) — UOM conversion via .uom rules + presets (DOM, formula
+      evaluator). TODO: -p/-P display preformatting (uomdisplay.xsl) not applied.
 
 ## 4. Cross-cutting
 - [ ] Common option handling: `--version`, `-h/--help`, libxml2 parse opts
