@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/S1kdTools.Cli/S1kdTools.Cli.csproj" />
+    <Project Path="src/S1kdTools.Core/S1kdTools.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/S1kdTools.Tests/S1kdTools.Tests.csproj" />
+  </Folder>
+</Solution>
