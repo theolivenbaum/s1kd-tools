@@ -163,7 +163,10 @@ public sealed class DefaultsTool : ITool
         fname ??= Csdb.DefaultsFileName;
         brexmap ??= ReadDefaultBrexMap();
 
-        // Change/create working directory.
+        // Change/create working directory. This runs in-process, so the
+        // original working directory is restored before returning to avoid
+        // leaking the change to the rest of the process.
+        string? cwd0 = null;
         if (dir != null)
         {
             try
@@ -181,6 +184,7 @@ public sealed class DefaultsTool : ITool
 
             try
             {
+                cwd0 = Directory.GetCurrentDirectory();
                 Directory.SetCurrentDirectory(dir);
             }
             catch (Exception ex)
@@ -190,23 +194,33 @@ public sealed class DefaultsTool : ITool
             }
         }
 
-        if (initialize)
+        try
         {
-            return Initialize(fmt, overwrite, brex, brexmap, userDefs, stdout, stderr);
-        }
-
-        if (files.Count > 0)
-        {
-            int status = 0;
-            foreach (string file in files)
+            if (initialize)
             {
-                int r = ConvertOrDump(fmt, f, file, overwrite, sort, brex, brexmap, userDefs, stdout, stderr);
-                if (r != 0) { status = r; }
+                return Initialize(fmt, overwrite, brex, brexmap, userDefs, stdout, stderr);
             }
-            return status;
-        }
 
-        return ConvertOrDump(fmt, f, fname, overwrite, sort, brex, brexmap, userDefs, stdout, stderr);
+            if (files.Count > 0)
+            {
+                int status = 0;
+                foreach (string file in files)
+                {
+                    int r = ConvertOrDump(fmt, f, file, overwrite, sort, brex, brexmap, userDefs, stdout, stderr);
+                    if (r != 0) { status = r; }
+                }
+                return status;
+            }
+
+            return ConvertOrDump(fmt, f, fname, overwrite, sort, brex, brexmap, userDefs, stdout, stderr);
+        }
+        finally
+        {
+            if (cwd0 != null)
+            {
+                Directory.SetCurrentDirectory(cwd0);
+            }
+        }
     }
 
     private int MissingArg(string opt, TextWriter stderr)
