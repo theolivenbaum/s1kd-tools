@@ -195,4 +195,49 @@ public static class Csdb
     /// <summary>Compare two paths by their base names, case-insensitively.</summary>
     public static int CompareBaseName(string a, string b) =>
         string.Compare(Path.GetFileName(a), Path.GetFileName(b), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Inverse of <see cref="ExtractLatestObjects"/>: keep only the older issues
+    /// of each code (everything except the latest). Mirrors s1kd-ls's
+    /// <c>remove_latest</c>; entries without two <c>_</c> separators are skipped.
+    /// </summary>
+    public static List<string> RemoveLatestObjects(IReadOnlyList<string> files)
+    {
+        var old = new List<string>();
+        for (int i = 0; i < files.Count; i++)
+        {
+            string base1 = Path.GetFileName(files[i]);
+            int us = base1.IndexOf('_');
+            if (us < 0 || base1.IndexOf('_', us + 1) < 0)
+            {
+                continue;
+            }
+            if (i < files.Count - 1)
+            {
+                string base3 = Path.GetFileName(files[i + 1]);
+                if (base3.Length >= us && string.Equals(base1[..us], base3[..Math.Min(us, base3.Length)], StringComparison.Ordinal))
+                {
+                    old.Add(files[i]);
+                }
+            }
+        }
+        return old;
+    }
+
+    /// <summary>
+    /// Determine whether a CSDB object file name represents an official issue
+    /// (inwork == 00). Mirrors s1kd-ls's <c>is_official_issue</c> for the
+    /// file-name form (<c>code_NNN-NN_...</c>).
+    /// </summary>
+    public static bool IsOfficialIssue(string fileName)
+    {
+        string name = Path.GetFileName(fileName);
+        int us = name.IndexOf('_');
+        if (us < 0 || us + 7 > name.Length || name[us + 4] != '-')
+        {
+            return true; // could not parse an inwork number
+        }
+        string inwork = name.Substring(us + 5, 2);
+        return inwork == "00";
+    }
 }

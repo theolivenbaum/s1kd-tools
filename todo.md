@@ -44,7 +44,9 @@ Generation / `new*` family (share template + .defaults plumbing):
 
 Authoring:
 - [ ] s1kd-addicn (111) — easy
-- [ ] s1kd-ls (1050)
+- [~] s1kd-ls (1050) — type selection, official/inwork, latest/old, recursive,
+      list input, writable/read-only, null output. TODO: -e/--exec, -N file
+      inwork lookup.
 - [~] s1kd-metadata (3240) — list/edit metadata (big key table)
 - [ ] s1kd-mvref (768)
 - [ ] s1kd-ref (2040)

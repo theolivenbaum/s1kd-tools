@@ -8,6 +8,7 @@ public static class ToolRegistry
 {
     private static readonly ITool[] AllTools =
     {
+        new LsTool(),
         new MetadataTool(),
     };
 
