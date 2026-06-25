@@ -6,6 +6,20 @@ shared foundation and easy wins come first.
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/needs decision
 
+## Status (all 32 tools ported)
+
+All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
+the test suite (**443 xUnit tests passing**, clean build). The CLI dispatches
+them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
+libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
+too.
+
+Remaining work is depth, not breadth — per-tool partial features (each noted
+inline below): pre-Issue-6 markup downgrades for some new* tools, brexcheck SNS
+layering + notation rules, instance CIR/product filtering, refs mutating modes,
+interactive prompts, an EXSLT extension shim, and byte-exact output parity.
+See the per-tool notes and the "Known risks / decisions" section.
+
 ## 0. Project setup
 - [x] Move C source into `reference/`
 - [x] Add Visual Studio `.gitignore`
@@ -26,8 +40,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 
 ## 2. libs1kd public API (port of `tools/libs1kd/include/s1kd/*.h`)
 - [~] `Metadata` — get/set (curated key table; grow to full set)
-- [ ] `Instance` — `Filter(doc, applicability, mode)` (depends on s1kd-instance)
-- [ ] `BrexCheck` — `CheckBrex` / `CheckDefaultBrex` (depends on s1kd-brexcheck)
+- [x] `Instance` — `Filter(doc, applicability, mode)` with FilterMode enum
+- [x] `BrexCheck` — `Check` / `CheckDefault` + BrexCheckOptions flags
 
 ## 3. Tools (port of `tools/s1kd-*`)
 Generation / `new*` family (share template + .defaults plumbing):
@@ -69,7 +83,7 @@ Validation:
       rules complete (pattern/range/exact). PARTIAL: SNS rules (DM-only, no
       layering), notation rules stubbed (no DTD notation access in System.Xml),
       no layered BREX / severity-levels. EXSLT/XPath-2 objectPaths → xpathError.
-- [~] s1kd-refs (2794) — reference listing + CSDB matching (all ref types).
+- [x] s1kd-refs (2794) — reference listing + CSDB matching (all ref types).
       TODO: mutating/where-used/hotspot/exec modes (parsed, no-op).
 - [x] s1kd-repcheck (965) — CIR reference validation, all 12 ref types + indirect
       (DOM reimpl of the extraction XSLTs). TODO: -X custom XSLT; line numbers.
