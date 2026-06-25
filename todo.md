@@ -9,16 +9,16 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 ## Status (all 32 tools ported)
 
 All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
-the test suite (**443 xUnit tests passing**, clean build). The CLI dispatches
+the test suite (**542 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
 them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
 libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
 too.
 
 Remaining work is depth, not breadth — per-tool partial features (each noted
-inline below): pre-Issue-6 markup downgrades for some new* tools, brexcheck SNS
-layering + notation rules, instance CIR/product filtering, refs mutating modes,
-interactive prompts, an EXSLT extension shim, and byte-exact output parity.
-See the per-tool notes and the "Known risks / decisions" section.
+inline below): interactive prompts (no-op in-process), brexcheck severity-level config,
+instance container/auto-naming options, refs hotspot/exec modes, wiring the
+EXSLT shim into the few EXSLT-dependent stylesheet paths, and byte-exact output
+parity. See the per-tool notes and the "Known risks / decisions" section.
 
 ## 0. Project setup
 - [x] Move C source into `reference/`
@@ -36,10 +36,12 @@ See the per-tool notes and the "Known risks / decisions" section.
 - [x] `Applicability`: same_annotation (C14N), rem_delete_elems
 - [ ] CCT dependency injection (`add_cct_depends`) — used by aspp/instance
 - [ ] ICN entity / notation helpers (`add_icn`, `add_notation`) — used by addicn
-- [ ] XSLT extension shim for EXSLT (as needed by stylesheet tools)
+- [x] XSLT extension shim for EXSLT — `S1kdTools.Xslt.Exslt` (str/math/date/set/
+      common extension objects + Transform helper); native exsl:node-set used.
 
 ## 2. libs1kd public API (port of `tools/libs1kd/include/s1kd/*.h`)
-- [~] `Metadata` — get/set (curated key table; grow to full set)
+- [x] `Metadata` — full key table (72 keys) + composite get/set + create-on-set
+      + ICN-file metadata (icn_metadata[])
 - [x] `Instance` — `Filter(doc, applicability, mode)` with FilterMode enum
 - [x] `BrexCheck` — `Check` / `CheckDefault` + BrexCheckOptions flags
 
@@ -51,11 +53,11 @@ Generation / `new*` family (share template + .defaults plumbing):
 - [x] s1kd-newdm (2110) — flagship; templates+SNS+dmtypes embedded, downgrade
       via to*.xsl. TODO: interactive -p prompt (no-op), byte-exact output.
 - [x] s1kd-newpm (1002) — incl. dmRef generation and to*.xsl downgrade.
-- [x] s1kd-newcom (906) — TODO: pre-Issue-6 markup downgrade (to*.xsl).
-- [x] s1kd-newddn (797) — TODO: pre-Issue-6 downgrade; -p no-op.
-- [x] s1kd-newdml (1171) — incl. sort.xsl/sns2dmrl.xsl. TODO: pre-6 downgrade.
-- [x] s1kd-newimf (663) — TODO: 4.2/5.0 structural downgrade.
-- [x] s1kd-newsmc (965) — TODO: pre-Issue-6 downgrade.
+- [x] s1kd-newcom (906) — incl. pre-Issue-6 downgrade (to*.xsl).
+- [x] s1kd-newddn (797) — incl. pre-Issue-6 downgrade; -p no-op.
+- [x] s1kd-newdml (1171) — incl. sort.xsl/sns2dmrl.xsl + pre-6 downgrade.
+- [x] s1kd-newimf (663) — incl. 4.2/5.0 structural downgrade.
+- [x] s1kd-newsmc (965) — incl. 4.1/4.2/5.0 downgrade.
 - [x] s1kd-newupf (852) — diff two issues → delete/insert/replace groups.
 - [x] s1kd-dmrl (274) — drives new* in-process via the registry.
 
@@ -80,11 +82,11 @@ Validation:
       XML report; XSD validation when schema is locally resolvable (graceful
       offline). TODO: -T stats.xsl summary; source line numbers.
 - [x] s1kd-brexcheck (9147) — library API + tool; structure-object & value
-      rules complete (pattern/range/exact). PARTIAL: SNS rules (DM-only, no
-      layering), notation rules stubbed (no DTD notation access in System.Xml),
-      no layered BREX / severity-levels. EXSLT/XPath-2 objectPaths → xpathError.
-- [x] s1kd-refs (2794) — reference listing + CSDB matching (all ref types).
-      TODO: mutating/where-used/hotspot/exec modes (parsed, no-op).
+      rules; SNS rules (with layered-BREX merge) + notation rules (via DOM
+      DocumentType.Notations) now implemented. Remaining: severity-level config
+      (brsl); EXSLT/XPath-2 objectPaths → xpathError.
+- [x] s1kd-refs (2794) — reference listing + CSDB matching (all ref types) +
+      update/overwrite/tag-unmatched, externalpubs. TODO: hotspot/exec.
 - [x] s1kd-repcheck (965) — CIR reference validation, all 12 ref types + indirect
       (DOM reimpl of the extraction XSLTs). TODO: -X custom XSLT; line numbers.
 - [x] s1kd-appcheck (2840) — applicability validation (undefined props, nested,
@@ -105,8 +107,9 @@ Publication:
 - [x] s1kd-index (400) — keyword flagging from .indexflags; issue-3.0 rename
       (DOM; XSLTs reimplemented).
 - [x] s1kd-instance (5126) — applicability filtering core (Default/Reduce/
-      Simplify/Prune) + Instance library API. PARTIAL: CIR resolution, PCT/ACT
-      product filtering, containers, auto-naming (parsed, return exit 7).
+      Simplify/Prune) + Instance library API; CIR resolution and PCT product
+      filtering now implemented. Remaining: containers, alts flattening,
+      auto-naming, update-instances (parsed, partial).
 - [x] s1kd-neutralize (292) — IETP neutral metadata via embedded XSLT
       (xlink/rdf/namespace/delete; no EXSLT).
 - [x] s1kd-syncrefs (504) — rebuild the References table (refs) from references
@@ -115,10 +118,11 @@ Publication:
       evaluator). TODO: -p/-P display preformatting (uomdisplay.xsl) not applied.
 
 ## 4. Cross-cutting
-- [ ] Common option handling: `--version`, `-h/--help`, libxml2 parse opts
-      (`--huge`, `--net`, `--noent`, `--xinclude`, `--xml-catalog`)
-- [ ] Embedded resources: wire each tool's `*.xsl`/templates/data as resources
-- [ ] Multi-call dispatch (`s1kd-<tool>` argv[0] routing) in CLI
+- [~] Common option handling: `--version`, `-h/--help` done per tool; libxml2
+      parse opts (`--huge`, `--net`, `--noent`, `--xinclude`, `--xml-catalog`)
+      accepted-but-ignored (no System.Xml equivalent)
+- [x] Embedded resources: `Resources/**` glob + `EmbeddedResources` loader
+- [x] Multi-call dispatch (`s1kd-<tool>` argv[0] routing) in CLI
 - [ ] Packaging: `dotnet pack` for the library; single-file publish for the CLI
 - [ ] Port/port-equivalent of `libs1kd` tests under `reference/.../tests`
 

@@ -196,6 +196,249 @@ public class BrexCheckToolTests
         Assert.Equal(4, code); // EXIT_BAD_XPATH_VERSION
     }
 
+    // ---- SNS rules ----------------------------------------------------------
+
+    // A BREX whose SNS rules allow only systemCode "42".
+    private const string SnsBrex =
+        """
+        <dmodule>
+          <content>
+            <brex>
+              <snsRules>
+                <snsSystem>
+                  <snsCode>42</snsCode>
+                  <snsTitle>Answer</snsTitle>
+                </snsSystem>
+              </snsRules>
+            </brex>
+          </content>
+        </dmodule>
+        """;
+
+    private static string DmWithCode(string systemCode, string subSystem = "0",
+        string subSubSystem = "0", string assy = "00") =>
+        $"""
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmIdent>
+                <dmCode modelIdentCode="X" systemDiffCode="A" systemCode="{systemCode}"
+                        subSystemCode="{subSystem}" subSubSystemCode="{subSubSystem}"
+                        assyCode="{assy}" disassyCode="00" disassyCodeVariant="A"
+                        infoCode="040" infoCodeVariant="A" itemLocationCode="D"/>
+              </dmIdent>
+            </dmAddress>
+          </identAndStatusSection>
+          <content><description><para>x</para></description></content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void Library_Sns_ConformingSystemCode_NoError()
+    {
+        int errs = BrexCheck.Check(Doc(DmWithCode("42")), Doc(SnsBrex), BrexCheckOptions.Sns, out XmlDocument report);
+
+        Assert.Equal(0, errs);
+        Assert.NotNull(report.SelectSingleNode("//sns/noErrors"));
+        Assert.Null(report.SelectSingleNode("//sns/error"));
+    }
+
+    [Fact]
+    public void Library_Sns_ViolatingSystemCode_Error()
+    {
+        int errs = BrexCheck.Check(Doc(DmWithCode("99")), Doc(SnsBrex), BrexCheckOptions.Sns, out XmlDocument report);
+
+        Assert.Equal(1, errs);
+        var snsError = report.SelectSingleNode("//sns/error") as XmlElement;
+        Assert.NotNull(snsError);
+        Assert.Equal("systemCode", snsError!.SelectSingleNode("code")!.InnerText);
+        Assert.Equal("99", snsError.SelectSingleNode("invalidValue")!.InnerText);
+    }
+
+    [Fact]
+    public void Tool_Sns_ViolatingSystemCode_ExitsBrexError()
+    {
+        string objPath = WriteTemp(DmWithCode("99"));
+        string brexPath = WriteTemp(SnsBrex);
+        try
+        {
+            var (code, outText, _) = RunTool("-b", brexPath, "-S", "-x", objPath);
+            Assert.Equal(1, code);
+            Assert.Contains("systemCode", outText);
+        }
+        finally { File.Delete(objPath); File.Delete(brexPath); }
+    }
+
+    // ---- Notation rules -----------------------------------------------------
+
+    // A BREX that disallows the "png" notation (allowedNotationFlag="0").
+    private const string NotationBrex =
+        """
+        <dmodule>
+          <content>
+            <brex>
+              <notationRuleList>
+                <notationRule>
+                  <notationName allowedNotationFlag="0">png</notationName>
+                  <objectUse>The png notation is not allowed.</objectUse>
+                </notationRule>
+              </notationRuleList>
+            </brex>
+          </content>
+        </dmodule>
+        """;
+
+    // A data module that declares and uses an unparsed entity with NDATA png.
+    private const string DmUsingPngNotation =
+        """
+        <?xml version="1.0"?>
+        <!DOCTYPE dmodule [
+          <!NOTATION png SYSTEM "image/png">
+          <!ENTITY icn-001 SYSTEM "icn-001.png" NDATA png>
+        ]>
+        <dmodule>
+          <content><description><para>x</para></description></content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void Library_Notation_DisallowedNotation_Error()
+    {
+        int errs = BrexCheck.Check(Doc(DmUsingPngNotation), Doc(NotationBrex), BrexCheckOptions.Notations, out XmlDocument report);
+
+        Assert.Equal(1, errs);
+        var notationError = report.SelectSingleNode("//notations/error") as XmlElement;
+        Assert.NotNull(notationError);
+        Assert.Equal("png", notationError!.SelectSingleNode("invalidNotation")!.InnerText);
+        Assert.Equal("The png notation is not allowed.", notationError.SelectSingleNode("objectUse")!.InnerText);
+    }
+
+    [Fact]
+    public void Library_Notation_NoDtd_NoNotationsElement()
+    {
+        // A document with no internal DTD subset emits no <notations> element.
+        int errs = BrexCheck.Check(Doc(ConformingObject), Doc(NotationBrex), BrexCheckOptions.Notations, out XmlDocument report);
+
+        Assert.Equal(0, errs);
+        Assert.Null(report.SelectSingleNode("//notations"));
+    }
+
+    [Fact]
+    public void Tool_Notation_DisallowedNotation_ExitsBrexError()
+    {
+        string objPath = WriteTemp(DmUsingPngNotation);
+        string brexPath = WriteTemp(NotationBrex);
+        try
+        {
+            var (code, outText, _) = RunTool("-b", brexPath, "-n", "-x", objPath);
+            Assert.Equal(1, code);
+            Assert.Contains("invalidNotation", outText);
+            Assert.Contains("png", outText);
+        }
+        finally { File.Delete(objPath); File.Delete(brexPath); }
+    }
+
+    // ---- Layered BREX -------------------------------------------------------
+
+    [Fact]
+    public void Tool_Layered_AppliesRulesFromReferencedBrex()
+    {
+        // Set up a temp dir with: an object referencing brexA, brexA referencing
+        // brexB, and brexB containing the prohibiting rule. With -l, brexB's rule
+        // must be applied to the object.
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-brex-layer-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        string cwd = Directory.GetCurrentDirectory();
+        try
+        {
+            // brexB: DMC-LAYER-A-00-00-00-00A-022A-D, prohibits //prohibited.
+            string brexBCode = "DMC-LAYER-A-00-00-00-00A-022A-D";
+            string brexB =
+                $"""
+                <dmodule>
+                  <identAndStatusSection><dmAddress><dmIdent>
+                    <dmCode modelIdentCode="LAYER" systemDiffCode="A" systemCode="00"
+                            subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                            disassyCode="00" disassyCodeVariant="A" infoCode="022"
+                            infoCodeVariant="A" itemLocationCode="D"/>
+                  </dmIdent></dmAddress></identAndStatusSection>
+                  <content><brex>
+                    <contextRules>
+                      <structureObjectRule>
+                        <brDecisionRef brDecisionIdentNumber="BREX-LAYER-B"/>
+                        <objectPath allowedObjectFlag="0">//prohibited</objectPath>
+                        <objectUse>No prohibited (layer B).</objectUse>
+                      </structureObjectRule>
+                    </contextRules>
+                  </brex></content>
+                </dmodule>
+                """;
+            File.WriteAllText(Path.Combine(dir, brexBCode + "_001-00_EN-US.XML"), brexB);
+
+            // brexA: references brexB, no rules of its own.
+            string brexACode = "DMC-LAYER-A-00-00-00-00A-022B-D";
+            string brexA =
+                $"""
+                <dmodule>
+                  <identAndStatusSection><dmAddress><dmIdent>
+                    <dmCode modelIdentCode="LAYER" systemDiffCode="A" systemCode="00"
+                            subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                            disassyCode="00" disassyCodeVariant="A" infoCode="022"
+                            infoCodeVariant="B" itemLocationCode="D"/>
+                  </dmIdent></dmAddress></identAndStatusSection>
+                  <content><brex>
+                    <brexDmRef><dmRef><dmRefIdent>
+                      <dmCode modelIdentCode="LAYER" systemDiffCode="A" systemCode="00"
+                              subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                              disassyCode="00" disassyCodeVariant="A" infoCode="022"
+                              infoCodeVariant="A" itemLocationCode="D"/>
+                    </dmRefIdent></dmRef></brexDmRef>
+                    <contextRules/>
+                  </brex></content>
+                </dmodule>
+                """;
+            File.WriteAllText(Path.Combine(dir, brexACode + "_001-00_EN-US.XML"), brexA);
+
+            // Object: violates the rule, references brexA.
+            string obj =
+                """
+                <dmodule>
+                  <identAndStatusSection><dmAddress><dmIdent>
+                    <dmCode modelIdentCode="OBJ" systemDiffCode="A" systemCode="00"
+                            subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                            disassyCode="00" disassyCodeVariant="A" infoCode="040"
+                            infoCodeVariant="A" itemLocationCode="D"/>
+                    <brexDmRef><dmRef><dmRefIdent>
+                      <dmCode modelIdentCode="LAYER" systemDiffCode="A" systemCode="00"
+                              subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                              disassyCode="00" disassyCodeVariant="A" infoCode="022"
+                              infoCodeVariant="B" itemLocationCode="D"/>
+                    </dmRefIdent></dmRef></brexDmRef>
+                  </dmIdent></dmAddress></identAndStatusSection>
+                  <content><description><prohibited>nope</prohibited></description></content>
+                </dmodule>
+                """;
+            string objFile = Path.Combine(dir, "obj.XML");
+            File.WriteAllText(objFile, obj);
+
+            Directory.SetCurrentDirectory(dir);
+            // Without -l, brexA has no rules, so no error.
+            var (codeNoLayer, _, _) = RunTool("-d", dir, "-x", objFile);
+            Assert.Equal(0, codeNoLayer);
+
+            // With -l, brexB's rule is applied and the object fails.
+            var (codeLayered, outText, _) = RunTool("-d", dir, "-l", "-x", objFile);
+            Assert.Equal(1, codeLayered);
+            Assert.Contains("BREX-LAYER-B", outText);
+            Assert.Contains("layered=\"yes\"", outText);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(cwd);
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     private static (int code, string outText, string errText) RunTool(params string[] args)
     {
         var tool = new BrexCheckTool();

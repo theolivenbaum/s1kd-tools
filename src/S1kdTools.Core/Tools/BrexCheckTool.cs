@@ -17,11 +17,17 @@ namespace S1kdTools.Tools;
 /// </para>
 ///
 /// <para>
-/// Partial (see todo.md): SNS rule checking (<c>-S</c>) is implemented for data
-/// modules; notation rule checking (<c>-n</c>) is a stub because System.Xml does
-/// not expose internal-DTD NOTATION declarations. Layered BREX (<c>-l</c>),
-/// severity-level configuration (<c>-w</c>), summary stats (<c>-T</c>), progress
-/// bars, and XPath 2.0 (<c>-X</c>) are not ported.
+/// Also ported: SNS rule checking (<c>-S</c>/<c>-t</c>/<c>-u</c>) for data
+/// modules with rules merged across layered BREX; notation rule checking
+/// (<c>-n</c>), which enumerates the NOTATIONs referenced by the document's
+/// internal-DTD unparsed (<c>NDATA</c>) entity declarations and validates them
+/// against the combined BREX <c>notationRuleList</c>; and layered BREX
+/// (<c>-l</c>), which follows the chain of <c>brexDmRef</c> references.
+/// </para>
+///
+/// <para>
+/// Not ported (see todo.md): severity-level configuration (<c>-w</c>), summary
+/// stats (<c>-T</c>), progress bars, and XPath 2.0 (<c>-X</c>).
 /// </para>
 /// </summary>
 public sealed class BrexCheckTool : ITool
@@ -55,6 +61,7 @@ public sealed class BrexCheckTool : ITool
         bool ignoreEmpty = false;
         bool remDelete = false;
         bool isList = false;
+        bool layered = false;
         var showFnames = ShowFnames.None;
 
         for (int i = 0; i < args.Count; i++)
@@ -130,9 +137,11 @@ public sealed class BrexCheckTool : ITool
                         return ExitBadXPathVersion;
                     }
                     break;
+                case "-l" or "--layered":
+                    layered = true;
+                    break;
                 // Recognised but not (yet) ported flags — accepted as no-ops so
                 // existing command lines don't break.
-                case "-l" or "--layered":
                 case "-N" or "--omit-issue":
                 case "-o" or "--output-valid":
                 case "-p" or "--progress":
@@ -215,29 +224,33 @@ public sealed class BrexCheckTool : ITool
                 XmlUtils.RemoveDeleteElements(objDoc);
             }
 
-            // Resolve the BREX module(s) for this object.
-            XmlDocument? brexDoc;
-            string brexPath;
+            // Resolve the BREX module(s) for this object into a chain.
+            var chain = new List<BrexModule>();
             if (brexFiles.Count > 0)
             {
-                brexPath = brexFiles[0];
-                brexDoc = LoadBrex(brexPath, objDoc, stderr, quiet);
-                if (brexDoc == null) return ExitBadDmodule;
+                // Explicit BREX (-b): all apply to every object.
+                foreach (string bf in brexFiles)
+                {
+                    XmlDocument? bd = LoadBrex(bf, objDoc, stderr, quiet);
+                    if (bd == null) return ExitBadDmodule;
+                    chain.Add(new BrexModule(bd, bf));
+                }
             }
             else if (useDefaultBrex)
             {
-                brexPath = BrexCheck.DefaultBrexDmc(objDoc);
-                brexDoc = BrexCheck.LoadDefaultBrex(brexPath);
+                string brexPath = BrexCheck.DefaultBrexDmc(objDoc);
+                XmlDocument? brexDoc = BrexCheck.LoadDefaultBrex(brexPath);
                 if (brexDoc == null)
                 {
                     if (!quiet) stderr.WriteLine($"{Name}: ERROR: No default BREX data module found for {brexPath}.");
                     return ExitBrexNotFound;
                 }
+                chain.Add(new BrexModule(brexDoc, brexPath));
             }
             else
             {
                 int err = ResolveReferencedBrex(objDoc, searchDir, searchPaths, objects,
-                    out brexPath, out brexDoc, stderr, quiet);
+                    out string brexPath, out XmlDocument? brexDoc, stderr, quiet);
                 if (err == -1)
                 {
                     // Object does not reference a BREX: warn and skip.
@@ -254,9 +267,29 @@ public sealed class BrexCheckTool : ITool
                     if (!quiet) stderr.WriteLine($"{Name}: ERROR: No BREX data module found for {(useStdin ? "object on stdin" : objPath)}.");
                     return ExitBrexNotFound;
                 }
+                chain.Add(new BrexModule(brexDoc, brexPath));
+
+                // When using brexDmRef, if the data module is itself a BREX data
+                // module, include it as a BREX (mirrors the C //brex check).
+                if (objPath != "-" && brexPath != objPath &&
+                    objDoc.SelectSingleNode("//brex") != null)
+                {
+                    chain.Add(new BrexModule(objDoc, objPath));
+                }
             }
 
-            int errs = BrexCheck.Check(objDoc, brexDoc, opts, objPath, brexPath, out XmlDocument report);
+            // Layered BREX (-l): follow each BREX's own brexDmRef, recursively.
+            if (layered)
+            {
+                int rc = AddLayeredBrex(chain, searchDir, searchPaths, objects, stderr, quiet);
+                if (rc != 0)
+                {
+                    return ExitBrexNotFound;
+                }
+            }
+
+            string firstBrexPath = chain.Count > 0 ? chain[0].Path : "-";
+            int errs = BrexCheck.Check(objDoc, chain, opts, objPath, layered, out XmlDocument report);
 
             // Splice this object's <document> result into the combined report.
             XmlNode? documentNode = report.DocumentElement?.SelectSingleNode("document");
@@ -277,8 +310,8 @@ public sealed class BrexCheckTool : ITool
             if (verbose && !quiet)
             {
                 stderr.WriteLine(errs > 0
-                    ? $"{Name}: FAILED: {objPath} failed to validate against BREX {brexPath}."
-                    : $"{Name}: SUCCESS: {objPath} validated successfully against BREX {brexPath}.");
+                    ? $"{Name}: FAILED: {objPath} failed to validate against BREX {firstBrexPath}."
+                    : $"{Name}: SUCCESS: {objPath} validated successfully against BREX {firstBrexPath}.");
             }
 
             status += errs;
@@ -343,6 +376,44 @@ public sealed class BrexCheckTool : ITool
 
         if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not find BREX data module: {name}");
         return null;
+    }
+
+    /// <summary>
+    /// Extend a BREX chain with the BREX referenced by each BREX already in the
+    /// chain, recursively (mirrors <c>add_layered_brex</c>). A BREX that is already
+    /// present (by path) is not added again, which terminates cycles. Returns 0 on
+    /// success, or a non-zero exit code if a referenced BREX could not be found.
+    /// </summary>
+    private int AddLayeredBrex(List<BrexModule> chain, string searchDir, List<string> searchPaths,
+        List<string> objects, TextWriter stderr, bool quiet)
+    {
+        // Walk the list with a growing index so that BREX added during the walk
+        // are themselves resolved.
+        for (int i = 0; i < chain.Count; i++)
+        {
+            BrexModule layer = chain[i];
+
+            int err = ResolveReferencedBrex(layer.Document, searchDir, searchPaths, objects,
+                out string refPath, out XmlDocument? refDoc, stderr, quiet);
+
+            if (err == -1)
+            {
+                // This BREX does not reference a further BREX: nothing to layer.
+                continue;
+            }
+            if (err == 1 || refDoc == null)
+            {
+                if (!quiet) stderr.WriteLine($"{Name}: ERROR: No BREX data module found for BREX {layer.Path}.");
+                return ExitBrexNotFound;
+            }
+
+            if (!chain.Exists(m => string.Equals(m.Path, refPath, StringComparison.Ordinal)))
+            {
+                chain.Add(new BrexModule(refDoc, refPath));
+            }
+        }
+
+        return 0;
     }
 
     /// <summary>
@@ -534,7 +605,8 @@ public sealed class BrexCheckTool : ITool
         stdout.WriteLine("  -f, --filenames        Print the filenames of invalid objects.");
         stdout.WriteLine("  -I, --include <path>   Add <path> to BREX search path.");
         stdout.WriteLine("  -L, --list             Input is a list of data module filenames.");
-        stdout.WriteLine("  -n, --notations        Check notation rules (partial).");
+        stdout.WriteLine("  -l, --layered          Check BREX referenced by other BREX.");
+        stdout.WriteLine("  -n, --notations        Check notation rules.");
         stdout.WriteLine("  -q, --quiet            Quiet mode. Do not print errors.");
         stdout.WriteLine("  -S, --sns              Check SNS rules.");
         stdout.WriteLine("  -t, --strict           Strict SNS checking.");

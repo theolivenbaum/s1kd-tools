@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -13,10 +14,10 @@ namespace S1kdTools.Tools;
 /// </summary>
 /// <remarks>
 /// Faithful to issue 6 (the default). For older S1000D issues (-$ 2.x..5.0) the
-/// C tool applies a downissue XSLT (<c>common/to*.xsl</c>) which lives outside
-/// this tool's directory and is therefore not bundled here; for those issues the
-/// default BREX DM code is still set (as in the C), but the document is left in
-/// its issue-6 shape. This is the only intentional deviation.
+/// C tool applies a downissue XSLT (<c>common/to*.xsl</c>); the port reuses those
+/// stylesheets (embedded under <c>Resources/newdm/common/</c>) via
+/// <see cref="XslCompiledTransform"/>, mirroring <c>toissue</c>: the default BREX
+/// DM code is set (as in the C) and the document is then down-converted.
 /// </remarks>
 public sealed class NewddnTool : ITool
 {
@@ -271,10 +272,6 @@ public sealed class NewddnTool : ITool
             // Down-issue conversion (issue < 6) -------------------------------
             if (_issue < Issue.Iss6)
             {
-                // For older issues the C tool applies a common/to*.xsl downissue
-                // stylesheet (outside this tool's directory, so not bundled). As
-                // with the other ported new* tools, the default BREX DM code is
-                // still set but the document is left in its issue-6 shape.
                 if (_brexDmcode.Length == 0)
                 {
                     string? defBrex = DefaultBrexForIssue(_issue);
@@ -283,6 +280,10 @@ public sealed class NewddnTool : ITool
                         SetBrex(ddn, defBrex, stderr);
                     }
                 }
+
+                // Down-convert the document to the selected older issue using the
+                // shared common/to<NN>.xsl stylesheets (mirror toissue()).
+                ddn = ToIssue(ddn, _issue);
             }
 
             // Output path -----------------------------------------------------
@@ -505,6 +506,48 @@ public sealed class NewddnTool : ITool
         Issue.Iss50 => "S1000D-G-04-10-0301-00A-022A-D",
         _ => null,
     };
+
+    /// <summary>
+    /// Down-issue the document to an older S1000D issue using the shared
+    /// <c>common/to*.xsl</c> stylesheets (embedded under
+    /// <c>Resources/newdm/common/</c>). Mirrors <c>toissue</c>.
+    /// </summary>
+    private static XmlDocument ToIssue(XmlDocument doc, Issue iss)
+    {
+        string? xsl = iss switch
+        {
+            Issue.Iss50 => "newdm/common/to50.xsl",
+            Issue.Iss42 => "newdm/common/to42.xsl",
+            Issue.Iss41 => "newdm/common/to41.xsl",
+            Issue.Iss40 => "newdm/common/to40.xsl",
+            Issue.Iss30 => "newdm/common/to30.xsl",
+            Issue.Iss23 => "newdm/common/to23.xsl",
+            Issue.Iss22 => "newdm/common/to22.xsl",
+            Issue.Iss21 => "newdm/common/to21.xsl",
+            Issue.Iss20 => "newdm/common/to20.xsl",
+            _ => null,
+        };
+        if (xsl == null) return doc;
+
+        var transform = new XslCompiledTransform();
+        using (Stream s = EmbeddedResources.Open(xsl)
+                          ?? throw new FileNotFoundException($"Embedded resource not found: {xsl}"))
+        using (var reader = XmlReader.Create(s))
+        {
+            transform.Load(reader);
+        }
+
+        var result = XmlUtils.NewDocument();
+        using (var sw = new StringWriter())
+        {
+            using (var xw = XmlWriter.Create(sw, transform.OutputSettings ?? new XmlWriterSettings()))
+            {
+                transform.Transform(doc, xw);
+            }
+            result.LoadXml(sw.ToString());
+        }
+        return result;
+    }
 
     /* ----- content setters ----- */
 

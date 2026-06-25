@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -20,13 +21,12 @@ namespace S1kdTools.Tools;
 /// with <c>-N</c>).
 /// </para>
 /// <para>
-/// Deviation from the C: downgrading the issued document to S1000D issue 4.2 or
-/// 5.0 is implemented in the C via the EXSLT-based <c>to42.xsl</c>/<c>to50.xsl</c>
-/// stylesheets. Those transforms are not ported here (EXSLT is not supported by
-/// <see cref="System.Xml.Xsl.XslCompiledTransform"/>), so when <c>-$ 4.2</c> or
-/// <c>-$ 5.0</c> is requested the issue-specific default BREX is still applied but
-/// the schema-version downgrade transform is skipped. Issue 6 (the default) is
-/// fully supported.
+/// Downgrading the issued document to S1000D issue 4.2 or 5.0 reuses the shared
+/// <c>to42.xsl</c>/<c>to50.xsl</c> stylesheets (embedded under
+/// <c>Resources/newdm/common/</c>) via <see cref="System.Xml.Xsl.XslCompiledTransform"/>,
+/// mirroring <c>toissue</c> (which for newimf only supports down to issue 4.2):
+/// the issue-specific default BREX is applied and the document is then
+/// down-converted. Issue 6 (the default) is fully supported.
 /// </para>
 /// </remarks>
 public sealed class NewimfTool : ITool
@@ -292,10 +292,10 @@ public sealed class NewimfTool : ITool
                         }
                     }
 
-                    // NOTE: the C tool runs to42.xsl/to50.xsl here to downgrade the
-                    // schema version. That EXSLT transform is not ported (see class
-                    // remarks); the skeleton structure is otherwise compatible.
-                    ToIssue(template, _issue);
+                    // Down-convert the document to the selected older issue using
+                    // the shared common/to42.xsl/to50.xsl stylesheets (mirror
+                    // toissue(); newimf only supports down to 4.2).
+                    template = ToIssue(template, _issue);
                 }
 
                 string fname;
@@ -752,35 +752,39 @@ public sealed class NewimfTool : ITool
     }
 
     /// <summary>
-    /// Adjust the document for issue 4.2/5.0. The full schema downgrade is done in
-    /// the C via EXSLT stylesheets that are not ported; here we only update the
-    /// schema location reference so the produced file at least targets the right
-    /// issue directory. See class remarks.
+    /// Down-issue the document to issue 4.2/5.0 using the shared
+    /// <c>common/to42.xsl</c>/<c>to50.xsl</c> stylesheets (embedded under
+    /// <c>Resources/newdm/common/</c>). Mirrors <c>toissue</c>, which for newimf
+    /// only supports down to issue 4.2.
     /// </summary>
-    private static void ToIssue(XmlDocument doc, Issue iss)
+    private static XmlDocument ToIssue(XmlDocument doc, Issue iss)
     {
-        if (doc.DocumentElement == null)
+        string? xsl = iss switch
         {
-            return;
-        }
-        string? issueDir = iss switch
-        {
-            Issue.Iss42 => "S1000D_4-2",
-            Issue.Iss50 => "S1000D_5-0",
+            Issue.Iss50 => "newdm/common/to50.xsl",
+            Issue.Iss42 => "newdm/common/to42.xsl",
             _ => null,
         };
-        if (issueDir == null)
+        if (xsl == null) return doc;
+
+        var transform = new XslCompiledTransform();
+        using (Stream s = EmbeddedResources.Open(xsl)
+                          ?? throw new FileNotFoundException($"Embedded resource not found: {xsl}"))
+        using (var reader = XmlReader.Create(s))
         {
-            return;
+            transform.Load(reader);
         }
 
-        const string xsiNs = "http://www.w3.org/2001/XMLSchema-instance";
-        string? loc = doc.DocumentElement.GetAttribute("noNamespaceSchemaLocation", xsiNs);
-        if (!string.IsNullOrEmpty(loc))
+        var result = XmlUtils.NewDocument();
+        using (var sw = new StringWriter())
         {
-            string updated = loc.Replace("S1000D_6", issueDir, StringComparison.Ordinal);
-            doc.DocumentElement.SetAttribute("noNamespaceSchemaLocation", xsiNs, updated);
+            using (var xw = XmlWriter.Create(sw, transform.OutputSettings ?? new XmlWriterSettings()))
+            {
+                transform.Transform(doc, xw);
+            }
+            result.LoadXml(sw.ToString());
         }
+        return result;
     }
 
     /* ----- help / version ----- */
