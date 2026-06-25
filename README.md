@@ -3,6 +3,19 @@
 A set of small, free and open source software tools for manipulating
 [S1000D](http://www.s1000d.org) data.
 
+> **C# port in progress.** This repository is being ported from the original
+> C implementation to C# / .NET. The original C source is preserved under
+> [`reference/`](reference/) and remains the authoritative spec. The .NET
+> solution lives under [`src/`](src/) and [`tests/`](tests/). See
+> [`CLAUDE.md`](CLAUDE.md) for the architecture and [`todo.md`](todo.md) for
+> per-tool porting progress.
+>
+> ```
+> dotnet build              # build the solution (S1kdTools.slnx)
+> dotnet test               # run the test suite
+> dotnet run --project src/S1kdTools.Cli -- metadata -n issueInfo FILE.XML
+> ```
+
   - [Introduction](INTRO.md)
 
   - [Installation](INSTALL.md)
