@@ -53,7 +53,8 @@ Authoring:
       inwork lookup.
 - [~] s1kd-metadata (3240) — list/edit metadata (big key table)
 - [x] s1kd-mvref (768) — recode dmRef/pmRef from a source object to a target.
-- [ ] s1kd-ref (2040)
+- [x] s1kd-ref (2040) — build/insert references from codes; -T transform;
+      .externalpubs; downgrade via to*.xsl.
 - [x] s1kd-sns (468) — directory-tree generation from an SNS. NOTE: hard-link
       mode falls back to copy (no portable BCL hard-link API).
 - [x] s1kd-upissue (1016) — inwork/official workflow, RFU/change marks, QA
@@ -61,22 +62,37 @@ Authoring:
       flags (-ife), libxml2 parser long-opts.
 
 Validation:
-- [ ] s1kd-validate (633) — XSD validation + IDREF checks + XML report
-- [ ] s1kd-brexcheck (9147) — largest; business-rule checking
-- [ ] s1kd-refs (2794) — dependency listing
-- [ ] s1kd-repcheck (965) — CIR reference validation
-- [ ] s1kd-appcheck (2840) — applicability validation
+- [x] s1kd-validate (633) — well-formedness + faithful IDREF/IDREFS checks +
+      XML report; XSD validation when schema is locally resolvable (graceful
+      offline). TODO: -T stats.xsl summary; source line numbers.
+- [x] s1kd-brexcheck (9147) — library API + tool; structure-object & value
+      rules complete (pattern/range/exact). PARTIAL: SNS rules (DM-only, no
+      layering), notation rules stubbed (no DTD notation access in System.Xml),
+      no layered BREX / severity-levels. EXSLT/XPath-2 objectPaths → xpathError.
+- [~] s1kd-refs (2794) — reference listing + CSDB matching (all ref types).
+      TODO: mutating/where-used/hotspot/exec modes (parsed, no-op).
+- [x] s1kd-repcheck (965) — CIR reference validation, all 12 ref types + indirect
+      (DOM reimpl of the extraction XSLTs). TODO: -X custom XSLT; line numbers.
+- [x] s1kd-appcheck (2840) — applicability validation (undefined props, nested,
+      redundant, duplicate; standalone/full/products via in-process filter +
+      broken-internalRef detection). PARTIAL: external -e/-b validators, CCT deps.
 
 Publication:
-- [ ] s1kd-acronyms (1020)
-- [ ] s1kd-aspp (929) — applicability preprocessing
-- [ ] s1kd-flatten (765)
-- [ ] s1kd-fmgen (1021)
+- [x] s1kd-acronyms (1020) — markup from .acronyms + list/table generation
+      (DOM markup + original XSLTs). TODO: interactive -i/-I prompting (no-op).
+- [x] s1kd-aspp (929) — applicability preprocessing; display-text reimplemented
+      in DOM (C path needs EXSLT str:replace). TODO: -x custom XSLT, CCT deps.
+- [x] s1kd-flatten (765) — resolve dmRef/pmRef to files and inline; -u dedup
+      reimplemented in DOM (C uses EXSLT). 
+- [x] s1kd-fmgen (1021) — front matter via 10 embedded XSLTs (all XSLT 1.0, no
+      EXSLT). TODO: XProc (.xpl) pipelines unsupported.
 - [x] s1kd-icncatalog (577) — resolve ICN refs via catalog; media groups; regex
       pattern rules (DOM). NOTE: DTD serialized manually like addicn.
 - [x] s1kd-index (400) — keyword flagging from .indexflags; issue-3.0 rename
       (DOM; XSLTs reimplemented).
-- [ ] s1kd-instance (5126) — applicability/CIR filtering (core algorithm)
+- [x] s1kd-instance (5126) — applicability filtering core (Default/Reduce/
+      Simplify/Prune) + Instance library API. PARTIAL: CIR resolution, PCT/ACT
+      product filtering, containers, auto-naming (parsed, return exit 7).
 - [x] s1kd-neutralize (292) — IETP neutral metadata via embedded XSLT
       (xlink/rdf/namespace/delete; no EXSLT).
 - [x] s1kd-syncrefs (504) — rebuild the References table (refs) from references
