@@ -253,11 +253,19 @@ public sealed class RepCheckTool : ITool
     private int CheckCirRefsInFile(string path, Options opts, TextWriter stdout, TextWriter stderr)
     {
         XmlDocument doc;
+        string? source = null;
         try
         {
-            doc = path == "-"
-                ? XmlUtils.ReadStream(Console.OpenStandardInput())
-                : XmlUtils.ReadDoc(path);
+            if (path == "-")
+            {
+                using var stdin = new StreamReader(Console.OpenStandardInput());
+                source = stdin.ReadToEnd();
+            }
+            else
+            {
+                source = File.ReadAllText(path);
+            }
+            doc = XmlUtils.ReadMem(source);
         }
         catch (Exception ex) when (ex is IOException or XmlException)
         {
@@ -273,6 +281,17 @@ public sealed class RepCheckTool : ITool
             stderr.WriteLine($"{InfPrefix}Checking CIR references in {path}...");
         }
 
+        // Build the source line map from the original parse, before any
+        // structural modification (remove-deleted only removes nodes, so
+        // surviving CIR-reference elements keep their mapped line). For the
+        // built-in extraction path the ref elements are the original DOM nodes,
+        // so this maps them directly; the custom -X stylesheet path reports
+        // against transform-result nodes that are not in this map (see
+        // ExtractCirRefsWithXsl) and therefore yields line 0.
+        LineInfo lineInfo = source != null
+            ? LineInfo.Build(doc, source)
+            : LineInfo.BuildFromFile(doc, path);
+
         XmlDocument? validTree = null;
         if (opts.OutputValid)
         {
@@ -284,7 +303,7 @@ public sealed class RepCheckTool : ITool
             XmlUtils.RemoveDeleteElements(doc);
         }
 
-        int err = CheckCirRefs(doc, path, opts, stdout, stderr);
+        int err = CheckCirRefs(doc, path, opts, lineInfo, stdout, stderr);
 
         if (opts.Verbosity >= Verbosity.Verbose)
         {
@@ -309,7 +328,7 @@ public sealed class RepCheckTool : ITool
     }
 
     /// <summary>Check all CIR references in a document tree.</summary>
-    private int CheckCirRefs(XmlDocument doc, string path, Options opts, TextWriter stdout, TextWriter stderr)
+    private int CheckCirRefs(XmlDocument doc, string path, Options opts, LineInfo lineInfo, TextWriter stdout, TextWriter stderr)
     {
         int err = 0;
 
@@ -332,9 +351,9 @@ public sealed class RepCheckTool : ITool
 
             if (opts.ListRefs)
             {
-                ListCirRef(r, path, rpt, stdout);
+                ListCirRef(r, path, rpt, lineInfo, stdout);
             }
-            else if (CheckCirRef(r, path, rpt, opts, stderr) != 0)
+            else if (CheckCirRef(r, path, rpt, opts, lineInfo, stderr) != 0)
             {
                 err = 1;
             }
@@ -349,9 +368,9 @@ public sealed class RepCheckTool : ITool
     }
 
     /// <summary>List a CIR reference without validating it.</summary>
-    private static void ListCirRef(CirRef r, string path, XmlElement? rpt, TextWriter stdout)
+    private static void ListCirRef(CirRef r, string path, XmlElement? rpt, LineInfo lineInfo, TextWriter stdout)
     {
-        int lineno = LineOf(r.Element);
+        int lineno = LineOf(r.Element, lineInfo);
         if (rpt != null)
         {
             AddRefToReport(rpt, r, lineno, null);
@@ -363,9 +382,9 @@ public sealed class RepCheckTool : ITool
     }
 
     /// <summary>Validate a single CIR reference against the available CIRs.</summary>
-    private int CheckCirRef(CirRef r, string path, XmlElement? rpt, Options opts, TextWriter stderr)
+    private int CheckCirRef(CirRef r, string path, XmlElement? rpt, Options opts, LineInfo lineInfo, TextWriter stderr)
     {
-        int lineno = LineOf(r.Element);
+        int lineno = LineOf(r.Element, lineInfo);
 
         // Explicit CIR reference embedded in the ref element?
         var explicitRefs = new List<XmlNode>();
@@ -1133,11 +1152,13 @@ public sealed class RepCheckTool : ITool
         return null;
     }
 
-    private static int LineOf(XmlElement el)
+    private static int LineOf(XmlElement el, LineInfo lineInfo)
     {
-        // System.Xml does not retain source line numbers; the C tool uses them
-        // for diagnostics only. Report 0 as a stable placeholder.
-        return el is IXmlLineInfo li && li.HasLineInfo() ? li.LineNumber : 0;
+        // For the built-in extraction path the ref element is the original DOM
+        // node, so the source line map resolves it (mirroring the C's
+        // xmlGetLineNo(ref)). For the custom -X stylesheet path the element comes
+        // from the transform result and is not in the map, so this yields 0.
+        return lineInfo.LineOf(el);
     }
 
     // ----- Messages ---------------------------------------------------------
