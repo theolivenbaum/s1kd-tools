@@ -293,4 +293,64 @@ public class AsppToolTests
             File.Delete(path);
         }
     }
+
+    // ----------------------------------------------------------------------
+    // Custom display-text XSLT (-x)
+    // ----------------------------------------------------------------------
+
+    // A minimal stylesheet that drives display-text generation. It receives a
+    // <mux> of the DM + ACTs + CCTs and the overwrite-display-text param, and
+    // must output a <mux> whose first child is the transformed DM. This one
+    // copies everything and prepends a fixed display text to each <applic> that
+    // has an <assert>.
+    private const string CustomXsl =
+        """
+        <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+          <xsl:param name="overwrite-display-text"/>
+          <xsl:template match="@*|node()">
+            <xsl:copy><xsl:apply-templates select="@*|node()"/></xsl:copy>
+          </xsl:template>
+          <xsl:template match="applic[assert]">
+            <xsl:copy>
+              <xsl:apply-templates select="@*"/>
+              <displayText><simplePara>CUSTOM-XSL</simplePara></displayText>
+              <xsl:apply-templates select="node()"/>
+            </xsl:copy>
+          </xsl:template>
+        </xsl:stylesheet>
+        """;
+
+    [Fact]
+    public void CustomXsl_GeneratesDisplayText()
+    {
+        string xslPath = WriteTempXsl(CustomXsl);
+        try
+        {
+            var (code, outText, _) = RunStdin(Dm, "-x", xslPath);
+            Assert.Equal(0, code);
+            Assert.Contains("<displayText><simplePara>CUSTOM-XSL</simplePara></displayText>", outText);
+            // The DM (not the mux wrapper) is what is emitted.
+            Assert.Contains("<dmodule", outText);
+            Assert.DoesNotContain("<mux", outText);
+        }
+        finally
+        {
+            File.Delete(xslPath);
+        }
+    }
+
+    [Fact]
+    public void CustomXsl_MissingFile_ReturnsError()
+    {
+        var (code, _, errText) = RunStdin(Dm, "-x", "/no/such/file.xsl");
+        Assert.Equal(2, code);
+        Assert.Contains("Could not read XSLT", errText);
+    }
+
+    private static string WriteTempXsl(string xsl)
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"s1kd-aspp-{Guid.NewGuid():N}.xsl");
+        File.WriteAllText(path, xsl);
+        return path;
+    }
 }

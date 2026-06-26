@@ -418,4 +418,102 @@ public class AppCheckToolTests
         }
         finally { File.Delete(path); }
     }
+
+    /* ---- CCT dependency injection (-~) ---- */
+
+    // CCT: condition cond001 value "running" depends on cond002 = "on".
+    private const string DepCct =
+        """
+        <dmodule>
+          <content>
+            <condCrossRefTable>
+              <condType id="ct-state">
+                <name>State</name>
+                <enumeration applicPropertyValues="running|stopped"/>
+              </condType>
+              <condType id="ct-power">
+                <name>Power</name>
+                <enumeration applicPropertyValues="on|off"/>
+              </condType>
+              <cond id="cond001" condTypeRefId="ct-state">
+                <name>Engine</name>
+                <dependency dependencyTest="dep001" forCondValues="running"/>
+              </cond>
+              <cond id="cond002" condTypeRefId="ct-power">
+                <name>Ignition</name>
+              </cond>
+              <applic id="dep001">
+                <assert applicPropertyIdent="cond002" applicPropertyType="condition" applicPropertyValues="on"/>
+              </applic>
+            </condCrossRefTable>
+          </content>
+        </dmodule>
+        """;
+
+    // DM whose content is applicable when cond001 = running.
+    private const string DmUsingCond =
+        """
+        <dmodule>
+          <referencedApplicGroup>
+            <applic id="app-run">
+              <assert applicPropertyIdent="cond001" applicPropertyType="condition" applicPropertyValues="running"/>
+            </applic>
+          </referencedApplicGroup>
+          <content>
+            <description>
+              <para applicRefId="app-run">Engine is running.</para>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void Dependencies_InjectsDependentConditionIntoCheck()
+    {
+        string cct = WriteTemp(DepCct);
+        string dm = WriteTemp(DmUsingCond);
+        try
+        {
+            // Standalone check with CCT dependencies. The dependency on cond002
+            // is injected into the object's applicability before the property
+            // sets are extracted, so cond002 shows up in the checked combinations.
+            var (code, outText, _) = Run("-C", cct, "-~", "-x", dm);
+            Assert.Equal(0, code);
+            Assert.Contains("applicPropertyIdent=\"cond002\"", outText);
+            // The CCT was loaded and reported.
+            Assert.Contains("<cct", outText);
+        }
+        finally { File.Delete(cct); File.Delete(dm); }
+    }
+
+    [Fact]
+    public void Dependencies_NotRequested_DoesNotInjectDependentCondition()
+    {
+        string cct = WriteTemp(DepCct);
+        string dm = WriteTemp(DmUsingCond);
+        try
+        {
+            // Without -~, the dependency is not injected; only cond001 is checked.
+            var (code, outText, _) = Run("-C", cct, "-x", dm);
+            Assert.Equal(0, code);
+            Assert.DoesNotContain("applicPropertyIdent=\"cond002\"", outText);
+        }
+        finally { File.Delete(cct); File.Delete(dm); }
+    }
+
+    [Fact]
+    public void Dependencies_CustomMode_LoadsCctAndReports()
+    {
+        string cct = WriteTemp(DepCct);
+        string dm = WriteTemp(DmUsingCond);
+        try
+        {
+            // -~ in custom mode (no -s) still locates and loads the CCT to inject
+            // dependencies, adding the cct object node to the report.
+            var (code, outText, _) = Run("-c", "-C", cct, "-~", "-x", dm);
+            Assert.Equal(0, code);
+            Assert.Contains("<cct", outText);
+        }
+        finally { File.Delete(cct); File.Delete(dm); }
+    }
 }

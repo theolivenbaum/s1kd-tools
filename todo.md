@@ -34,7 +34,8 @@ parity. See the per-tool notes and the "Known risks / decisions" section.
 - [x] `Csdb`: latest-issue extraction, basename compare, config discovery
 - [x] `Applicability`: is_applic / eval_assert / eval_evaluate / eval_applic
 - [x] `Applicability`: same_annotation (C14N), rem_delete_elems
-- [ ] CCT dependency injection (`add_cct_depends`) — used by aspp/instance
+- [x] CCT dependency injection (`add_cct_depends`) — used by appcheck/instance
+      (`Applicability.AddCctDepends`; wired into appcheck `-~`)
 - [ ] ICN entity / notation helpers (`add_icn`, `add_notation`) — used by addicn
 - [x] XSLT extension shim for EXSLT — `S1kdTools.Xslt.Exslt` (str/math/date/set/
       common extension objects + Transform helper); native exsl:node-set used.
@@ -91,13 +92,15 @@ Validation:
       (DOM reimpl of the extraction XSLTs). TODO: -X custom XSLT; line numbers.
 - [x] s1kd-appcheck (2840) — applicability validation (undefined props, nested,
       redundant, duplicate; standalone/full/products via in-process filter +
-      broken-internalRef detection). PARTIAL: external -e/-b validators, CCT deps.
+      broken-internalRef detection; CCT deps -~ via Applicability.AddCctDepends).
+      PARTIAL: external -e/-b validators.
 
 Publication:
 - [x] s1kd-acronyms (1020) — markup from .acronyms + list/table generation
       (DOM markup + original XSLTs). TODO: interactive -i/-I prompting (no-op).
 - [x] s1kd-aspp (929) — applicability preprocessing; display-text reimplemented
-      in DOM (C path needs EXSLT str:replace). TODO: -x custom XSLT, CCT deps.
+      in DOM (C path needs EXSLT str:replace). -x custom XSLT done (mux + XSLT
+      transform). NOTE: aspp does not use add_cct_depends in the C.
 - [x] s1kd-flatten (765) — resolve dmRef/pmRef to files and inline; -u dedup
       reimplemented in DOM (C uses EXSLT). 
 - [x] s1kd-fmgen (1021) — front matter via 10 embedded XSLTs (all XSLT 1.0, no
