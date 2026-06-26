@@ -1,11 +1,16 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Xml;
+
 namespace S1kdTools.Tools;
 
 /// <summary>
 /// Port of <c>s1kd-ls</c>: list CSDB objects in a directory tree. Supports type
 /// selection, official/inwork and latest/old filtering, recursion, list input,
-/// writable/read-only filtering and null-delimited output. The <c>-e/--exec</c>
-/// option and the <c>-N/--omit-issue</c> file-content inwork lookup are tracked
-/// in todo.md.
+/// writable/read-only filtering and null-delimited output, the
+/// <c>-e/--exec</c> option (run a command for each listed object) and the
+/// <c>-N/--omit-issue</c> file-content inwork lookup.
 /// </summary>
 public sealed class LsTool : ITool
 {
@@ -26,6 +31,8 @@ public sealed class LsTool : ITool
         var show = Show.None;
         bool onlyLatest = false, onlyOld = false, onlyOfficial = false, onlyInwork = false;
         bool onlyWritable = false, onlyReadonly = false, recursive = false, listInput = false;
+        bool noIssue = false;
+        string? execStr = null;
         char sep = '\n';
         var inputs = new List<string>();
 
@@ -37,6 +44,11 @@ public sealed class LsTool : ITool
                 case "-h" or "-?" or "--help": ShowHelp(stdout); return 0;
                 case "--version": stdout.WriteLine($"s1kd-{Name} (s1kd-tools) {Version}"); return 0;
                 case "-0" or "--null": sep = '\0'; break;
+                case "-N" or "--omit-issue": noIssue = true; break;
+                case "-e" or "--exec":
+                    if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: -e requires an argument"); return 2; }
+                    execStr = args[i];
+                    break;
                 case "-C" or "--com": show |= Show.Com; break;
                 case "-D" or "--dm": show |= Show.Dm; break;
                 case "-G" or "--icn": show |= Show.Icn; break;
@@ -128,7 +140,7 @@ public sealed class LsTool : ITool
                 {
                     continue;
                 }
-                Print(list, stdout, sep);
+                Print(list, stdout, sep, execStr);
                 continue;
             }
 
@@ -140,25 +152,51 @@ public sealed class LsTool : ITool
                     continue; // ICNs have no inwork notion in the C tool's output
                 }
                 var icns = ApplyLatestOld(list, onlyLatest, onlyOld, isIcn: true);
-                Print(icns, stdout, sep);
+                Print(icns, stdout, sep, execStr);
                 continue;
             }
 
             IEnumerable<string> result = list;
             if (onlyOfficial)
             {
-                result = result.Where(Csdb.IsOfficialIssue);
+                result = result.Where(f => IsOfficialIssue(f, noIssue));
             }
             else if (onlyInwork)
             {
-                result = result.Where(f => !Csdb.IsOfficialIssue(f));
+                result = result.Where(f => !IsOfficialIssue(f, noIssue));
             }
 
             var filtered = ApplyLatestOld(result.ToList(), onlyLatest, onlyOld, isIcn: false);
-            Print(filtered, stdout, sep);
+            Print(filtered, stdout, sep, execStr);
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// Mirrors <c>is_official_issue</c>: in the default case the inwork number is
+    /// parsed from the filename (<c>%*[^_]_%*3s-%2s</c>); with <c>-N</c> the
+    /// filename omits issue info, so the inwork state is read from the object's
+    /// XML (<c>//@inWork|//@inwork</c>, official when absent or <c>00</c>).
+    /// </summary>
+    private static bool IsOfficialIssue(string path, bool noIssue)
+    {
+        if (!noIssue)
+        {
+            return Csdb.IsOfficialIssue(path);
+        }
+
+        try
+        {
+            XmlDocument doc = XmlUtils.ReadDoc(path);
+            string? inwork = XmlUtils.XPathFirstValue(doc, null, "//@inWork|//@inwork");
+            return inwork == null || inwork == "00";
+        }
+        catch
+        {
+            // C: read_xml_doc failure -> treated as official (returns 1).
+            return true;
+        }
     }
 
     private static List<string> ApplyLatestOld(List<string> list, bool latest, bool old, bool isIcn)
@@ -174,13 +212,87 @@ public sealed class LsTool : ITool
         return list;
     }
 
-    private static void Print(IEnumerable<string> files, TextWriter stdout, char sep)
+    private static void Print(IEnumerable<string> files, TextWriter stdout, char sep, string? execStr)
     {
+        if (execStr != null)
+        {
+            foreach (string f in files)
+            {
+                ExecFile(execStr, f);
+            }
+            return;
+        }
+
         foreach (string f in files)
         {
             stdout.Write(f);
             stdout.Write(sep);
         }
+    }
+
+    /// <summary>
+    /// Mirrors <c>execfile</c> from the shared C library: expand <c>{}</c> in the
+    /// command string to the object path and run it through the system shell
+    /// (libxml2's tools use <c>system()</c>, which on POSIX is <c>/bin/sh -c</c>).
+    /// </summary>
+    public static int ExecFile(string execStr, string path)
+    {
+        string cmd = BuildExecCommand(execStr, path);
+
+        string shell, flag;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            shell = "cmd.exe";
+            flag = "/c";
+        }
+        else
+        {
+            shell = "/bin/sh";
+            flag = "-c";
+        }
+
+        try
+        {
+            var psi = new ProcessStartInfo(shell) { UseShellExecute = false };
+            psi.ArgumentList.Add(flag);
+            psi.ArgumentList.Add(cmd);
+            using Process? p = Process.Start(psi);
+            if (p == null)
+            {
+                return 127;
+            }
+            p.WaitForExit();
+            return p.ExitCode;
+        }
+        catch
+        {
+            return 127;
+        }
+    }
+
+    /// <summary>
+    /// Substitute the object path for each <c>{}</c> placeholder in the command
+    /// string (mirrors the format building in <c>execfile</c>). The C code maps
+    /// <c>{}</c> to a printf <c>%1$s</c> argument; here we substitute the path
+    /// directly for each occurrence.
+    /// </summary>
+    public static string BuildExecCommand(string execStr, string path)
+    {
+        var sb = new StringBuilder(execStr.Length + path.Length);
+        for (int i = 0; i < execStr.Length; i++)
+        {
+            char c = execStr[i];
+            if (c == '{' && i + 1 < execStr.Length && execStr[i + 1] == '}')
+            {
+                sb.Append(path);
+                i++;
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.ToString();
     }
 
     private static bool IsNon(string baseName) =>
@@ -379,12 +491,14 @@ public sealed class LsTool : ITool
         stdout.WriteLine("  -0, --null        Output null-delimited list.");
         stdout.WriteLine("  -C, --com         List comments.");
         stdout.WriteLine("  -D, --dm          List data modules.");
+        stdout.WriteLine("  -e, --exec <cmd>  Execute <cmd> for each CSDB object.");
         stdout.WriteLine("  -G, --icn         List ICN files.");
         stdout.WriteLine("  -I, --inwork      Show only inwork issues.");
         stdout.WriteLine("  -i, --official    Show only official issues.");
         stdout.WriteLine("  -L, --dml         List DMLs.");
         stdout.WriteLine("  -l, --latest      Show only latest official/inwork issue.");
         stdout.WriteLine("  -M, --imf         List ICN metadata files.");
+        stdout.WriteLine("  -N, --omit-issue  Assume issue/inwork numbers are omitted.");
         stdout.WriteLine("  -n, --other       List non-S1000D files.");
         stdout.WriteLine("  -o, --old         Show only old official/inwork issues.");
         stdout.WriteLine("  -P, --pm          List publication modules.");

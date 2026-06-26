@@ -464,6 +464,129 @@ public class RefsToolTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // A data module with a graphic whose hotspots point (by APS ID) at nodes in
+    // an XML-based ICN.
+    private const string HotspotDm =
+        """
+        <dmodule>
+          <content>
+            <figure>
+              <graphic infoEntityIdent="ICN-EX-A-000000-A-00001-A">
+                <hotspot apsid="hs1"/>
+                <hotspot apsid="hs2"/>
+                <hotspot apsid="missing"/>
+              </graphic>
+            </figure>
+          </content>
+        </dmodule>
+        """;
+
+    // An SVG-style ICN where hotspot targets are identified by @id.
+    private const string IcnSvg =
+        """
+        <svg>
+          <g id="hs1"/>
+          <g id="hs2"/>
+        </svg>
+        """;
+
+    [Fact]
+    public void Hotspot_MatchesApsIdsAgainstIcn()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", HotspotDm);
+            // The ICN file the graphic references (matched by code prefix).
+            WriteFixture(dir, "ICN-EX-A-000000-A-00001-A-001-01.XML", IcnSvg);
+
+            // -H: list hotspot matches; -a so unmatched hotspots print to stdout.
+            var (code, outText, _) = Run("-H", "-a", "-d", dir, src);
+
+            // hs1/hs2 match nodes in the ICN; "missing" does not -> exit 1.
+            Assert.Contains("hs1", outText);
+            Assert.Contains("hs2", outText);
+            Assert.Contains("missing", outText);
+            Assert.Equal(1, code);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Hotspot_CustomXPathMatchesByCustomAttribute()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML",
+                """
+                <dmodule>
+                  <content>
+                    <figure>
+                      <graphic infoEntityIdent="ICN-EX-A-000000-A-00001-A">
+                        <hotspot apsid="hs1"/>
+                      </graphic>
+                    </figure>
+                  </content>
+                </dmodule>
+                """);
+            WriteFixture(dir, "ICN-EX-A-000000-A-00001-A-001-01.XML",
+                "<icn><part ref=\"hs1\"/></icn>");
+
+            // The custom XPath matches on @ref instead of the default @id/@DEF.
+            var (code, _, _) = Run("-H", "-j", "//*[@ref = $id]", "-d", dir, src);
+
+            Assert.Equal(0, code); // hs1 matches via @ref
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Hotspot_UnmatchedWhenIcnMissing()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", HotspotDm);
+            // No ICN file present: every hotspot is unmatched.
+            var (code, _, errText) = Run("-H", "-d", dir, src);
+
+            Assert.Equal(1, code);
+            Assert.Contains("Unmatched reference", errText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Exec_RunsCommandForEachMatchedObject()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            string target = "DMC-EX-A-00-00-01-00A-040A-D_001-00_EN-CA.XML";
+            WriteFixture(dir, target, "<dmodule/>");
+
+            string outFile = Path.Combine(dir, "exec-out.txt");
+            string cmd = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+                System.Runtime.InteropServices.OSPlatform.Windows)
+                ? $"echo {{}}>>\"{outFile}\""
+                : $"echo {{}} >> \"{outFile}\"";
+
+            // -e runs the command for each matched object instead of printing it.
+            var (code, outText, _) = Run("-e", cmd, "-D", "-d", dir, src);
+
+            Assert.Equal(0, code);
+            // Nothing about the matched DM is printed to stdout in exec mode.
+            Assert.DoesNotContain(target, outText);
+
+            Assert.True(File.Exists(outFile));
+            string content = File.ReadAllText(outFile);
+            Assert.Contains(target, content);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     [Fact]
     public void Version_Prints522()
     {
