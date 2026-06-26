@@ -1,5 +1,7 @@
 using System.Text;
 using System.Xml;
+using System.Xml.XPath;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -21,11 +23,12 @@ namespace S1kdTools.Tools;
 ///   tree (-o), where-used (-w) and list-recursively (-R), and .externalpubs
 ///   lookup (-3) for externalPubRef resolution.
 ///
-/// Still documented as partial: hotspot matching (-H/-j/-J), exec (-e) and the
-/// non-chapterized IPD SNS construction (-b). Their option flags are parsed for
-/// CLI compatibility but the features fall back to plain listing. ICN entity
-/// rewriting on update (-U of an infoEntityIdent) is not performed because
-/// System.Xml's entity handling differs from libxml2.
+/// Hotspot matching (-H/-j/-J) and exec (-e) are now ported: hotspots in a
+/// graphic are matched against APS IDs in the referenced (XML-based) ICN using
+/// the configurable hotspot XPath, and -e runs a command for each matched
+/// object. Still documented as partial: the non-chapterized IPD SNS
+/// construction (-b). ICN entity rewriting on update (-U of an infoEntityIdent)
+/// is not performed because System.Xml's entity handling differs from libxml2.
 /// </summary>
 public sealed class RefsTool : ITool
 {
@@ -67,7 +70,11 @@ public sealed class RefsTool : ITool
     private enum Verbosity { Quiet = 0, Normal = 1, Verbose = 2, Debug = 3 }
 
     // Output mode selector for matched / unmatched references.
-    private enum OutputMode { Plain, Src, SrcLine, Xml, Custom, WhereUsed }
+    private enum OutputMode { Plain, Src, SrcLine, Xml, Custom, WhereUsed, Exec }
+
+    // Default XPath for matching a hotspot's APS ID to a node in the ICN.
+    // Mirrors DEFAULT_HOTSPOT_XPATH from the C source.
+    private const string DefaultHotspotXPath = "/X3D//*[@DEF=$id]|//*[@id=$id]";
 
     // ----- Runtime options (set from args, then immutable for the run) -----
     private sealed class Options
@@ -100,6 +107,13 @@ public sealed class RefsTool : ITool
 
         // .externalpubs document (-3 / autodiscovered).
         public XmlDocument? ExternalPubs;
+
+        // Hotspot matching (-H/-j/-J).
+        public string HotspotXPath = DefaultHotspotXPath;
+        public readonly List<(string Prefix, string Uri)> HotspotNs = new();
+
+        // Exec mode (-e): run this command for each matched object.
+        public string? ExecStr;
 
         // Recursion bookkeeping for -R (avoid loops).
         public readonly HashSet<string> ListedFiles = new(StringComparer.Ordinal);
@@ -187,10 +201,16 @@ public sealed class RefsTool : ITool
                     if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: -b requires an argument"); return 2; }
                     break;
                 case "-j" or "--hotspot-xpath":
-                case "-J" or "--namespace":
-                case "-e" or "--exec":
-                    // Options that take an argument but whose feature is not ported.
                     if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: {a} requires an argument"); return 2; }
+                    opts.HotspotXPath = args[i];
+                    break;
+                case "-J" or "--namespace":
+                    if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: {a} requires an argument"); return 2; }
+                    AddHotspotNs(opts, args[i]);
+                    break;
+                case "-e" or "--exec":
+                    if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: {a} requires an argument"); return 2; }
+                    opts.ExecStr = args[i];
                     break;
                 default:
                     if (a.StartsWith('-') && a.Length > 1 && a != "-")
@@ -236,6 +256,13 @@ public sealed class RefsTool : ITool
         else if (inclSrcFname)
         {
             opts.Mode = inclLineNum ? OutputMode.SrcLine : OutputMode.Src;
+        }
+
+        // -e overrides all the print modes for matched refs (mirrors the C tool
+        // assigning printMatchedFn = execMatched last in main()).
+        if (opts.ExecStr != null)
+        {
+            opts.Mode = OutputMode.Exec;
         }
 
         if (opts.XmlOutput)
@@ -532,6 +559,8 @@ public sealed class RefsTool : ITool
             code = GetSourceIdent(node, opts);
         else if (Has(show, Show.Rep) && name == "repositorySourceDmIdent")
             code = GetSourceIdent(node, opts);
+        else if (Has(show, Show.Hot) && name == "graphic")
+            return GetHotspots(node, src, opts, stdout, stderr);
         else if (Has(show, Show.Ipd) && name is "catalogSeqNumberRef" or "csnref")
             code = GetIpdCode(node, opts);
         else if (Has(show, Show.Csn) && name is "item" or "catalogSeqNumberValue" or "refcsn")
@@ -652,6 +681,155 @@ public sealed class RefsTool : ITool
             PrintUnmatched(node, src, code, id, opts, stdout, stderr);
         }
         return 1;
+    }
+
+    // ----- Hotspot matching (-H/-j/-J) -----
+
+    // Register a namespace (prefix=uri) for the hotspot XPath (mirrors
+    // addHotspotNs); the value before the first '=' is the prefix, the rest the URI.
+    private static void AddHotspotNs(Options opts, string s)
+    {
+        int eq = s.IndexOf('=');
+        string prefix = eq < 0 ? s : s[..eq];
+        string uri = eq < 0 ? string.Empty : s[(eq + 1)..];
+        opts.HotspotNs.Add((prefix, uri));
+    }
+
+    // Match the hotspots in a graphic against the APS IDs in the referenced ICN
+    // (mirrors getHotspots). Only hotspots with an application-structure ident
+    // are considered (the others use coordinates rather than pointing at an
+    // object). Returns the number of unmatched hotspots.
+    private int GetHotspots(XmlNode graphic, string src, Options opts, TextWriter stdout, TextWriter stderr)
+    {
+        var hotspots = graphic.SelectNodes(".//hotspot/@applicationStructureIdent|.//hotspot/@apsid");
+        if (hotspots == null || hotspots.Count == 0)
+        {
+            return 0;
+        }
+
+        // The graphic carries the ICN reference via @infoEntityIdent|@boardno.
+        XmlNode? icn = FirstNode(graphic, "@infoEntityIdent|@boardno");
+        string code = icn != null ? GetIcnAttr(icn, opts) : "";
+
+        string? fname = FindObjectFile(code, opts);
+        XmlDocument? doc = fname != null ? TryReadDoc(fname) : null;
+        if (doc != null && opts.RemDelete)
+        {
+            XmlUtils.RemoveDeleteElements(doc);
+        }
+
+        int err = 0;
+        foreach (XmlNode hotspot in hotspots.Cast<XmlNode>().ToList())
+        {
+            err += MatchHotspot(hotspot, doc, code, doc != null ? fname! : code, src, opts, stdout, stderr);
+        }
+        return err;
+    }
+
+    // Match a single hotspot's APS ID against a node in the ICN document using
+    // the configurable hotspot XPath (mirrors matchHotspot).
+    private int MatchHotspot(XmlNode hotspot, XmlDocument? doc, string code, string fname, string src,
+        Options opts, TextWriter stdout, TextWriter stderr)
+    {
+        string apsid = hotspot.Value ?? hotspot.InnerText;
+        bool err = doc == null;
+
+        if (doc != null)
+        {
+            var ctx = new HotspotXsltContext(new NameTable());
+            foreach (var (prefix, uri) in opts.HotspotNs)
+            {
+                ctx.AddNamespace(prefix, uri);
+            }
+            ctx.SetVariable("id", apsid);
+
+            XmlNode? node = SelectWithContext(doc, opts.HotspotXPath, ctx);
+
+            if (node != null)
+            {
+                if (opts.ShowMatched && !opts.TagUnmatched)
+                {
+                    PrintMatched(hotspot, src, code, apsid, fname, opts, stdout);
+                }
+            }
+            else
+            {
+                err = true;
+            }
+        }
+
+        if (err)
+        {
+            if (opts.TagUnmatched)
+            {
+                TagUnmatchedRef(hotspot is XmlAttribute a ? a.OwnerElement! : hotspot);
+            }
+            else if (opts.ShowUnmatched)
+            {
+                PrintMatched(hotspot, src, code, apsid, doc != null ? fname : null, opts, stdout);
+            }
+            else if (opts.Verbosity >= Verbosity.Normal)
+            {
+                PrintUnmatched(hotspot, src, code, apsid, opts, stdout, stderr);
+            }
+        }
+
+        return err ? 1 : 0;
+    }
+
+    // Evaluate an XPath that may reference variables/namespaces (via the supplied
+    // XsltContext) and return the first matching node.
+    private static XmlNode? SelectWithContext(XmlDocument doc, string xpath, XsltContext ctx)
+    {
+        try
+        {
+            XPathNavigator nav = doc.CreateNavigator()!;
+            XPathExpression expr = nav.Compile(xpath);
+            expr.SetContext(ctx);
+            XPathNodeIterator it = nav.Select(expr);
+            if (it.MoveNext() && it.Current is IHasXmlNode hasNode)
+            {
+                return hasNode.GetNode();
+            }
+        }
+        catch (XPathException)
+        {
+            return null;
+        }
+        return null;
+    }
+
+    // Minimal XsltContext supporting string variables (e.g. $id) and namespace
+    // prefixes for the hotspot XPath.
+    private sealed class HotspotXsltContext : XsltContext
+    {
+        private readonly Dictionary<string, string> _vars = new(StringComparer.Ordinal);
+
+        public HotspotXsltContext(NameTable nt) : base(nt) { }
+
+        public void SetVariable(string name, string value) => _vars[name] = value;
+
+        public override IXsltContextVariable ResolveVariable(string prefix, string name) =>
+            new StringVariable(_vars.TryGetValue(name, out string? v) ? v : string.Empty);
+
+        public override IXsltContextFunction ResolveFunction(string prefix, string name, XPathResultType[] argTypes) =>
+            throw new XPathException($"Unknown function: {name}");
+
+        public override bool Whitespace => true;
+
+        public override bool PreserveWhitespace(XPathNavigator node) => true;
+
+        public override int CompareDocument(string baseUri, string nextbaseUri) => 0;
+
+        private sealed class StringVariable : IXsltContextVariable
+        {
+            private readonly string _value;
+            public StringVariable(string value) => _value = value;
+            public object Evaluate(XsltContext xsltContext) => _value;
+            public bool IsLocal => false;
+            public bool IsParam => false;
+            public XPathResultType VariableType => XPathResultType.String;
+        }
     }
 
     // ----- Tag unmatched (-X) -----
@@ -1293,6 +1471,11 @@ public sealed class RefsTool : ITool
             case OutputMode.WhereUsed:
                 stdout.Write($"{src}\n");
                 break;
+            case OutputMode.Exec:
+                // Mirrors execMatched -> execfile(execStr, fname). The matched
+                // filename is the argument substituted for {} in the command.
+                LsTool.ExecFile(opts.ExecStr!, fname ?? code);
+                break;
             case OutputMode.Xml:
                 PrintMatchedXml(node, src, code, frag, fname, "found", stdout);
                 break;
@@ -1799,11 +1982,15 @@ public sealed class RefsTool : ITool
         stdout.WriteLine("  -D, --dm               List data module references.");
         stdout.WriteLine("  -d, --dir <dir>        Directory to search for matches in.");
         stdout.WriteLine("  -E, --epr              List external pub refs.");
+        stdout.WriteLine("  -e, --exec <cmd>       Execute <cmd> for each CSDB object matched.");
         stdout.WriteLine("  -F, --overwrite        Overwrite updated (-U) or tagged (-X) objects.");
         stdout.WriteLine("  -f, --filename         Print the source filename for each reference.");
         stdout.WriteLine("  -G, --icn              List ICN references.");
+        stdout.WriteLine("  -H, --hotspot          List hotspot matches in ICNs.");
         stdout.WriteLine("  -I, --update-issue     Update references to the latest matched object (implies -U -i).");
         stdout.WriteLine("  -i, --ignore-issue     Ignore issue info when matching.");
+        stdout.WriteLine("  -J, --namespace <ns=URL>   Register a namespace for the hotspot XPath.");
+        stdout.WriteLine("  -j, --hotspot-xpath <xpath>  XPath to use for matching hotspots (-H).");
         stdout.WriteLine("  -K, --csn              List CSN references.");
         stdout.WriteLine("  -L, --dml              List DML references.");
         stdout.WriteLine("  -l, --list             Treat input as list of CSDB objects.");
