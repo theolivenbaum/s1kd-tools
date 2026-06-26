@@ -636,4 +636,360 @@ public class InstanceToolTests
         Assert.NotNull(assert);
         Assert.Equal("A", assert!.GetAttribute("applicPropertyValues"));
     }
+
+    // ---- alts flattening (-F / -4) ----
+
+    /// <summary>
+    /// A DM with a single-child figureAlts (which should flatten) and a
+    /// multi-child multimediaAlts (which should not), plus a cross-reference.
+    /// </summary>
+    private const string AltsDm =
+        """
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmIdent>
+                <dmCode modelIdentCode="EX" systemDiffCode="A" systemCode="00"
+                        subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                        disassyCode="00" disassyCodeVariant="A" infoCode="040"
+                        infoCodeVariant="A" itemLocationCode="D"/>
+                <language languageIsoCode="en" countryIsoCode="CA"/>
+                <issueInfo issueNumber="001" inWork="00"/>
+              </dmIdent>
+              <dmAddressItems>
+                <issueDate year="2026" month="06" day="25"/>
+                <dmTitle><techName>Example</techName></dmTitle>
+              </dmAddressItems>
+            </dmAddress>
+            <dmStatus issueType="new"><security securityClassification="01"/></dmStatus>
+          </identAndStatusSection>
+          <content>
+            <description>
+              <para>See <internalRef internalRefId="fig-1" internalRefTargetType="irtt05"/>.</para>
+              <figureAlts id="fig-1">
+                <figure><title>The figure.</title></figure>
+              </figureAlts>
+              <multimediaAlts id="mm-1">
+                <multimedia><title>One.</title></multimedia>
+                <multimedia><title>Two.</title></multimedia>
+              </multimediaAlts>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void FlattenAlts_ReplacesSingleChildAltsWithChild()
+    {
+        string path = WriteFixture(AltsDm);
+        try
+        {
+            var (code, outText, _) = Run(path, "-F");
+            Assert.Equal(0, code);
+            // figureAlts has one child -> flattened away; the figure keeps the id.
+            Assert.DoesNotContain("figureAlts", outText);
+            Assert.Contains("<figure id=\"fig-1\"", outText);
+            // multimediaAlts has two children -> left intact.
+            Assert.Contains("multimediaAlts", outText);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void FlattenAltsRefs_FixesInternalRefTargetType()
+    {
+        string path = WriteFixture(AltsDm);
+        try
+        {
+            var (code, outText, _) = Run(path, "-4");
+            Assert.Equal(0, code);
+            Assert.DoesNotContain("figureAlts", outText);
+            // The xref to the (former) figureAlts becomes irtt01.
+            Assert.Contains("internalRefTargetType=\"irtt01\"", outText);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void LibraryFlattenAlts_FlattensInPlace()
+    {
+        var doc = XmlUtils.ReadMem(AltsDm);
+        Instance.FlattenAlts(doc, fixAltsRefs: false);
+        Assert.Null(doc.SelectSingleNode("//figureAlts"));
+        Assert.NotNull(doc.SelectSingleNode("//multimediaAlts"));
+        var fig = doc.SelectSingleNode("//figure[@id='fig-1']");
+        Assert.NotNull(fig);
+    }
+
+    // ---- automatic naming (-O / -5 / -N) ----
+
+    [Fact]
+    public void Outdir_AutoNamesInstance()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-out-{Guid.NewGuid():N}");
+        string path = WriteFixture(ApplicDm);
+        try
+        {
+            var (code, _, _) = Run(path, "-s", "version:prodattr=A", "-O", dir, "-f");
+            Assert.Equal(0, code);
+            // ApplicDm: EX-A-00-0-0-00-00A-040A-D, issue 002-01, EN-CA.
+            string expected = Path.Combine(dir, "DMC-EX-A-00-00-00-00A-040A-D_002-01_EN-CA.XML");
+            Assert.True(File.Exists(expected), $"expected {expected}");
+            string written = File.ReadAllText(expected);
+            Assert.Contains("Only for version A.", written);
+        }
+        finally
+        {
+            File.Delete(path);
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Outdir_OmitIssue_DropsIssueFromName()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-out-{Guid.NewGuid():N}");
+        string path = WriteFixture(ApplicDm);
+        try
+        {
+            var (code, _, _) = Run(path, "-O", dir, "-N", "-f");
+            Assert.Equal(0, code);
+            string expected = Path.Combine(dir, "DMC-EX-A-00-00-00-00A-040A-D_EN-CA.XML");
+            Assert.True(File.Exists(expected), $"expected {expected}");
+        }
+        finally
+        {
+            File.Delete(path);
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Outdir_Print_OutputsGeneratedFileName()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-out-{Guid.NewGuid():N}");
+        string path = WriteFixture(ApplicDm);
+        try
+        {
+            var (code, outText, _) = Run(path, "-O", dir, "-5", "-f");
+            Assert.Equal(0, code);
+            Assert.Contains("DMC-EX-A-00-00-00-00A-040A-D_002-01_EN-CA.XML", outText);
+        }
+        finally
+        {
+            File.Delete(path);
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LibraryAutoName_BuildsDmFilename()
+    {
+        var doc = XmlUtils.ReadMem(ApplicDm);
+        string? name = Instance.AutoName("ignored.XML", doc, ".", noIss: false);
+        Assert.Equal("DMC-EX-A-00-00-00-00A-040A-D_002-01_EN-CA.XML", name);
+    }
+
+    // ---- container resolution (-Q) ----
+
+    private static string ContainerExampleDir =>
+        Path.Combine(FindRepoRoot(), "reference", "tools", "s1kd-instance", "example", "container");
+
+    private static string FindRepoRoot()
+    {
+        string dir = AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            if (Directory.Exists(Path.Combine(dir, "reference", "tools", "s1kd-instance")))
+            {
+                return dir;
+            }
+            dir = Path.GetDirectoryName(dir)!;
+        }
+        throw new DirectoryNotFoundException("Could not locate repo root with reference/ tree.");
+    }
+
+    [Fact]
+    public void ResolveContainers_PicksApplicableReference()
+    {
+        string srcDir = ContainerExampleDir;
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-cnt-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            // Copy the referencing DM, the container and its referenced DMs.
+            foreach (string f in Directory.GetFiles(srcDir, "*.XML"))
+            {
+                File.Copy(f, Path.Combine(dir, Path.GetFileName(f)));
+            }
+
+            string referencer = Path.Combine(dir, "DMC-AJ-A-35-13-51-00A-040A-A_000-01_EN-CA.XML");
+            // config=A keeps the 00B ref (config A) inside the container.
+            var (code, outText, _) = Run(referencer, "-Q", "-d", dir, "-s", "config:prodattr=A");
+            Assert.Equal(0, code);
+            // The container ref (00A-520A) is replaced by the 00B-520A ref.
+            Assert.Contains("disassyCodeVariant=\"B\"", outText);
+            Assert.DoesNotContain("disassyCode=\"00\" disassyCodeVariant=\"A\" infoCode=\"520\"", outText);
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    // ---- update-instances (-@) ----
+
+    /// <summary>A master DM with two applicability versions.</summary>
+    private const string UpdateMasterDm =
+        """
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmIdent>
+                <dmCode modelIdentCode="UPD" systemDiffCode="A" systemCode="00"
+                        subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                        disassyCode="00" disassyCodeVariant="A" infoCode="040"
+                        infoCodeVariant="A" itemLocationCode="D"/>
+                <language languageIsoCode="en" countryIsoCode="CA"/>
+                <issueInfo issueNumber="001" inWork="00"/>
+              </dmIdent>
+              <dmAddressItems>
+                <issueDate year="2026" month="06" day="25"/>
+                <dmTitle><techName>Master</techName></dmTitle>
+              </dmAddressItems>
+            </dmAddress>
+            <dmStatus issueType="changed"><security securityClassification="01"/></dmStatus>
+          </identAndStatusSection>
+          <content>
+            <referencedApplicGroup>
+              <applic id="app-A">
+                <assert applicPropertyIdent="version" applicPropertyType="prodattr" applicPropertyValues="A"/>
+              </applic>
+              <applic id="app-B">
+                <assert applicPropertyIdent="version" applicPropertyType="prodattr" applicPropertyValues="B"/>
+              </applic>
+            </referencedApplicGroup>
+            <description>
+              <para>Always present.</para>
+              <para applicRefId="app-A">Only for version A.</para>
+              <para applicRefId="app-B">Only for version B.</para>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    /// <summary>An existing instance of the master, carrying its source ident and version=A applic.</summary>
+    private const string UpdateInstanceDm =
+        """
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmIdent>
+                <dmCode modelIdentCode="UPD" systemDiffCode="A" systemCode="00"
+                        subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                        disassyCode="00" disassyCodeVariant="A" infoCode="040"
+                        infoCodeVariant="A" itemLocationCode="D"/>
+                <identExtension extensionProducer="S1KDI" extensionCode="VERSIONA"/>
+                <language languageIsoCode="en" countryIsoCode="CA"/>
+                <issueInfo issueNumber="001" inWork="00"/>
+              </dmIdent>
+              <dmAddressItems>
+                <issueDate year="2026" month="06" day="25"/>
+                <dmTitle><techName>Master</techName></dmTitle>
+              </dmAddressItems>
+            </dmAddress>
+            <dmStatus issueType="changed">
+              <security securityClassification="01"/>
+              <sourceDmIdent>
+                <dmCode modelIdentCode="UPD" systemDiffCode="A" systemCode="00"
+                        subSystemCode="0" subSubSystemCode="0" assyCode="00"
+                        disassyCode="00" disassyCodeVariant="A" infoCode="040"
+                        infoCodeVariant="A" itemLocationCode="D"/>
+                <language languageIsoCode="en" countryIsoCode="CA"/>
+                <issueInfo issueNumber="001" inWork="00"/>
+              </sourceDmIdent>
+              <applic>
+                <assert applicPropertyIdent="version" applicPropertyType="prodattr" applicPropertyValues="A"/>
+              </applic>
+            </dmStatus>
+          </identAndStatusSection>
+          <content>
+            <description><para>Stale content.</para></description>
+          </content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void UpdateInstances_RefiltersFromSourceUsingInstanceApplic()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-upd-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            WriteFixture(dir, "DMC-UPD-A-00-00-00-00A-040A-D_001-00_EN-CA.XML", UpdateMasterDm);
+            string inst = WriteFixture(dir, "DME-S1KDI-VERSIONA-UPD-A-00-00-00-00A-040A-D_001-00_EN-CA.XML", UpdateInstanceDm);
+
+            var (code, outText, _) = Run(inst, "-@", "-d", dir);
+            Assert.Equal(0, code);
+            // The instance is re-derived from the master with its own version=A applic.
+            Assert.Contains("Always present.", outText);
+            Assert.Contains("Only for version A.", outText);
+            Assert.DoesNotContain("Only for version B.", outText);
+            Assert.DoesNotContain("Stale content.", outText);
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void UpdateInstances_NoSource_ReturnsMissingSource()
+    {
+        // An object with no sourceDmIdent cannot be updated.
+        string path = WriteFixture(ApplicDm);
+        try
+        {
+            var (code, _, errText) = Run(path, "-@");
+            Assert.Equal(3, code);
+            Assert.Contains("Could not find source object", errText);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void DryRun_DoesNotWriteOutput()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-dry-{Guid.NewGuid():N}");
+        string path = WriteFixture(ApplicDm);
+        try
+        {
+            var (code, outText, _) = Run(path, "-O", dir, "-7", "-5", "-f");
+            Assert.Equal(0, code);
+            // -5 still prints the name, but -7 means nothing is written.
+            Assert.Contains("DMC-EX-A-00-00-00-00A-040A-D_002-01_EN-CA.XML", outText);
+            Assert.False(Directory.Exists(dir) &&
+                Directory.GetFiles(dir).Length > 0);
+        }
+        finally
+        {
+            File.Delete(path);
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LibraryLoadApplicFromInst_LoadsAsserts()
+    {
+        var defsDoc = XmlUtils.NewDocument();
+        var defs = defsDoc.CreateElement("applic");
+        defsDoc.AppendChild(defs);
+
+        var inst = XmlUtils.ReadMem(UpdateInstanceDm);
+        Instance.LoadApplicFromInst(defs, inst);
+
+        var assert = defs.SelectSingleNode("assert[@applicPropertyIdent='version']") as XmlElement;
+        Assert.NotNull(assert);
+        Assert.Equal("A", assert!.GetAttribute("applicPropertyValues"));
+    }
 }
