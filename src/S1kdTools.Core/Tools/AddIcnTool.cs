@@ -9,16 +9,10 @@ namespace S1kdTools.Tools;
 /// S1000D module.
 /// </summary>
 /// <remarks>
-/// Mirrors <c>reference/tools/s1kd-addicn/s1kd-addicn.c</c> and the shared
-/// <c>add_icn</c>/<c>add_notation</c> helpers in
-/// <c>reference/tools/common/s1kd_tools.c</c>. For each ICN file path the tool
-/// derives:
-/// <list type="bullet">
-///   <item>the info entity identifier (basename up to the first '.'),</item>
-///   <item>the notation name (the remainder of the basename after the first '.'),</item>
-/// </list>
-/// then declares a SYSTEM NOTATION for the notation name and an external
-/// unparsed general ENTITY referencing the ICN via that notation.
+/// Mirrors <c>reference/tools/s1kd-addicn/s1kd-addicn.c</c>. The ICN entity and
+/// notation work is delegated to the shared <see cref="Icn"/> helpers, which port
+/// the <c>add_icn</c>/<c>add_notation</c> functions in
+/// <c>reference/tools/common/s1kd_tools.c</c>.
 /// </remarks>
 public sealed class AddIcnTool : ITool
 {
@@ -103,7 +97,7 @@ public sealed class AddIcnTool : ITool
 
         foreach (string icn in icns)
         {
-            AddIcn(doc, icn, fullpath);
+            Icn.AddIcn(doc, icn, fullpath);
         }
 
         if (overwrite && src != "-")
@@ -112,12 +106,12 @@ public sealed class AddIcnTool : ITool
         }
         else if (outPath == "-")
         {
-            stdout.Write(SerializeWithDtd(doc));
+            stdout.Write(Icn.SerializeWithDtd(doc));
             stdout.Write('\n');
         }
         else
         {
-            File.WriteAllText(outPath, SerializeWithDtd(doc), new UTF8Encoding(false));
+            File.WriteAllText(outPath, Icn.SerializeWithDtd(doc), new UTF8Encoding(false));
         }
 
         return 0;
@@ -188,340 +182,6 @@ public sealed class AddIcnTool : ITool
 
         handled = true;
         return true;
-    }
-
-    /// <summary>
-    /// Port of <c>add_icn</c>: declare the NOTATION and external unparsed ENTITY
-    /// for the given ICN file path.
-    /// </summary>
-    private static void AddIcn(XmlDocument doc, string path, bool fullpath)
-    {
-        string baseName = GetBaseName(path);
-
-        // strtok(name, ".") -> identifier before first '.'; strtok(NULL, "")
-        // -> everything after that first '.'.
-        int dot = baseName.IndexOf('.');
-        string infoEntityIdent;
-        string? notation;
-        if (dot < 0)
-        {
-            infoEntityIdent = baseName;
-            notation = null;
-        }
-        else
-        {
-            infoEntityIdent = baseName[..dot];
-            string rest = baseName[(dot + 1)..];
-            notation = rest.Length == 0 ? null : rest;
-        }
-
-        string systemId = fullpath ? path : baseName;
-
-        var decls = ParseInternalSubset(doc, out string dtdName);
-
-        if (notation != null && !decls.HasNotation(notation))
-        {
-            decls.Notations.Add(new NotationDecl(notation, null, notation));
-        }
-
-        // xmlAddDocEntity replaces an existing entity with the same name.
-        decls.Entities.RemoveAll(e => e.Name == infoEntityIdent);
-        decls.Entities.Add(new EntityDecl(infoEntityIdent, systemId, notation));
-
-        ApplyInternalSubset(doc, dtdName, decls);
-    }
-
-    /// <summary>Mirror POSIX <c>basename</c> for the path semantics used here.</summary>
-    private static string GetBaseName(string path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return path;
-        }
-        // Handle both separators; libxml2/POSIX use '/', but be forgiving.
-        string trimmed = path.TrimEnd('/');
-        if (trimmed.Length == 0)
-        {
-            return "/";
-        }
-        int slash = trimmed.LastIndexOf('/');
-        return slash < 0 ? trimmed : trimmed[(slash + 1)..];
-    }
-
-    private sealed record NotationDecl(string Name, string? PublicId, string? SystemId);
-
-    private sealed record EntityDecl(string Name, string SystemId, string? Notation);
-
-    private sealed class DtdDecls
-    {
-        public List<NotationDecl> Notations { get; } = new();
-        public List<EntityDecl> Entities { get; } = new();
-        public string Preamble { get; set; } = string.Empty;
-
-        public bool HasNotation(string name) => Notations.Exists(n => n.Name == name);
-    }
-
-    /// <summary>
-    /// Pull apart the existing internal DTD subset so we can append our
-    /// declarations and re-serialize. The DTD name defaults to the root element
-    /// name (mirroring <c>xmlCreateIntSubset</c> when no DOCTYPE exists).
-    /// </summary>
-    private static DtdDecls ParseInternalSubset(XmlDocument doc, out string dtdName)
-    {
-        var decls = new DtdDecls();
-        XmlDocumentType? dtd = doc.DocumentType;
-        dtdName = dtd?.Name ?? doc.DocumentElement?.Name ?? "doc";
-
-        if (dtd?.InternalSubset is { Length: > 0 } subset)
-        {
-            ParseDeclarations(subset, decls);
-        }
-
-        return decls;
-    }
-
-    /// <summary>
-    /// Extract NOTATION and ENTITY declarations from an internal subset string,
-    /// preserving anything else verbatim as a preamble so existing content is
-    /// not lost.
-    /// </summary>
-    private static void ParseDeclarations(string subset, DtdDecls decls)
-    {
-        var preamble = new StringBuilder();
-        int i = 0;
-        while (i < subset.Length)
-        {
-            int open = subset.IndexOf("<!", i, StringComparison.Ordinal);
-            if (open < 0)
-            {
-                break;
-            }
-            preamble.Append(subset, i, open - i);
-
-            int close = subset.IndexOf('>', open);
-            if (close < 0)
-            {
-                preamble.Append(subset, open, subset.Length - open);
-                i = subset.Length;
-                break;
-            }
-
-            string decl = subset.Substring(open, close - open + 1);
-            string body = decl.Substring(2, decl.Length - 3).Trim();
-
-            if (body.StartsWith("NOTATION", StringComparison.Ordinal))
-            {
-                NotationDecl? n = ParseNotation(body);
-                if (n != null) decls.Notations.Add(n);
-                else preamble.Append(decl);
-            }
-            else if (body.StartsWith("ENTITY", StringComparison.Ordinal))
-            {
-                EntityDecl? e = ParseEntity(body);
-                if (e != null) decls.Entities.Add(e);
-                else preamble.Append(decl);
-            }
-            else
-            {
-                preamble.Append(decl);
-            }
-
-            i = close + 1;
-        }
-
-        if (i < subset.Length)
-        {
-            preamble.Append(subset, i, subset.Length - i);
-        }
-
-        decls.Preamble = preamble.ToString();
-    }
-
-    private static NotationDecl? ParseNotation(string body)
-    {
-        // NOTATION name SYSTEM "sysId"  |  NOTATION name PUBLIC "pubId" ["sysId"]
-        var toks = Tokenize(body);
-        if (toks.Count < 2) return null;
-        string name = toks[1];
-        if (toks.Count >= 4 && toks[2] == "SYSTEM")
-        {
-            return new NotationDecl(name, null, Unquote(toks[3]));
-        }
-        if (toks.Count >= 4 && toks[2] == "PUBLIC")
-        {
-            string pub = Unquote(toks[3]);
-            string? sys = toks.Count >= 5 ? Unquote(toks[4]) : null;
-            return new NotationDecl(name, pub, sys);
-        }
-        return new NotationDecl(name, null, null);
-    }
-
-    private static EntityDecl? ParseEntity(string body)
-    {
-        // ENTITY name SYSTEM "sysId" NDATA notation
-        var toks = Tokenize(body);
-        if (toks.Count < 4) return null;
-        if (toks[1] == "%") return null; // parameter entity: leave as preamble
-        string name = toks[1];
-        if (toks[2] != "SYSTEM") return null; // only external unparsed handled
-        string sysId = Unquote(toks[3]);
-        string? notation = null;
-        for (int k = 4; k < toks.Count - 1; k++)
-        {
-            if (toks[k] == "NDATA")
-            {
-                notation = toks[k + 1];
-                break;
-            }
-        }
-        return new EntityDecl(name, sysId, notation);
-    }
-
-    private static List<string> Tokenize(string s)
-    {
-        var toks = new List<string>();
-        int i = 0;
-        while (i < s.Length)
-        {
-            char c = s[i];
-            if (char.IsWhiteSpace(c)) { i++; continue; }
-            if (c == '"' || c == '\'')
-            {
-                int end = s.IndexOf(c, i + 1);
-                if (end < 0) { toks.Add(s[i..]); break; }
-                toks.Add(s.Substring(i, end - i + 1));
-                i = end + 1;
-            }
-            else
-            {
-                int start = i;
-                while (i < s.Length && !char.IsWhiteSpace(s[i]) && s[i] != '"' && s[i] != '\'') i++;
-                toks.Add(s[start..i]);
-            }
-        }
-        return toks;
-    }
-
-    private static string Unquote(string s)
-    {
-        if (s.Length >= 2 && (s[0] == '"' || s[0] == '\'') && s[^1] == s[0])
-        {
-            return s[1..^1];
-        }
-        return s;
-    }
-
-    /// <summary>
-    /// Replace the document's internal DTD subset with one rebuilt from the
-    /// collected declarations.
-    /// </summary>
-    private static void ApplyInternalSubset(XmlDocument doc, string dtdName, DtdDecls decls)
-    {
-        string internalSubset = BuildInternalSubset(decls);
-
-        XmlDocumentType? existing = doc.DocumentType;
-        string? publicId = existing?.PublicId;
-        string? systemId = existing?.SystemId;
-
-        XmlDocumentType newDtd = doc.CreateDocumentType(dtdName, publicId, systemId, internalSubset);
-
-        if (existing != null)
-        {
-            doc.ReplaceChild(newDtd, existing);
-        }
-        else
-        {
-            // Insert before the root element (after the XML declaration).
-            XmlNode? root = doc.DocumentElement;
-            if (root != null)
-            {
-                doc.InsertBefore(newDtd, root);
-            }
-            else
-            {
-                doc.AppendChild(newDtd);
-            }
-        }
-    }
-
-    private static string BuildInternalSubset(DtdDecls decls)
-    {
-        var sb = new StringBuilder();
-        sb.Append('\n');
-        if (!string.IsNullOrWhiteSpace(decls.Preamble))
-        {
-            sb.Append(decls.Preamble.Trim('\n'));
-            sb.Append('\n');
-        }
-        foreach (var n in decls.Notations)
-        {
-            sb.Append("<!NOTATION ").Append(n.Name);
-            if (n.PublicId != null)
-            {
-                sb.Append(" PUBLIC \"").Append(n.PublicId).Append('"');
-                if (n.SystemId != null) sb.Append(" \"").Append(n.SystemId).Append('"');
-            }
-            else
-            {
-                sb.Append(" SYSTEM \"").Append(n.SystemId).Append('"');
-            }
-            sb.Append(">\n");
-        }
-        foreach (var e in decls.Entities)
-        {
-            sb.Append("<!ENTITY ").Append(e.Name)
-              .Append(" SYSTEM \"").Append(e.SystemId).Append('"');
-            if (e.Notation != null)
-            {
-                sb.Append(" NDATA ").Append(e.Notation);
-            }
-            sb.Append(">\n");
-        }
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// Serialize the document including its internal DTD subset. <see
-    /// cref="XmlWriter"/> with conformance checks can choke on a DOCTYPE added
-    /// after load, so we emit the prolog, DOCTYPE and document element ourselves.
-    /// </summary>
-    private static string SerializeWithDtd(XmlDocument doc)
-    {
-        XmlDocumentType? dtd = doc.DocumentType;
-        if (dtd == null)
-        {
-            return XmlUtils.ToXmlString(doc);
-        }
-
-        var sb = new StringBuilder();
-
-        // XML declaration (match the default emitted by XmlUtils/libxml2).
-        XmlDeclaration? decl = doc.FirstChild as XmlDeclaration;
-        string version = decl?.Version ?? "1.0";
-        string encoding = string.IsNullOrEmpty(decl?.Encoding) ? "utf-8" : decl!.Encoding;
-        sb.Append("<?xml version=\"").Append(version).Append("\" encoding=\"").Append(encoding).Append("\"?>\n");
-
-        sb.Append("<!DOCTYPE ").Append(dtd.Name);
-        if (!string.IsNullOrEmpty(dtd.PublicId))
-        {
-            sb.Append(" PUBLIC \"").Append(dtd.PublicId).Append("\" \"").Append(dtd.SystemId ?? string.Empty).Append('"');
-        }
-        else if (!string.IsNullOrEmpty(dtd.SystemId))
-        {
-            sb.Append(" SYSTEM \"").Append(dtd.SystemId).Append('"');
-        }
-        if (!string.IsNullOrEmpty(dtd.InternalSubset))
-        {
-            sb.Append(" [").Append(dtd.InternalSubset).Append(']');
-        }
-        sb.Append(">\n");
-
-        if (doc.DocumentElement != null)
-        {
-            sb.Append(doc.DocumentElement.OuterXml);
-        }
-
-        return sb.ToString();
     }
 
     private void ShowHelp(TextWriter stdout)
