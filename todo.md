@@ -9,16 +9,23 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 ## Status (all 32 tools ported)
 
 All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
-the test suite (**542 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
+the test suite (**632 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
 them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
 libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
 too.
 
-Remaining work is depth, not breadth — per-tool partial features (each noted
-inline below): interactive prompts (no-op in-process), brexcheck severity-level config,
-instance container/auto-naming options, refs hotspot/exec modes, wiring the
-EXSLT shim into the few EXSLT-dependent stylesheet paths, and byte-exact output
-parity. See the per-tool notes and the "Known risks / decisions" section.
+A depth wave (parallelized) since landed: brexcheck severity-level config (brsl);
+instance containers/alts/auto-naming/update-instances; ls -e/-N; refs hotspot/exec;
+validate -T stats; repcheck -X; uom -p/-P preformatting; upissue bundled short
+flags + libxml2 long-opts; metadata option/exit-code completion; the shared
+`add_cct_depends` CCT dependency-injection helper, wired into appcheck (-~) and
+aspp -x custom XSLT.
+
+Remaining work is narrow depth — per-tool partial features (each noted inline
+below): interactive prompts (no-op in-process), source line numbers in reports
+(BCL `XmlDocument` has no `IXmlLineInfo`), the few EXSLT-dependent stylesheet
+paths, fmgen XProc pipelines, and byte-exact output parity. See the per-tool
+notes and the "Known risks / decisions" section.
 
 ## 0. Project setup
 - [x] Move C source into `reference/`
@@ -75,23 +82,25 @@ Authoring:
 - [x] s1kd-sns (468) — directory-tree generation from an SNS. NOTE: hard-link
       mode falls back to copy (no portable BCL hard-link API).
 - [x] s1kd-upissue (1016) — inwork/official workflow, RFU/change marks, QA
-      reset, file renaming, issue 3.0 vs 4.x switching. TODO: bundled short
-      flags (-ife), libxml2 parser long-opts.
+      reset, file renaming, issue 3.0 vs 4.x switching; bundled short flags
+      (-ife) and libxml2 parser long-opts now handled (getopt-style parser).
 
 Validation:
 - [x] s1kd-validate (633) — well-formedness + faithful IDREF/IDREFS checks +
       XML report; XSD validation when schema is locally resolvable (graceful
-      offline). TODO: -T stats.xsl summary; source line numbers.
+      offline); -T stats.xsl summary (XSLT 1.0). TODO: source line numbers
+      (BCL XmlDocument has no IXmlLineInfo).
 - [x] s1kd-brexcheck (9147) — library API + tool; structure-object & value
       rules; SNS rules (with layered-BREX merge) + notation rules (via DOM
-      DocumentType.Notations) now implemented. Remaining: severity-level config
-      (brsl); EXSLT/XPath-2 objectPaths → xpathError.
+      DocumentType.Notations); severity-level config (brsl, -w/.brseveritylevels)
+      now implemented. Remaining: EXSLT/XPath-2 objectPaths → xpathError.
 - [x] s1kd-refs (2794) — reference listing + CSDB matching (all ref types) +
       update/overwrite/tag-unmatched, externalpubs, hotspot matching (-H/-j/-J,
       $id var + registered NS via a custom XsltContext) and exec (-e). TODO:
       non-chapterized IPD SNS (-b).
 - [x] s1kd-repcheck (965) — CIR reference validation, all 12 ref types + indirect
-      (DOM reimpl of the extraction XSLTs). TODO: -X custom XSLT; line numbers.
+      (DOM reimpl of the extraction XSLTs); -X custom XSLT (via XslCompiledTransform,
+      strips repcheck attrs). TODO: line numbers (BCL XmlDocument limitation).
 - [x] s1kd-appcheck (2840) — applicability validation (undefined props, nested,
       redundant, duplicate; standalone/full/products via in-process filter +
       broken-internalRef detection; CCT deps -~ via Applicability.AddCctDepends).
@@ -112,15 +121,17 @@ Publication:
 - [x] s1kd-index (400) — keyword flagging from .indexflags; issue-3.0 rename
       (DOM; XSLTs reimplemented).
 - [x] s1kd-instance (5126) — applicability filtering core (Default/Reduce/
-      Simplify/Prune) + Instance library API; CIR resolution and PCT product
-      filtering now implemented. Remaining: containers, alts flattening,
-      auto-naming, update-instances (parsed, partial).
+      Simplify/Prune) + Instance library API; CIR resolution, PCT product
+      filtering, containers (-Q), alts flattening (-F/-4), auto-naming
+      (-O/-5/-N), and update-instances (-@/-8/-7) now implemented. Remaining:
+      set-applic, list-properties, comments, acronym/entity cleanup, list input.
 - [x] s1kd-neutralize (292) — IETP neutral metadata via embedded XSLT
       (xlink/rdf/namespace/delete; no EXSLT).
 - [x] s1kd-syncrefs (504) — rebuild the References table (refs) from references
       in a data module (DOM, no XSLT).
 - [x] s1kd-uom (599) — UOM conversion via .uom rules + presets (DOM, formula
-      evaluator). TODO: -p/-P display preformatting (uomdisplay.xsl) not applied.
+      evaluator); -p/-P display preformatting (uomdisplay.xsl reimplemented in
+      DOM: quantity/group/value/tolerance templates + picture format-number).
 
 ## 4. Cross-cutting
 - [~] Common option handling: `--version`, `-h/--help` done per tool; libxml2
