@@ -1037,4 +1037,721 @@ public static class Instance
         }
         return n;
     }
+
+    // ---- alts flattening (ported from flatten_alts / flatten-alts.xsl) ----
+
+    /// <summary>
+    /// The built-in stylesheet that flattens <c>*Alts</c> elements with a single
+    /// child by replacing them with that child, and (when
+    /// <c>fix-alts-refs</c> is true) rewrites the <c>internalRefTargetType</c> of
+    /// cross-references to alts. Ported verbatim from
+    /// <c>reference/tools/s1kd-instance/xsl/flatten-alts.xsl</c> so the tool stays
+    /// self-contained.
+    /// </summary>
+    private const string FlattenAltsXsl =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+          <xsl:param name="fix-alts-refs"/>
+          <xsl:template match="@*|node()">
+            <xsl:copy>
+              <xsl:apply-templates select="@*|node()"/>
+            </xsl:copy>
+          </xsl:template>
+          <xsl:template match="assocWarningMalfunctionAlts|
+                               bitMessageAlts|
+                               commonInfoDescrParaAlts|
+                               correlatedFaultAlts|
+                               detectedFaultAlts|
+                               dialogAlts|
+                               dmNodeAlts|
+                               dmSeqAlts|
+                               electricalEquipAlts|
+                               figureAlts|
+                               harnessAlts|
+                               isolatedFaultAlts|
+                               isolationProcedureEndAlts|
+                               isolationStepAlts|
+                               levelledParaAlts|
+                               messageAlts|
+                               multimediaAlts|
+                               observedFaultAlts|
+                               proceduralStepAlts|
+                               taskDefinitionAlts|
+                               warningMalfunctionAlts|
+                               wireAlts">
+            <xsl:choose>
+              <xsl:when test="count(*) = 1">
+                <xsl:for-each select="*">
+                  <xsl:copy>
+                    <xsl:apply-templates select="parent::*/@id|@*[name() != 'id']|node()"/>
+                  </xsl:copy>
+                </xsl:for-each>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:copy>
+                  <xsl:apply-templates select="@*|node()"/>
+                </xsl:copy>
+              </xsl:otherwise>
+            </xsl:choose>
+          </xsl:template>
+          <xsl:template match="internalRef/@internalRefTargetType">
+            <xsl:choose>
+              <xsl:when test="$fix-alts-refs">
+                <xsl:variable name="id" select="parent::internalRef/@internalRefId"/>
+                <xsl:variable name="target" select="//*[@id=$id]"/>
+                <xsl:attribute name="internalRefTargetType">
+                  <xsl:choose>
+                    <xsl:when test="$target/self::figureAlts">irtt01</xsl:when>
+                    <xsl:when test="$target/self::multimediaAlts">irtt03</xsl:when>
+                    <xsl:when test="$target/self::levelledParaAlts">irtt07</xsl:when>
+                    <xsl:when test="$target/self::proceduralStepAlts|$target/self::isolationStepAlts|$target/self::isolationProcedureEndAlts">irtt08</xsl:when>
+                  </xsl:choose>
+                </xsl:attribute>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:copy>
+                  <xsl:apply-templates/>
+                </xsl:copy>
+              </xsl:otherwise>
+            </xsl:choose>
+          </xsl:template>
+        </xsl:stylesheet>
+        """;
+
+    /// <summary>
+    /// Flatten <c>*Alts</c> elements in place. <c>*Alts</c> elements with exactly
+    /// one child element are replaced by that child; when
+    /// <paramref name="fixAltsRefs"/> is set, the <c>internalRefTargetType</c> of
+    /// cross-references is corrected. Mirrors <c>flatten_alts</c>.
+    /// </summary>
+    public static void FlattenAlts(XmlDocument doc, bool fixAltsRefs)
+    {
+        var args = new XsltArgumentList();
+        // libxslt passes "true()"/"false()" as XPath boolean params; in
+        // XslCompiledTransform we supply a real boolean to the same effect.
+        args.AddParam("fix-alts-refs", string.Empty, fixAltsRefs);
+        TransformInPlace(doc, FlattenAltsXsl, args);
+    }
+
+    /// <summary>
+    /// Transform <paramref name="doc"/> with <paramref name="xslText"/> and replace
+    /// the document's root element with the transformed result, in place. Mirrors
+    /// the C <c>transform_doc</c> helper.
+    /// </summary>
+    private static void TransformInPlace(XmlDocument doc, string xslText, XsltArgumentList? args)
+    {
+        var readerSettings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Ignore,
+            XmlResolver = null,
+        };
+
+        var xslt = new XslCompiledTransform();
+        using (var sr = new StringReader(xslText))
+        using (XmlReader styleReader = XmlReader.Create(sr, readerSettings))
+        {
+            xslt.Load(styleReader);
+        }
+
+        var resultDoc = new XmlDocument { PreserveWhitespace = true };
+        using (var ms = new MemoryStream())
+        {
+            var writerSettings = new XmlWriterSettings
+            {
+                ConformanceLevel = ConformanceLevel.Auto,
+                OmitXmlDeclaration = true,
+            };
+            using (XmlWriter writer = XmlWriter.Create(ms, writerSettings))
+            {
+                xslt.Transform(doc, args, writer);
+            }
+            ms.Position = 0;
+            using XmlReader resultReader = XmlReader.Create(ms, readerSettings);
+            resultDoc.Load(resultReader);
+        }
+
+        if (resultDoc.DocumentElement == null || doc.DocumentElement == null)
+        {
+            return;
+        }
+
+        XmlNode imported = doc.ImportNode(resultDoc.DocumentElement, true);
+        doc.ReplaceChild(imported, doc.DocumentElement);
+    }
+
+    // ---- container resolution (ported from resolve_containers) ----
+
+    /// <summary>
+    /// Resolve references to container data modules, replacing each
+    /// <c>dmRef</c> to a container with the single applicable <c>dmRef</c> from
+    /// within that container for the user-defined applicability. Additionally, if
+    /// the object being filtered is itself a container, the applicability of its
+    /// referenced DMs is copied in as inline annotations prior to filtering (this
+    /// happens inside <see cref="ResolveContainerRef"/>). Mirrors
+    /// <c>resolve_containers</c>.
+    /// </summary>
+    /// <param name="doc">The object whose container references are resolved.</param>
+    /// <param name="defs">User-defined applicability definitions.</param>
+    /// <param name="resolveRef">
+    /// Resolver mapping a <c>dmRefIdent</c> node to a (document, path) pair for the
+    /// referenced data module, or null when it cannot be located.
+    /// </param>
+    /// <param name="warn">Callback for the "could not resolve container" warning.</param>
+    public static void ResolveContainers(XmlDocument doc, XmlNode defs,
+        Func<XmlNode, (XmlDocument doc, string path)?> resolveRef, Action<string>? warn = null)
+    {
+        var refIdents = new List<XmlNode>();
+        foreach (XmlNode n in doc.SelectNodes("//dmRef/dmRefIdent")!)
+        {
+            refIdents.Add(n);
+        }
+
+        foreach (XmlNode refIdent in refIdents)
+        {
+            (XmlDocument doc, string path)? resolved = resolveRef(refIdent);
+            if (resolved == null)
+            {
+                continue;
+            }
+            ResolveContainerRef(refIdent, resolved.Value.doc, resolved.Value.path, defs,
+                resolveRef, warn);
+        }
+    }
+
+    /// <summary>
+    /// Replace a reference to a container with the appropriate reference within
+    /// the container for the given applicability. Mirrors
+    /// <c>resolve_container_ref</c> (with <see cref="AddContainerApplics"/>).
+    /// </summary>
+    private static XmlNode? ResolveContainerRef(XmlNode refIdent, XmlDocument cdoc, string path, XmlNode defs,
+        Func<XmlNode, (XmlDocument doc, string path)?> resolveRef, Action<string>? warn)
+    {
+        XmlElement? root = cdoc.DocumentElement;
+        if (root == null)
+        {
+            return null;
+        }
+
+        XmlNode? content = cdoc.SelectSingleNode("//content");
+        if (content == null)
+        {
+            return null;
+        }
+
+        // Referenced DM is not a container.
+        XmlNode? container = content.SelectSingleNode("container");
+        if (container == null)
+        {
+            return null;
+        }
+
+        // If the container does not contain inline annotations, copy them from the
+        // referenced DMs.
+        XmlNode? rag = cdoc.SelectSingleNode("//referencedApplicGroup");
+        if (rag == null)
+        {
+            rag = AddContainerApplics(cdoc, content, container, resolveRef);
+            if (rag == null)
+            {
+                return null;
+            }
+        }
+
+        // Filter the container.
+        StripApplic(defs, rag, root);
+
+        // If the container does not have exactly one ref after filtering, it should
+        // not be resolved.
+        var refs = new List<XmlNode>();
+        foreach (XmlNode n in container.SelectNodes("refs/dmRef")!)
+        {
+            refs.Add(n);
+        }
+        XmlNode? reference = refs.Count == 1 ? refs[0] : null;
+
+        if (reference != null)
+        {
+            XmlNode? old = refIdent.ParentNode;
+            if (old?.ParentNode != null)
+            {
+                XmlNode newNode = refIdent.OwnerDocument!.ImportNode(reference, true);
+                if (newNode is XmlElement ne)
+                {
+                    ne.RemoveAttribute("applicRefId");
+                }
+                old.ParentNode.InsertAfter(newNode, old);
+                old.ParentNode.RemoveChild(old);
+            }
+        }
+        else
+        {
+            warn?.Invoke(path);
+        }
+
+        return reference;
+    }
+
+    /// <summary>
+    /// Copy the applicability of the referenced DMs of a container into the
+    /// container itself as inline annotations. Mirrors <c>add_container_applics</c>.
+    /// </summary>
+    private static XmlNode? AddContainerApplics(XmlDocument doc, XmlNode content, XmlNode container,
+        Func<XmlNode, (XmlDocument doc, string path)?> resolveRef)
+    {
+        XmlElement rag = doc.CreateElement("referencedApplicGroup");
+
+        // Insert the referencedApplicGroup element appropriately.
+        XmlNode? refs = content.SelectSingleNode("refs");
+        if (refs?.ParentNode != null)
+        {
+            refs.ParentNode.InsertAfter(rag, refs);
+        }
+        else
+        {
+            content.InsertBefore(rag, content.FirstChild);
+        }
+
+        var refIdents = new List<XmlNode>();
+        foreach (XmlNode n in container.SelectNodes("refs/dmRef/dmRefIdent")!)
+        {
+            refIdents.Add(n);
+        }
+
+        int seq = 1;
+        foreach (XmlNode refIdent in refIdents)
+        {
+            (XmlDocument doc, string path)? resolved = resolveRef(refIdent);
+            if (resolved == null)
+            {
+                continue;
+            }
+
+            string id = $"app-{seq:D4}";
+            if (AddContainerApplic(rag, resolved.Value.doc, id) != null && refIdent.ParentNode is XmlElement dmRef)
+            {
+                dmRef.SetAttribute("applicRefId", id);
+                seq++;
+            }
+        }
+
+        return rag;
+    }
+
+    /// <summary>Create an applicability annotation in a container. Mirrors <c>add_container_applic</c>.</summary>
+    private static XmlNode? AddContainerApplic(XmlNode rag, XmlDocument refDoc, string id)
+    {
+        XmlNode? app = refDoc.SelectSingleNode("//applic");
+        if (app == null)
+        {
+            return null;
+        }
+        if (app is XmlElement ae)
+        {
+            ae.SetAttribute("id", id);
+        }
+        XmlNode imported = rag.OwnerDocument!.ImportNode(app, true);
+        return rag.AppendChild(imported);
+    }
+
+    // ---- automatic naming (ported from init_ident / auto_name) ----
+
+    /// <summary>
+    /// The minimal set of identity fields needed to construct an automatic
+    /// filename for a CSDB object. Mirrors the subset of the C <c>struct ident</c>
+    /// used by <c>auto_name</c>.
+    /// </summary>
+    private sealed class ObjectIdent
+    {
+        public string Type = string.Empty; // DM, PM, DML, COM, DDN, IMF, UPF
+        public bool Extended;
+        public string? ExtensionProducer;
+        public string? ExtensionCode;
+        public string? ModelIdentCode;
+        public string? SystemDiffCode;
+        public string? SystemCode;
+        public string? SubSystemCode;
+        public string? SubSubSystemCode;
+        public string? AssyCode;
+        public string? DisassyCode;
+        public string? DisassyCodeVariant;
+        public string? InfoCode;
+        public string? InfoCodeVariant;
+        public string? ItemLocationCode;
+        public string? LearnCode;
+        public string? LearnEventCode;
+        public string? SenderIdent;
+        public string? ReceiverIdent;
+        public string? PmNumber;
+        public string? PmVolume;
+        public string? IssueNumber;
+        public string? InWork;
+        public string? LanguageIsoCode;
+        public string? CountryIsoCode;
+        public string? DmlCommentType;
+        public string? SeqNumber;
+        public string? YearOfDataIssue;
+        public string? ImfIdentIcn;
+    }
+
+    /// <summary>
+    /// Compute the automatic filename for a filtered instance, mirroring
+    /// <c>auto_name</c>. <paramref name="dir"/> is the output directory ("." means
+    /// no directory prefix). When <paramref name="noIss"/> is set the issue/inwork
+    /// suffix is omitted. Returns null for unsupported object types (matching the C
+    /// tool's S_BAD_TYPE / EXIT_BAD_XML path); when the object has no recognisable
+    /// ident the source basename is used (also matching the C tool).
+    /// </summary>
+    public static string? AutoName(string src, XmlDocument dm, string dir, bool noIss)
+    {
+        string dname, sep;
+        if (dir == ".")
+        {
+            dname = string.Empty;
+            sep = string.Empty;
+        }
+        else
+        {
+            dname = dir;
+            sep = "/";
+        }
+
+        ObjectIdent? ident = InitIdent(dm);
+        if (ident == null)
+        {
+            return dname + sep + Path.GetFileName(src);
+        }
+
+        if (ident.Type is "DM" or "PM" or "COM" or "UPF")
+        {
+            ident.LanguageIsoCode = ident.LanguageIsoCode?.ToUpperInvariant();
+        }
+
+        if (ident.Type is "DML" or "COM" && !string.IsNullOrEmpty(ident.DmlCommentType))
+        {
+            ident.DmlCommentType = char.ToUpperInvariant(ident.DmlCommentType![0]) + ident.DmlCommentType[1..];
+        }
+
+        string iss = string.Empty;
+        if (!noIss && ident.Type is "DM" or "PM" or "DML" or "IMF" or "UPF")
+        {
+            iss = $"_{ident.IssueNumber}-{ident.InWork}";
+        }
+
+        switch (ident.Type)
+        {
+            case "PM":
+                return ident.Extended
+                    ? $"{dname}{sep}PME-{ident.ExtensionProducer}-{ident.ExtensionCode}-{ident.ModelIdentCode}-{ident.SenderIdent}-{ident.PmNumber}-{ident.PmVolume}{iss}_{ident.LanguageIsoCode}-{ident.CountryIsoCode}.XML"
+                    : $"{dname}{sep}PMC-{ident.ModelIdentCode}-{ident.SenderIdent}-{ident.PmNumber}-{ident.PmVolume}{iss}_{ident.LanguageIsoCode}-{ident.CountryIsoCode}.XML";
+            case "DML":
+                return $"{dname}{sep}DML-{ident.ModelIdentCode}-{ident.SenderIdent}-{ident.DmlCommentType}-{ident.YearOfDataIssue}-{ident.SeqNumber}{iss}.XML";
+            case "DM":
+            case "UPF":
+            {
+                string learn = string.Empty;
+                if (!string.IsNullOrEmpty(ident.LearnCode) && !string.IsNullOrEmpty(ident.LearnEventCode))
+                {
+                    learn = $"-{ident.LearnCode}{ident.LearnEventCode}";
+                }
+                string prefixExt = ident.Type == "DM" ? "DME" : "UPE";
+                string prefix = ident.Type == "DM" ? "DMC" : "UPF";
+                return ident.Extended
+                    ? $"{dname}{sep}{prefixExt}-{ident.ExtensionProducer}-{ident.ExtensionCode}-{ident.ModelIdentCode}-{ident.SystemDiffCode}-{ident.SystemCode}-{ident.SubSystemCode}{ident.SubSubSystemCode}-{ident.AssyCode}-{ident.DisassyCode}{ident.DisassyCodeVariant}-{ident.InfoCode}{ident.InfoCodeVariant}-{ident.ItemLocationCode}{learn}{iss}_{ident.LanguageIsoCode}-{ident.CountryIsoCode}.XML"
+                    : $"{dname}{sep}{prefix}-{ident.ModelIdentCode}-{ident.SystemDiffCode}-{ident.SystemCode}-{ident.SubSystemCode}{ident.SubSubSystemCode}-{ident.AssyCode}-{ident.DisassyCode}{ident.DisassyCodeVariant}-{ident.InfoCode}{ident.InfoCodeVariant}-{ident.ItemLocationCode}{learn}{iss}_{ident.LanguageIsoCode}-{ident.CountryIsoCode}.XML";
+            }
+            case "COM":
+                return $"{dname}{sep}COM-{ident.ModelIdentCode}-{ident.SenderIdent}-{ident.YearOfDataIssue}-{ident.SeqNumber}-{ident.DmlCommentType}_{ident.LanguageIsoCode}-{ident.CountryIsoCode}.XML";
+            case "DDN":
+                return $"{dname}{sep}DDN-{ident.ModelIdentCode}-{ident.SenderIdent}-{ident.ReceiverIdent}-{ident.YearOfDataIssue}-{ident.SeqNumber}.XML";
+            case "IMF":
+                return $"{dname}{sep}IMF-{ident.ImfIdentIcn}{iss}.XML";
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Extract a CSDB object's identity from its address/status. A focused port of
+    /// <c>init_ident</c> covering the fields used for automatic naming. Returns null
+    /// if no recognisable ident/code is present.
+    /// </summary>
+    private static ObjectIdent? InitIdent(XmlDocument doc)
+    {
+        XmlNode? moduleIdent = doc.SelectSingleNode(
+            "//dmIdent|//dmaddres|//pmIdent|//pmaddres|//dmlIdent|//dml[dmlc]|" +
+            "//commentIdent|//cstatus|//ddnIdent|//ddn|//imfIdent|//updateIdent");
+        if (moduleIdent == null)
+        {
+            return null;
+        }
+
+        var ident = new ObjectIdent();
+        bool iss30;
+        switch (moduleIdent.LocalName)
+        {
+            case "pmIdent": ident.Type = "PM"; iss30 = false; break;
+            case "pmaddres": ident.Type = "PM"; iss30 = true; break;
+            case "dmlIdent": ident.Type = "DML"; iss30 = false; break;
+            case "dml": ident.Type = "DML"; iss30 = true; break;
+            case "commentIdent": ident.Type = "COM"; iss30 = false; break;
+            case "cstatus": ident.Type = "COM"; iss30 = true; break;
+            case "dmIdent": ident.Type = "DM"; iss30 = false; break;
+            case "dmaddres": ident.Type = "DM"; iss30 = true; break;
+            case "ddnIdent": ident.Type = "DDN"; iss30 = false; break;
+            case "ddn": ident.Type = "DDN"; iss30 = true; break;
+            case "imfIdent": ident.Type = "IMF"; iss30 = false; break;
+            case "updateIdent": ident.Type = "UPF"; iss30 = false; break;
+            default: return null;
+        }
+
+        XmlNode? identExtension = doc.SelectSingleNode(
+            "//dmIdent/identExtension|//dmaddres/dmcextension|//pmIdent/identExtension|//updateIdent/identExtension");
+        XmlNode? code = doc.SelectSingleNode(
+            "//dmIdent/dmCode|//dmaddres/dmc/avee|//pmIdent/pmCode|//pmaddres/pmc|//dmlIdent/dmlCode|//dml/dmlc|" +
+            "//commentIdent/commentCode|//cstatus/ccode|//ddnIdent/ddnCode|//ddn/ddnc|//imfIdent/imfCode|//updateIdent/updateCode");
+        XmlNode? language = doc.SelectSingleNode(
+            "//dmIdent/language|//dmaddres/language|//pmIdent/language|//pmaddres/language|" +
+            "//commentIdent/language|//cstatus/language|//updateIdent/language");
+        XmlNode? issueInfo = doc.SelectSingleNode(
+            "//dmIdent/issueInfo|//dmaddres/issno|//pmIdent/issueInfo|//pmaddres/issno|" +
+            "//dmlIdent/issueInfo|//dml/issno|//imfIdent/issueInfo|//updateIdent/issueInfo");
+
+        if (code is not XmlElement c)
+        {
+            return null;
+        }
+
+        string Prop30(string child) => c.SelectSingleNode(child)?.InnerText ?? string.Empty;
+        string Attr(string a) => c.GetAttribute(a);
+
+        ident.ModelIdentCode = iss30 ? Prop30("modelic") : Attr("modelIdentCode");
+
+        if (ident.Type == "PM")
+        {
+            if (iss30)
+            {
+                ident.SenderIdent = Prop30("pmissuer");
+                ident.PmNumber = Prop30("pmnumber");
+                ident.PmVolume = Prop30("pmvolume");
+            }
+            else
+            {
+                ident.SenderIdent = Attr("pmIssuer");
+                ident.PmNumber = Attr("pmNumber");
+                ident.PmVolume = Attr("pmVolume");
+            }
+        }
+        else if (ident.Type is "DML" or "COM")
+        {
+            if (iss30)
+            {
+                ident.SenderIdent = Prop30("sendid");
+                ident.YearOfDataIssue = Prop30("diyear");
+                ident.SeqNumber = Prop30("seqnum");
+            }
+            else
+            {
+                ident.SenderIdent = Attr("senderIdent");
+                ident.YearOfDataIssue = Attr("yearOfDataIssue");
+                ident.SeqNumber = Attr("seqNumber");
+            }
+
+            if (ident.Type == "DML")
+            {
+                ident.DmlCommentType = iss30
+                    ? (c.SelectSingleNode("dmltype") as XmlElement)?.GetAttribute("type")
+                    : Attr("dmlType");
+            }
+            else
+            {
+                ident.DmlCommentType = iss30
+                    ? (c.SelectSingleNode("ctype") as XmlElement)?.GetAttribute("type")
+                    : Attr("commentType");
+            }
+        }
+        else if (ident.Type == "DDN")
+        {
+            if (iss30)
+            {
+                ident.SenderIdent = Prop30("sendid");
+                ident.ReceiverIdent = Prop30("recvid");
+                ident.YearOfDataIssue = Prop30("diyear");
+                ident.SeqNumber = Prop30("seqnum");
+            }
+            else
+            {
+                ident.SenderIdent = Attr("senderIdent");
+                ident.ReceiverIdent = Attr("receiverIdent");
+                ident.YearOfDataIssue = Attr("yearOfDataIssue");
+                ident.SeqNumber = Attr("seqNumber");
+            }
+        }
+        else if (ident.Type is "DM" or "UPF")
+        {
+            if (iss30)
+            {
+                ident.SystemDiffCode = Prop30("sdc");
+                ident.SystemCode = Prop30("chapnum");
+                ident.SubSystemCode = Prop30("section");
+                ident.SubSubSystemCode = Prop30("subsect");
+                ident.AssyCode = Prop30("subject");
+                ident.DisassyCode = Prop30("discode");
+                ident.DisassyCodeVariant = Prop30("discodev");
+                ident.InfoCode = Prop30("incode");
+                ident.InfoCodeVariant = Prop30("incodev");
+                ident.ItemLocationCode = Prop30("itemloc");
+            }
+            else
+            {
+                ident.SystemDiffCode = Attr("systemDiffCode");
+                ident.SystemCode = Attr("systemCode");
+                ident.SubSystemCode = Attr("subSystemCode");
+                ident.SubSubSystemCode = Attr("subSubSystemCode");
+                ident.AssyCode = Attr("assyCode");
+                ident.DisassyCode = Attr("disassyCode");
+                ident.DisassyCodeVariant = Attr("disassyCodeVariant");
+                ident.InfoCode = Attr("infoCode");
+                ident.InfoCodeVariant = Attr("infoCodeVariant");
+                ident.ItemLocationCode = Attr("itemLocationCode");
+                ident.LearnCode = c.HasAttribute("learnCode") ? Attr("learnCode") : null;
+                ident.LearnEventCode = c.HasAttribute("learnEventCode") ? Attr("learnEventCode") : null;
+            }
+        }
+        else if (ident.Type == "IMF")
+        {
+            ident.ImfIdentIcn = Attr("imfIdentIcn");
+        }
+
+        if (ident.Type is "DM" or "PM" or "DML" or "IMF" or "UPF")
+        {
+            if (issueInfo is not XmlElement ii)
+            {
+                return null;
+            }
+            ident.IssueNumber = iss30 ? ii.GetAttribute("issno") : ii.GetAttribute("issueNumber");
+            ident.InWork = iss30 ? ii.GetAttribute("inwork") : ii.GetAttribute("inWork");
+            if (string.IsNullOrEmpty(ident.InWork))
+            {
+                ident.InWork = "00";
+            }
+        }
+
+        if (ident.Type is "DM" or "PM" or "COM" or "UPF")
+        {
+            if (language is not XmlElement le)
+            {
+                return null;
+            }
+            ident.LanguageIsoCode = iss30 ? le.GetAttribute("language") : le.GetAttribute("languageIsoCode");
+            ident.CountryIsoCode = iss30 ? le.GetAttribute("country") : le.GetAttribute("countryIsoCode");
+        }
+
+        if (identExtension is XmlElement ext)
+        {
+            ident.Extended = true;
+            if (iss30)
+            {
+                ident.ExtensionProducer = ext.SelectSingleNode("dmeproducer")?.InnerText ?? string.Empty;
+                ident.ExtensionCode = ext.SelectSingleNode("dmecode")?.InnerText ?? string.Empty;
+            }
+            else
+            {
+                ident.ExtensionProducer = ext.GetAttribute("extensionProducer");
+                ident.ExtensionCode = ext.GetAttribute("extensionCode");
+            }
+        }
+
+        return ident;
+    }
+
+    // ---- update-instances (ported from find_source / load_*_from_inst) ----
+
+    /// <summary>
+    /// Locate the <c>sourceDmIdent</c>/<c>sourcePmIdent</c>/<c>srcdmaddres</c> of an
+    /// instance, so its source master object can be re-derived. Returns the source
+    /// ident node, or null if the object has no source ident. Mirrors the
+    /// node-finding part of <c>find_source</c> (the file lookup is performed by the
+    /// caller, which owns the filesystem search helpers).
+    /// </summary>
+    public static XmlNode? FindSourceIdent(XmlDocument inst)
+    {
+        return inst.SelectSingleNode("//sourceDmIdent|//sourcePmIdent|//srcdmaddres");
+    }
+
+    /// <summary>
+    /// Load applicability definitions from the applic of an instance into
+    /// <paramref name="defs"/>. Asserts inside an <c>or</c> evaluation are ignored
+    /// (the defs mechanism cannot represent them). The values are added as
+    /// non-user-defined so explicit <c>-s</c> assertions take precedence. Mirrors
+    /// <c>load_applic_from_inst</c>.
+    /// </summary>
+    public static void LoadApplicFromInst(XmlElement defs, XmlDocument doc)
+    {
+        XmlNodeList? asserts = doc.SelectNodes(
+            "//identAndStatusSection//applic[1]//assert[not(ancestor::evaluate/@andOr = 'or')]");
+        if (asserts == null)
+        {
+            return;
+        }
+
+        foreach (XmlNode n in asserts)
+        {
+            if (n is not XmlElement a)
+            {
+                continue;
+            }
+            string ident = a.GetAttribute("applicPropertyIdent");
+            string type = a.GetAttribute("applicPropertyType");
+            string value = a.GetAttribute("applicPropertyValues");
+            if (ident.Length == 0 || type.Length == 0 || value.Length == 0)
+            {
+                continue;
+            }
+            // userDefined=false: user-defined assertions override those in the instance.
+            DefineApplicValue(defs, ident, type, value, perDm: true, userDefined: false);
+        }
+    }
+
+    /// <summary>
+    /// Read the skill level code from an instance, if present. Mirrors
+    /// <c>load_skill_from_inst</c>.
+    /// </summary>
+    public static string? LoadSkillFromInst(XmlDocument doc) =>
+        FirstAttr(doc, "//skillLevel/@skillLevelCode|//skill/@skill");
+
+    /// <summary>
+    /// Read the security classification from an instance, if present. Mirrors
+    /// <c>load_sec_from_inst</c>.
+    /// </summary>
+    public static string? LoadSecFromInst(XmlDocument doc) =>
+        FirstAttr(doc, "//security/@securityClassification|//security/@class");
+
+    /// <summary>
+    /// Return the <c>repositorySourceDmIdent</c> nodes referenced by an instance
+    /// (CIRs that were resolved when it was created), removing them from the
+    /// instance. Mirrors <c>add_cirs_from_inst</c>; the caller resolves each ident
+    /// to a file. The returned nodes are detached copies.
+    /// </summary>
+    public static IReadOnlyList<XmlNode> TakeCirsFromInst(XmlDocument doc)
+    {
+        var result = new List<XmlNode>();
+        var nodes = new List<XmlNode>();
+        foreach (XmlNode n in doc.SelectNodes("//repositorySourceDmIdent")!)
+        {
+            nodes.Add(n);
+        }
+        foreach (XmlNode n in nodes)
+        {
+            result.Add(n);
+            n.ParentNode?.RemoveChild(n);
+        }
+        return result;
+    }
+
+    private static string? FirstAttr(XmlDocument doc, string xpath)
+    {
+        XmlNode? n = doc.SelectSingleNode(xpath);
+        return n?.Value;
+    }
 }
