@@ -464,6 +464,122 @@ public class RefsToolTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // --------------------------------------------------------------------
+    // Non-chapterized IPD SNS (-b) (mirrors the manpage CSN example)
+    // --------------------------------------------------------------------
+
+    // A data module (DMC-EX-A-00-00-00-00AA-100A-D) containing a single
+    // non-chapterized CSN reference (figureNumber/item only).
+    private const string IpdReferencingDm =
+        """
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmIdent>
+                <dmCode modelIdentCode="EX" systemDiffCode="A" systemCode="00"
+                        subSystemCode="0" subSubSystemCode="0" assyCode="00AA"
+                        disassyCode="100" disassyCodeVariant="A" infoCode="040"
+                        infoCodeVariant="A" itemLocationCode="D"/>
+                <issueInfo issueNumber="001" inWork="00"/>
+              </dmIdent>
+            </dmAddress>
+          </identAndStatusSection>
+          <content>
+            <refs>
+              <catalogSeqNumberRef figureNumber="01" item="004"/>
+            </refs>
+          </content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void IpdRef_WithoutSns_IsGenericFigureName()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "DMC-EX-A-00-00-00-00AA-100A-D_001-00_EN-CA.XML", IpdReferencingDm);
+
+            // -K (CSN), -a so the unmatched code is printed to stdout.
+            var (_, outText, _) = Run("-K", "-a", "-d", dir, src);
+
+            // Without -b the reference cannot be chapterized: generic figure name.
+            Assert.Contains("Fig 01", outText);
+            Assert.DoesNotContain("DMC-EX-A-ZD", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void IpdRef_WithSns_ConstructsChapterizedDmc()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "DMC-EX-A-00-00-00-00AA-100A-D_001-00_EN-CA.XML", IpdReferencingDm);
+
+            // -b ZD-00-35: apply the non-chapterized IPD SNS. Mirrors the manpage
+            // example. systemDiffCode/modelIdentCode are inherited from the DM.
+            var (_, outText, _) = Run("-K", "-a", "-b", "ZD-00-35", "-d", dir, src);
+
+            // disassyCode = figureNumber(01) + figureNumberVariant(default 0).
+            // The item location code is unspecified on the ref, so it is "?".
+            Assert.Contains("DMC-EX-A-ZD-00-35-010-941A-?", outText);
+            Assert.Contains("Item 004", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void IpdRef_WithSnsAndDcvPattern_AppliesPattern()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "DMC-EX-A-00-00-00-00AA-100A-D_001-00_EN-CA.XML", IpdReferencingDm);
+
+            // -k %A: 2-character disassembly code variant pattern (manpage example).
+            var (_, outText, _) = Run("-K", "-a", "-b", "ZD-00-35", "-k", "%A", "-d", dir, src);
+
+            Assert.Contains("DMC-EX-A-ZD-00-35-010A-941A-?", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void IpdRef_WithRelativeSns_InheritsSnsFromDm()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "DMC-EX-A-00-00-00-00AA-100A-D_001-00_EN-CA.XML", IpdReferencingDm);
+
+            // -b -: the SNS is also relative to the containing DM (00/0/0/00AA).
+            // The item location code is unspecified on the ref, so it is "?".
+            var (_, outText, _) = Run("-K", "-a", "-b", "-", "-d", dir, src);
+
+            Assert.Contains("DMC-EX-A-00-00-00AA-010-941A-?", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void IpdRef_InvalidSns_ExitsWithBadCsnCode()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "DMC-EX-A-00-00-00-00AA-100A-D_001-00_EN-CA.XML", IpdReferencingDm);
+
+            // A code that does not match the SNS grammar must be rejected.
+            var (code, _, errText) = Run("-K", "-b", "not a valid sns!", "-d", dir, src);
+
+            Assert.Equal(4, code);
+            Assert.Contains("Invalid non-chapterized IPD SNS", errText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     [Fact]
     public void Version_Prints522()
     {
