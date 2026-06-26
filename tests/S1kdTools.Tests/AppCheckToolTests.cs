@@ -458,7 +458,7 @@ public class AppCheckToolTests
     // DM whose content is applicable when cond001 = running.
     private const string DmUsingCond =
         """
-        <dmodule>
+        <dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://example.invalid/descript.xsd">
           <referencedApplicGroup>
             <applic id="app-run">
               <assert applicPropertyIdent="cond001" applicPropertyType="condition" applicPropertyValues="running"/>
