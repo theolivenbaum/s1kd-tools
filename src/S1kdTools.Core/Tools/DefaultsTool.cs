@@ -927,6 +927,10 @@ public sealed class DefaultsTool : ITool
     private int Initialize(Format fmt, bool overwrite, XmlDocument? brex, XmlDocument? brexmap,
         XmlElement userDefs, TextWriter stdout, TextWriter stderr)
     {
+        // Mirrors the C: dump_defaults_text (-.) / dump_defaults_xml (-,) and the
+        // s1kd-newdm / s1kd-fmgen dump options. The C main returns 0 regardless
+        // of whether the newdm/fmgen sub-commands succeed (it only warns), so the
+        // overall init status stays 0.
         int status = 0;
 
         // .defaults
@@ -943,6 +947,9 @@ public sealed class DefaultsTool : ITool
             }
         }
 
+        // The dump option passed to s1kd-newdm / s1kd-fmgen: -. (text) or -, (xml).
+        string dumpOpt = fmt == Format.Text ? "-." : "-,";
+
         // .dmtypes
         if (overwrite || !File.Exists(Csdb.DmTypesFileName))
         {
@@ -958,23 +965,67 @@ public sealed class DefaultsTool : ITool
                     SaveXmlDoc(dmtypes, Csdb.DmTypesFileName);
                 }
             }
-            else
+            else if (!RunToolToFile("newdm", dumpOpt, Csdb.DmTypesFileName, stderr))
             {
-                // C shells out to `s1kd-newdm -. > .dmtypes` (text) or
-                // `s1kd-newdm -, > .dmtypes` (xml). s1kd-newdm is not ported yet.
+                // Mirrors C S_DMTYPES_ERR (warning only; does not fail the run).
                 stderr.WriteLine($"{Name}: ERROR: Could not create {Csdb.DmTypesFileName} file.");
-                status = status == 0 ? 0 : status;
             }
         }
 
         // .fmtypes
         if (overwrite || !File.Exists(Csdb.FmTypesFileName))
         {
-            // C shells out to `s1kd-fmgen` which is not ported yet.
-            stderr.WriteLine($"{Name}: ERROR: Could not create {Csdb.FmTypesFileName} file.");
+            if (!RunToolToFile("fmgen", dumpOpt, Csdb.FmTypesFileName, stderr))
+            {
+                // Mirrors C S_FMTYPES_ERR (warning only; does not fail the run).
+                stderr.WriteLine($"{Name}: ERROR: Could not create {Csdb.FmTypesFileName} file.");
+            }
         }
 
         return status;
+    }
+
+    /// <summary>
+    /// Drive a ported <c>new*</c>/generator tool in-process, capturing its stdout
+    /// dump into <paramref name="destFile"/>. Replaces the C tool's
+    /// <c>system("s1kd-newdm -. &gt; .dmtypes")</c> / <c>system("s1kd-fmgen ...")</c>.
+    /// Returns true on success (tool resolved, exited 0, file written), false on
+    /// any failure (mirroring a non-zero <c>system()</c> result).
+    /// </summary>
+    private static bool RunToolToFile(string toolName, string dumpOpt, string destFile, TextWriter stderr)
+    {
+        ITool? tool = ToolRegistry.Resolve(toolName);
+        if (tool == null)
+        {
+            return false;
+        }
+
+        var captured = new StringWriter();
+        int rc;
+        try
+        {
+            rc = tool.Run(new[] { dumpOpt }, captured, stderr);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+
+        if (rc != 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            File.WriteAllText(destFile, captured.ToString(), new UTF8Encoding(false));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     // ----- brexmap loading -----------------------------------------------------
