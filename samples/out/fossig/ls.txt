@@ -1,0 +1,17 @@
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-001A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-005A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-009A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-022A-D_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-01-00-0000-00A-009A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-01-01-0000-00A-040A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-02-00-0000-00A-009A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-02-01-0000-00A-040A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-03-00-0000-00A-009A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-03-01-0000-00A-040A-A_000-01_EN-CA.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/DML-FOSSIG-KHZAE-C-2019-00001_000-01.XML
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/ICN-FOSSIG-A-00000000-A-KHZAE-00001-A-001-01.PNG
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/ICN-FOSSIG-A-00000000-A-KHZAE-00002-A-001-01.PNG
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/ICN-FOSSIG-A-00000000-A-KHZAE-00001-A-001-01.SVG
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/ICN-FOSSIG-A-00000000-A-KHZAE-00002-A-001-01.SVG
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/ICN-FOSSIG-A-00000000-A-KHZAE-00002-A-001-01.TXT
+/home/user/s1kd-tools/samples/datasets/fossig/csdb/PMC-FOSSIG-KHZAE-00001-00_000-01_EN-CA.XML

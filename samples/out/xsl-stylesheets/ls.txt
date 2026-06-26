@@ -1,0 +1,3 @@
+/home/user/s1kd-tools/samples/datasets/xsl-stylesheets/sample/DMC-S1000DXSL-A-00-00-00-00A-040A-A_001-00_EN-GB.xml
+/home/user/s1kd-tools/samples/datasets/xsl-stylesheets/sample/DMC-S1000DXSL-A-00-00-00-00A-040A-A_001-01_EN-GB.xml
+/home/user/s1kd-tools/samples/datasets/xsl-stylesheets/sample/PMC-S1000DXSL-SMART-00001-00.xml

@@ -27,7 +27,7 @@ samples/
     Samples.ToolsDoc/
     Samples.XslStylesheets/
     Samples.S1kd2db/
-  out/                          ← generated artifacts (git-ignored)
+  out/                          ← generated artifacts (checked in; cleared & rebuilt each run)
 ```
 
 Each `datasets/<name>/` folder has its **own README** documenting exactly what
@@ -71,8 +71,9 @@ A harness:
 2. runs a sequence of ported tools (`ls`, `validate`, `metadata`, `flatten`,
    `brexcheck`, `refs`, `syncrefs`) over the real objects — the same in-process
    `ITool.Run(...)` entry point the unit tests use,
-3. writes the produced artifacts (flattened publications, metadata listings,
-   validation/BREX XML reports) to `samples/out/<name>/`, and
+3. **clears** `samples/out/<name>/` and writes the produced artifacts
+   (flattened publications, metadata listings, validation/BREX XML reports)
+   into it, and
 4. prints a `PASS`/`FAIL` line per step and exits non-zero if any step did not
    produce its **expected** result.
 
@@ -83,6 +84,11 @@ contains data modules with dangling `internalRefId`s and modules that omit a
 `reasonForUpdate`, both of which the checkers should and do flag, matching the
 upstream C tools). They are written to assert exit code 1 so they read as
 `PASS` when the port behaves correctly.
+
+A snapshot of these artifacts is checked in under [`out/`](out/) so the expected
+results can be browsed and diffed without running anything. Each harness deletes
+its own `out/<name>/` folder at startup and regenerates it, so re-running keeps
+the snapshot in sync.
 
 All harness projects are part of `S1kdTools.slnx`, so `dotnet build` builds them
 and verifies they compile against the current library API.

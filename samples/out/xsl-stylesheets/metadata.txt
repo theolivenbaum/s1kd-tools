@@ -1,0 +1,67 @@
+applic                         All
+assyCode                       00
+brex                           S1000D-A-04-10-0301-00A-022A-D
+code                           S1000DXSL-A-00-00-00-00A-040A-A
+countryIsoCode                 GB
+disassyCode                    00
+disassyCodeVariant             A
+dmCode                         S1000DXSL-A-00-00-00-00A-040A-A
+infoCode                       040
+infoCodeVariant                A
+infoName                       README
+inWork                         00
+issue                          4.0
+issueDate                      2011-01-28
+issueInfo                      001-00
+issueNumber                    001
+itemLocationCode               A
+language                       en-GB
+languageIsoCode                en
+modelIdentCode                 S1000DXSL
+originator                     Smart Avionics Ltd.
+qualityAssurance               unverified
+responsiblePartnerCompany      Smart Avionics Ltd.
+schema                         descript
+schemaUrl                      http://www.s1000d.org/S1000D_4-0-1/xml_schema_flat/descript.xsd
+securityClassification         01
+subSubSystemCode               0
+subSystemCode                  0
+systemCode                     00
+systemDiffCode                 A
+techName                       S1000D XSL Stylesheets
+title                          S1000D XSL Stylesheets - README
+type                           dmodule
+applic                         All
+assyCode                       00
+brex                           S1000D-A-04-10-0301-00A-022A-D
+code                           S1000DXSL-A-00-00-00-00A-040A-A
+countryIsoCode                 GB
+disassyCode                    00
+disassyCodeVariant             A
+dmCode                         S1000DXSL-A-00-00-00-00A-040A-A
+infoCode                       040
+infoCodeVariant                A
+infoName                       README
+inWork                         01
+issue                          4.0
+issueDate                      2011-01-30
+issueInfo                      001-01
+issueNumber                    001
+issueType                      changed
+itemLocationCode               A
+language                       en-GB
+languageIsoCode                en
+modelIdentCode                 S1000DXSL
+originator                     Smart Avionics Ltd.
+qualityAssurance               unverified
+responsiblePartnerCompany      Smart Avionics Ltd.
+schema                         descript
+schemaUrl                      http://www.s1000d.org/S1000D_4-0-1/xml_schema_flat/descript.xsd
+securityClassification         01
+subSubSystemCode               0
+subSystemCode                  0
+systemCode                     00
+systemDiffCode                 A
+techName                       S1000D XSL Stylesheets
+title                          S1000D XSL Stylesheets - README
+type                           dmodule

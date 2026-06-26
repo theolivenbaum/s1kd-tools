@@ -19,7 +19,8 @@ upstream CSDB objects and writes the resulting artifacts to
 `Samples.Common/SampleHarness.cs` provides the shared driver:
 
 - **`new SampleHarness("<dataset>")`** walks up from the running assembly to
-  find `samples/datasets/<dataset>/` and creates `samples/out/<dataset>/`.
+  find `samples/datasets/<dataset>/`, then **deletes and recreates**
+  `samples/out/<dataset>/` so each run starts from a clean slate.
 - **`h.Files("DMC-*.XML")`** enumerates CSDB objects by glob.
 - **`h.Run(title, tool, args, expectExit, saveAs)`** runs a tool through its
   in-process `ITool.Run(args, stdout, stderr)` entry point (exactly what the
@@ -40,8 +41,9 @@ dotnet run --project samples/harnesses/Samples.Fossig
 # … etc, one per dataset
 ```
 
-Generated output lands in `samples/out/` (git-ignored). Delete it any time;
-re-running a harness recreates it.
+Generated output lands in `samples/out/`. A snapshot is checked in, and each
+harness clears its own `out/<dataset>/` folder before regenerating, so
+re-running keeps the committed snapshot up to date.
 
 ## Adding a new harness
 

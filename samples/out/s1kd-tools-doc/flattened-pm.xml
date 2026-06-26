@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE pm [
+<!NOTATION PNG SYSTEM "PNG" >
+<!ENTITY ICN-S1KDTOOLS-A-000000-A-KHZAE-00001-A-001-01 SYSTEM "ICN-S1KDTOOLS-A-000000-A-KHZAE-00001-A-001-01.PNG" NDATA PNG>
+]>
+<pm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_5-0/xml_schema_flat/pm.xsd">
+  <identAndStatusSection>
+    <pmAddress>
+      <pmIdent>
+        <pmCode modelIdentCode="S1KDTOOLS" pmIssuer="KHZAE" pmNumber="00000" pmVolume="00" />
+        <language languageIsoCode="en" countryIsoCode="CA" />
+        <issueInfo issueNumber="031" inWork="00" />
+      </pmIdent>
+      <pmAddressItems>
+        <issueDate year="2020" month="09" day="01" />
+        <pmTitle>s1kd-tools</pmTitle>
+        <shortPmTitle>Documentation</shortPmTitle>
+      </pmAddressItems>
+    </pmAddress>
+    <pmStatus issueType="status">
+      <security securityClassification="01" />
+      <logo>
+        <symbol infoEntityIdent="ICN-S1KDTOOLS-A-000000-A-KHZAE-00001-A-001-01" reproductionHeight="12mm" />
+      </logo>
+      <responsiblePartnerCompany>
+        <enterpriseName>khzae.net</enterpriseName>
+      </responsiblePartnerCompany>
+      <applic>
+        <displayText>
+          <simplePara>All</simplePara>
+        </displayText>
+      </applic>
+      <brexDmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="S1KDTOOLS" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D" />
+          </dmRefIdent>
+        </dmRef>
+      </brexDmRef>
+      <qualityAssurance>
+        <unverified />
+      </qualityAssurance>
+      <reasonForUpdate>
+        <simplePara>Upissue</simplePara>
+      </reasonForUpdate>
+    </pmStatus>
+  </identAndStatusSection>
+  <content>
+    <pmEntry>
+      <pmEntryTitle>Front matter</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-001A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-00SA-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-00UA-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-009A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-005A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Introduction</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-040B-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-018A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-920A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-130A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-014A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-00-00-00-00A-C30A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Tools for generating data</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-30-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-22-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-16-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-17-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-07-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-21-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-13-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-12-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-35-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-31-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Tools for authoring and managing data</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-27-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-06-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-08-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-09-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-19-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-34-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-05-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Tools for validating data</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-11-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-04-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-25-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-18-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-02-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Tools for delivering data</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-20-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-26-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-23-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-33-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-32-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-28-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-03-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-14-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-01-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/s1kd-tools-doc/csdb/DMC-S1KDTOOLS-A-10-00-00-00A-040A-D_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+  </content>
+</pm>
+

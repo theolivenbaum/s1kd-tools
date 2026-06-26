@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE pm [
+<!NOTATION PNG SYSTEM "PNG" >
+<!ENTITY ICN-FOSSIG-A-00000000-A-KHZAE-00001-A-001-01 SYSTEM "ICN-FOSSIG-A-00000000-A-KHZAE-00001-A-001-01.PNG" NDATA PNG>
+]>
+<pm xmlns:dc="http://www.purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-2/xml_schema_flat/pm.xsd">
+  <identAndStatusSection>
+    <pmAddress>
+      <pmIdent>
+        <pmCode modelIdentCode="FOSSIG" pmIssuer="KHZAE" pmNumber="00001" pmVolume="00" />
+        <language languageIsoCode="en" countryIsoCode="CA" />
+        <issueInfo issueNumber="000" inWork="01" />
+      </pmIdent>
+      <pmAddressItems>
+        <issueDate year="2019" month="01" day="09" />
+        <pmTitle>S1000D Free Open Source Software Interest Group</pmTitle>
+      </pmAddressItems>
+    </pmAddress>
+    <pmStatus>
+      <security securityClassification="01" />
+      <logo>
+        <symbol infoEntityIdent="ICN-FOSSIG-A-00000000-A-KHZAE-00001-A-001-01" reproductionHeight="12mm" />
+      </logo>
+      <responsiblePartnerCompany>
+        <enterpriseName>khzae.net</enterpriseName>
+      </responsiblePartnerCompany>
+      <applic>
+        <displayText>
+          <simplePara>All</simplePara>
+        </displayText>
+      </applic>
+      <brexDmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="S1000D" systemDiffCode="F" systemCode="04" subSystemCode="1" subSubSystemCode="0" assyCode="0301" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D" />
+          </dmRefIdent>
+        </dmRef>
+      </brexDmRef>
+      <qualityAssurance>
+        <unverified />
+      </qualityAssurance>
+    </pmStatus>
+  </identAndStatusSection>
+  <content>
+    <pmEntry>
+      <pmEntryTitle>Front matter</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-001A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-005A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-00-00-0000-00A-009A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Chapter 1 - Introduction</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-01-00-0000-00A-009A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-01-01-0000-00A-040A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Chapter 2 - Business rules</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-02-00-0000-00A-009A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-02-01-0000-00A-040A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Chapter 3 - SNS</pmEntryTitle>
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-03-00-0000-00A-009A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/fossig/csdb/DMC-FOSSIG-A-03-01-0000-00A-040A-A_000-01_EN-CA.XML" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+  </content>
+</pm>
+
