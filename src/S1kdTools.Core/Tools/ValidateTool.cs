@@ -1,6 +1,7 @@
 using System.Text;
 using System.Xml;
 using System.Xml.Schema;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -23,10 +24,12 @@ namespace S1kdTools.Tools;
 /// </para>
 ///
 /// <para>
-/// Not fully ported (tracked in todo.md): <c>-T/--summary</c> statistics XSLT
-/// (the C applies <c>stats.xsl</c> to the report; here a minimal text summary is
-/// produced instead), and the libxml2-specific <c>--xml-catalog</c>/long parse
-/// options.
+/// The <c>-T/--summary</c> statistics output applies the original
+/// <c>stats.xsl</c> stylesheet (a plain XSLT 1.0 transform, no EXSLT) to the XML
+/// report via <see cref="XslCompiledTransform"/>, matching the C tool's
+/// <c>print_stats</c> output byte-for-byte (written to stderr). The
+/// libxml2-specific <c>--xml-catalog</c>/long parse options remain unported
+/// (tracked in todo.md).
 /// </para>
 /// </summary>
 public sealed class ValidateTool : ITool
@@ -685,12 +688,73 @@ public sealed class ValidateTool : ITool
         return new UTF8Encoding(false).GetString(ms.ToArray()) + "\n";
     }
 
+    /// <summary>
+    /// The original <c>stats.xsl</c> (embedded verbatim from
+    /// <c>reference/tools/s1kd-validate/stats.xsl</c>). It is a plain XSLT 1.0
+    /// transform with no EXSLT use, so <see cref="XslCompiledTransform"/> runs it
+    /// directly.
+    /// </summary>
+    private const string StatsXsl =
+        """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <xsl:stylesheet
+          xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+          version="1.0">
+
+          <xsl:output method="text"/>
+
+          <xsl:template match="s1kdValidateReport">
+            <xsl:variable name="total" select="count(document)"/>
+            <xsl:text>Total documents checked: </xsl:text>
+            <xsl:value-of select="$total"/>
+            <xsl:text>&#10;</xsl:text>
+            <xsl:if test="$total &gt; 0">
+              <xsl:variable name="errors" select="count(document/error)"/>
+              <xsl:variable name="fail" select="count(document[error])"/>
+              <xsl:variable name="pass" select="count(document[not(error)])"/>
+              <xsl:text>Total errors: </xsl:text>
+              <xsl:value-of select="$errors"/>
+              <xsl:text>&#10;</xsl:text>
+              <xsl:text>Total documents that pass the check: </xsl:text>
+              <xsl:value-of select="$pass"/>
+              <xsl:text>&#10;</xsl:text>
+              <xsl:text>Total documents that fail the check: </xsl:text>
+              <xsl:value-of select="$fail"/>
+              <xsl:text>&#10;</xsl:text>
+              <xsl:text>Percentage passed: </xsl:text>
+              <xsl:value-of select="floor($pass div $total * 100)"/>
+              <xsl:text>%&#10;</xsl:text>
+              <xsl:text>Percentage failed: </xsl:text>
+              <xsl:value-of select="ceiling($fail div $total * 100)"/>
+              <xsl:text>%&#10;</xsl:text>
+            </xsl:if>
+          </xsl:template>
+
+        </xsl:stylesheet>
+        """;
+
+    /// <summary>
+    /// Print a summary of the check by applying <c>stats.xsl</c> to the XML
+    /// report. Mirrors <c>print_stats</c> in the C source (output to stderr).
+    /// </summary>
     private static void PrintStats(XmlDocument report, TextWriter stderr)
     {
-        int documents = report.SelectNodes("/s1kdValidateReport/document")?.Count ?? 0;
-        int invalid = report.SelectNodes("/s1kdValidateReport/document[error]")?.Count ?? 0;
-        int valid = documents - invalid;
-        stderr.WriteLine($"Validated {documents} files: {valid} valid, {invalid} invalid.");
+        var xslt = new XslCompiledTransform();
+        using (var sr = new StringReader(StatsXsl))
+        using (var xr = XmlReader.Create(sr))
+        {
+            xslt.Load(xr);
+        }
+
+        var sb = new StringBuilder();
+        // method="text" output: write the raw transform result. Use a writer
+        // configured to honour the stylesheet's text output method.
+        using (var sw = new StringWriter(sb))
+        {
+            xslt.Transform(report, null, sw);
+        }
+
+        stderr.Write(sb.ToString());
     }
 
     private void ShowHelp(TextWriter stdout)
