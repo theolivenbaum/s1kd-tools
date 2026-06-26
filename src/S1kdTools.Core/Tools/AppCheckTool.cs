@@ -37,8 +37,9 @@ namespace S1kdTools.Tools;
 /// to validate; this port filters in-process (dropping non-applicable annotated
 /// elements) and detects the most common resulting error — broken
 /// <c>internalRef</c> / <c>dmRef</c>-style cross references to filtered-out
-/// content. Custom validators (<c>-e</c>), the BREX check (<c>-b</c>), CCT
-/// dependency injection (<c>-~</c>), parallel threads (<c>-#</c>), the
+/// content. CCT dependency injection (<c>-~</c>) is supported via
+/// <see cref="Applicability.AddCctDepends"/>. Custom validators (<c>-e</c>), the
+/// BREX check (<c>-b</c>), parallel threads (<c>-#</c>), the
 /// <c>-o</c>/<c>-K</c>/<c>-k</c> external-filter options and the progress bar are
 /// parsed for compatibility but are not fully ported.
 /// </para>
@@ -275,12 +276,13 @@ public sealed class AppCheckTool : ITool
             objects.Add("-");
         }
 
-        // The BREX check (-b), CCT-dependency injection (-~) and omit-issue (-N)
-        // filename handling are parsed for compatibility but not fully ported;
-        // warn when they were requested so behaviour is not silently different.
-        if ((_brexcheck || _addDeps || _noIssue) && _verbosity >= Verbosity.Verbose)
+        // The BREX check (-b) and omit-issue (-N) filename handling are parsed
+        // for compatibility but not fully ported; warn when they were requested
+        // so behaviour is not silently different. CCT-dependency injection (-~)
+        // is supported (see Applicability.AddCctDepends).
+        if ((_brexcheck || _noIssue) && _verbosity >= Verbosity.Verbose)
         {
-            stderr.WriteLine($"{MsgPrefix}: WARNING: Options -b/-~/-N are not fully supported in this port.");
+            stderr.WriteLine($"{MsgPrefix}: WARNING: Options -b/-N are not fully supported in this port.");
         }
 
         int err = 0;
@@ -450,11 +452,18 @@ public sealed class AppCheckTool : ITool
     {
         int err = 0;
 
-        if (_checkProps)
+        if (_addDeps || _checkProps)
         {
             XmlDocument? act = FindAndLoadAct(doc, report);
             XmlDocument? cct = FindAndLoadCct(act, report);
-            err += CheckPropsAgainstCts(doc, path, act, cct, report, stderr);
+            if (_addDeps && cct != null)
+            {
+                Applicability.AddCctDepends(doc, cct, null);
+            }
+            if (_checkProps)
+            {
+                err += CheckPropsAgainstCts(doc, path, act, cct, report, stderr);
+            }
         }
 
         if (_checkDuplicate)
@@ -474,11 +483,21 @@ public sealed class AppCheckTool : ITool
     {
         int err = 0;
 
-        if (_checkProps)
+        // Add CCT dependencies so they are counted as part of the object's
+        // applicability (mirrors the add_deps/check_props block in
+        // check_object_props). Done before property-set extraction below.
+        if (_addDeps || _checkProps)
         {
             XmlDocument? act = FindAndLoadAct(doc, report);
             XmlDocument? cct = FindAndLoadCct(act, report);
-            err += CheckPropsAgainstCts(doc, path, act, cct, report, stderr);
+            if (_addDeps && cct != null)
+            {
+                Applicability.AddCctDepends(doc, cct, null);
+            }
+            if (_checkProps)
+            {
+                err += CheckPropsAgainstCts(doc, path, act, cct, report, stderr);
+            }
         }
 
         if (_checkDuplicate)
@@ -519,6 +538,11 @@ public sealed class AppCheckTool : ITool
     {
         int err = 0;
         XmlDocument? cct = FindAndLoadCct(act, report);
+
+        if (_addDeps && cct != null)
+        {
+            Applicability.AddCctDepends(doc, cct, null);
+        }
 
         if (_checkProps)
         {
@@ -594,11 +618,18 @@ public sealed class AppCheckTool : ITool
     {
         int err = 0;
 
-        if (_checkProps)
+        if (_addDeps || _checkProps)
         {
             XmlDocument? a = act ?? FindAndLoadAct(doc, report);
             XmlDocument? cct = FindAndLoadCct(a, report);
-            err += CheckPropsAgainstCts(doc, path, a, cct, report, stderr);
+            if (_addDeps && cct != null)
+            {
+                Applicability.AddCctDepends(doc, cct, null);
+            }
+            if (_checkProps)
+            {
+                err += CheckPropsAgainstCts(doc, path, a, cct, report, stderr);
+            }
         }
 
         if (_checkDuplicate)

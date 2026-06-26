@@ -182,4 +182,227 @@ public sealed class Applicability
         doc.LoadXml(node.OuterXml);
         return doc.DocumentElement?.OuterXml ?? string.Empty;
     }
+
+    // ----------------------------------------------------------------------
+    // CCT dependency injection (mirrors add_cct_depends and friends from
+    // tools/common/s1kd_tools.c).
+    // ----------------------------------------------------------------------
+
+    /// <summary>
+    /// Inject Conditions Cross-reference Table (CCT) dependency information into
+    /// the applicability annotations of <paramref name="doc"/>. For every
+    /// condition (<c>cond</c>) in the CCT that declares a dependency, any
+    /// assertion in the document that uses one of the dependant condition values
+    /// is rewritten so that the dependency test is ANDed onto it. Mirrors
+    /// <c>add_cct_depends</c>.
+    /// </summary>
+    /// <param name="doc">The document whose annotations are mutated in place.</param>
+    /// <param name="cct">The Conditions Cross-reference Table document.</param>
+    /// <param name="id">
+    /// When null, all conditions are processed. When non-null, only the
+    /// dependencies of the condition with that <c>id</c> are processed (used
+    /// when resolving sub-dependencies).
+    /// </param>
+    public static void AddCctDepends(XmlDocument doc, XmlDocument cct, string? id)
+    {
+        if (doc.DocumentElement == null || cct.DocumentElement == null)
+        {
+            return;
+        }
+
+        string xpath = id != null
+            ? $"//cond[@id='{id}']/dependency"
+            : "//cond/dependency";
+
+        XmlNodeList? deps = cct.SelectNodes(xpath);
+        if (deps == null)
+        {
+            return;
+        }
+
+        // Snapshot the dependency list; processing recurses and mutates doc but
+        // not the cct node-set.
+        var list = new List<XmlNode>();
+        foreach (XmlNode dep in deps)
+        {
+            list.Add(dep);
+        }
+
+        foreach (XmlNode dep in list)
+        {
+            AddCctDepend(doc, dep);
+        }
+    }
+
+    /// <summary>Add a single dependency from the CCT (mirrors <c>add_cct_depend</c>).</summary>
+    private static void AddCctDepend(XmlDocument doc, XmlNode dep)
+    {
+        if (dep is not XmlElement depEl || depEl.ParentNode is not XmlElement cond)
+        {
+            return;
+        }
+
+        string condId = cond.GetAttribute("id");
+        string test = depEl.GetAttribute("dependencyTest");
+        string vals = depEl.GetAttribute("forCondValues");
+
+        // Find the annotation in the CCT for the dependency test.
+        XmlNode? applic = depEl.OwnerDocument?.SelectSingleNode($"//applic[@id='{test}']");
+        if (applic == null)
+        {
+            return;
+        }
+
+        // Add dependency tests to assertions in doc that use the dependant
+        // values. The assertion query is re-run for each value because each
+        // match may replace the assertion node.
+        foreach (string v in vals.Split('|', StringSplitOptions.RemoveEmptyEntries))
+        {
+            XmlNodeList? asserts = doc.SelectNodes(
+                $"//assert[@applicPropertyIdent='{condId}' and @applicPropertyType='condition']");
+            if (asserts == null)
+            {
+                continue;
+            }
+
+            var snapshot = new List<XmlNode>();
+            foreach (XmlNode a in asserts)
+            {
+                snapshot.Add(a);
+            }
+
+            foreach (XmlNode assert in snapshot)
+            {
+                AddCctDependToAssert(assert, condId, v, applic);
+            }
+        }
+
+        // Handle subdependencies: dependant values which themselves have
+        // dependencies. Each condition referenced inside the dependency-test
+        // annotation is resolved recursively.
+        XmlNodeList? subAsserts = applic.SelectNodes(
+            ".//assert[@applicPropertyIdent and @applicPropertyType='condition']");
+        if (subAsserts != null)
+        {
+            var snapshot = new List<XmlNode>();
+            foreach (XmlNode a in subAsserts)
+            {
+                snapshot.Add(a);
+            }
+
+            XmlDocument cctDoc = (XmlDocument)applic.OwnerDocument!;
+            foreach (XmlNode subAssert in snapshot)
+            {
+                string ident = ((XmlElement)subAssert).GetAttribute("applicPropertyIdent");
+                AddCctDepends(doc, cctDoc, ident);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Add a dependency test to an assertion if it contains any of the dependent
+    /// values. If the assertion uses a set (<c>|</c>), the values are split so
+    /// the dependency is only added to the appropriate values. Mirrors
+    /// <c>add_cct_depend_to_assert</c>.
+    /// </summary>
+    private static void AddCctDependToAssert(XmlNode assert, string id, string forval, XmlNode applic)
+    {
+        XmlDocument owner = assert.OwnerDocument!;
+        string vals = (assert as XmlElement)?.GetAttribute("applicPropertyValues") ?? string.Empty;
+
+        bool match = false;
+        XmlElement eval = owner.CreateElement("evaluate");
+        eval.SetAttribute("andOr", "or");
+
+        // Split any sets (|); strtok skips empty tokens, so empties are dropped.
+        foreach (string v in vals.Split('|', StringSplitOptions.RemoveEmptyEntries))
+        {
+            XmlElement a = owner.CreateElement("assert");
+            a.SetAttribute("applicPropertyIdent", id);
+            a.SetAttribute("applicPropertyType", "condition");
+            a.SetAttribute("applicPropertyValues", v);
+
+            if (v == forval)
+            {
+                // This value has a dependency; AND the dependency test onto it.
+                match = true;
+
+                XmlElement e = owner.CreateElement("evaluate");
+                e.SetAttribute("andOr", "and");
+                eval.AppendChild(e);
+
+                for (XmlNode? cur = applic.FirstChild; cur != null; cur = cur.NextSibling)
+                {
+                    if (cur.LocalName is "assert" or "evaluate")
+                    {
+                        e.AppendChild(owner.ImportNode(cur, true));
+                    }
+                }
+
+                e.AppendChild(a);
+            }
+            else
+            {
+                eval.AppendChild(a);
+            }
+        }
+
+        if (!match)
+        {
+            return;
+        }
+
+        XmlNode? assertParent = assert.ParentNode;
+        if (assertParent == null)
+        {
+            return;
+        }
+
+        string? op = (assertParent as XmlElement)?.GetAttribute("andOr");
+        // GetAttribute returns "" when absent; treat that as null to match the C
+        // (which uses xmlGetProp -> NULL).
+        if (string.IsNullOrEmpty(op))
+        {
+            op = null;
+        }
+
+        // If the dependency test is being added to an OR evaluate, or the new
+        // evaluate has a single child, simplify by combining the new OR with the
+        // existing OR (insert the new OR's contents as siblings of the assert).
+        bool singleChild = eval.FirstChild != null && eval.FirstChild.NextSibling == null;
+        if (singleChild || op == "or")
+        {
+            XmlNode? last = assert;
+            for (XmlNode? cur = eval.FirstChild; cur != null; cur = cur.NextSibling)
+            {
+                string? o = (cur as XmlElement)?.GetAttribute("andOr");
+                if (string.IsNullOrEmpty(o))
+                {
+                    o = null;
+                }
+
+                if (o != null && o == op)
+                {
+                    // Combine evaluates with the same operation.
+                    for (XmlNode? c = cur.FirstChild; c != null; c = c.NextSibling)
+                    {
+                        XmlNode imported = owner.ImportNode(c, true);
+                        last = assertParent.InsertAfter(imported, last);
+                    }
+                }
+                else
+                {
+                    XmlNode imported = owner.ImportNode(cur, true);
+                    last = assertParent.InsertAfter(imported, last);
+                }
+            }
+        }
+        else
+        {
+            // Otherwise, just add the new OR after the assert.
+            assertParent.InsertAfter(eval, assert);
+        }
+
+        assertParent.RemoveChild(assert);
+    }
 }
