@@ -28,11 +28,11 @@ interactive -i/-I; the shared `add_cct_depends` CCT helper (appcheck -~); aspp
 -x custom XSLT; the shared ICN entity/notation helpers (`Icn.AddIcn`/`AddNotation`);
 NuGet packaging (`dotnet pack`) + single-file CLI publish.
 
-Genuinely remaining (platform limits / niche, each noted inline): fmgen XProc
-(.xpl) pipelines (no .NET equivalent); brexcheck EXSLT/XPath-2 objectPaths
-(System.Xml is XPath 1.0); instance CCT dependency-test injection in the filter
-loop (-2/-~); repcheck -X custom-stylesheet line numbers; newdm interactive -p
-prompt + byte-exact output. See per-tool notes and "Known risks / decisions".
+Genuinely remaining (platform limits / niche, each noted inline): brexcheck
+EXSLT/XPath-2 objectPaths (System.Xml is XPath 1.0); instance CCT dependency-test
+injection in the filter loop (-2/-~); repcheck -X custom-stylesheet line numbers;
+newdm interactive -p prompt + byte-exact output. See per-tool notes and
+"Known risks / decisions".
 
 ## 0. Project setup
 - [x] Move C source into `reference/`
@@ -128,7 +128,8 @@ Publication:
 - [x] s1kd-flatten (765) — resolve dmRef/pmRef to files and inline; -u dedup
       reimplemented in DOM (C uses EXSLT). 
 - [x] s1kd-fmgen (1021) — front matter via 10 embedded XSLTs (all XSLT 1.0, no
-      EXSLT). TODO: XProc (.xpl) pipelines unsupported.
+      EXSLT). XProc (.xpl) pipelines supported for -x/.fmtypes stylesheets
+      (p:pipeline of p:xslt steps, p:document/p:inline inputs, p:with-param).
 - [x] s1kd-icncatalog (577) — resolve ICN refs via catalog; media groups; regex
       pattern rules (DOM). NOTE: DTD serialized manually like addicn.
 - [x] s1kd-index (400) — keyword flagging from .indexflags; issue-3.0 rename

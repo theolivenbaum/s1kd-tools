@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml;
+using System.Xml.XPath;
 using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
@@ -18,19 +19,29 @@ namespace S1kdTools.Tools;
 /// The built-in stylesheets are copied verbatim from the C tool into
 /// <c>Resources/fmgen/*.xsl</c> and applied with <see cref="XslCompiledTransform"/>.
 /// They are plain XSLT 1.0 (using only <c>generate-id</c>, <c>key</c>, <c>sort</c>
-/// — all natively supported), so no EXSLT shim is required. The C tool also
-/// supports XProc (<c>p:pipeline</c>) stylesheets for the <c>-x</c>/per-type
-/// <c>xsl</c> override; that path is not ported (see remarks below).
+/// — all natively supported), so no EXSLT shim is required.
+///
+/// A file stylesheet supplied via <c>-x</c> or a <c>.fmtypes</c> <c>xsl</c>
+/// attribute may instead be an XProc (<c>http://www.w3.org/ns/xproc</c>)
+/// <c>&lt;p:pipeline&gt;</c> containing a sequence of <c>&lt;p:xslt&gt;</c> steps.
+/// Each step is applied in turn, the output of one feeding the next, enabling
+/// multi-pass transformations. Only the small subset used by the C tool is
+/// supported: per-step stylesheets from <c>&lt;p:input port="stylesheet"&gt;</c>
+/// containing either a <c>&lt;p:document href="…"/&gt;</c> (resolved relative to
+/// the pipeline file) or an inline <c>&lt;p:inline&gt;</c> stylesheet, plus
+/// <c>&lt;p:with-param&gt;</c> overrides. Mirrors <c>transform_doc</c> /
+/// <c>apply_xproc_xslt</c> in the C source.
 /// </summary>
 /// <remarks>
 /// Deviations from the C source:
 /// <list type="bullet">
-///   <item>XProc pipeline stylesheets (the <c>http://www.w3.org/ns/xproc</c>
-///         <c>&lt;p:pipeline&gt;</c> form, used by the multi-pass example) are not
-///         supported. Plain XSLT stylesheets supplied via <c>-x</c> or a
-///         <c>.fmtypes</c> <c>xsl</c> attribute work.</item>
 ///   <item>The <c>type</c> XSLT parameter that the C passes to every stylesheet
 ///         is set, but none of the built-in stylesheets actually reference it.</item>
+///   <item><c>p:with-param</c> <c>select</c> expressions are evaluated as
+///         standalone XPath (no source-document context), which covers the
+///         literal/boolean/number values the supported subset uses; an
+///         expression that cannot be evaluated standalone falls back to its
+///         literal text.</item>
 /// </list>
 /// </remarks>
 public sealed class FmGenTool : ITool
@@ -55,6 +66,9 @@ public sealed class FmGenTool : ITool
     private const string ToolPrefix = "s1kd-fmgen";
     private const string ErrPrefix = ToolPrefix + ": ERROR: ";
     private const string InfPrefix = ToolPrefix + ": INFO: ";
+
+    /// <summary>The XProc namespace used by <c>&lt;p:pipeline&gt;</c> stylesheets.</summary>
+    private const string XProcNs = "http://www.w3.org/ns/xproc";
 
     private enum Verbosity { Quiet, Normal, Verbose, Debug }
 
@@ -525,9 +539,17 @@ public sealed class FmGenTool : ITool
     {
         code = ExitSuccess;
 
-        // Apply the "type" parameter the C supplies (placeholder), if not already set.
-        // (None of the built-in stylesheets reference it, but we keep parity.)
-        XsltArgumentList args = CloneParams(xsltParams, paramSet, "type", type);
+        // Build the base parameter set passed to the transformation. The C seeds a
+        // "type" placeholder and fills it with the FM type before each generation
+        // (set_def_param); we mirror that. The dictionary doubles as the carrier
+        // for per-step XProc <p:with-param> combination, where user/base params
+        // take precedence over the pipeline's own parameters.
+        var baseParams = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (string name in paramSet)
+        {
+            baseParams[name] = xsltParams.GetParam(name, string.Empty);
+        }
+        baseParams["type"] = type;
 
         XmlDocument src;
         if (ignoreDel)
@@ -545,11 +567,11 @@ public sealed class FmGenTool : ITool
         {
             if (xslpath != null)
             {
-                return TransformWithFile(src, xslpath, args);
+                return TransformWithFile(src, xslpath, baseParams);
             }
             if (fmxsl != null)
             {
-                return TransformWithFile(src, fmxsl, args);
+                return TransformWithFile(src, fmxsl, baseParams);
             }
             if (!BuiltinXsl.TryGetValue(type, out string? resource))
             {
@@ -560,7 +582,7 @@ public sealed class FmGenTool : ITool
                 code = ExitBadType;
                 return null;
             }
-            return TransformWithResource(src, resource, args);
+            return TransformWithResource(src, resource, baseParams);
         }
         catch (FileNotFoundException)
         {
@@ -576,24 +598,6 @@ public sealed class FmGenTool : ITool
             code = ExitGenerateErr;
             return null;
         }
-    }
-
-    private static XsltArgumentList CloneParams(XsltArgumentList source, HashSet<string> names, string extraName, string extraValue)
-    {
-        var clone = new XsltArgumentList();
-        foreach (string name in names)
-        {
-            object? v = source.GetParam(name, string.Empty);
-            if (v != null)
-            {
-                clone.AddParam(name, string.Empty, v);
-            }
-        }
-        if (!names.Contains(extraName))
-        {
-            clone.AddParam(extraName, string.Empty, extraValue);
-        }
-        return clone;
     }
 
     private XmlElement? FindFm(XmlDocument fmtypes, string incode, string incodev)
@@ -711,44 +715,190 @@ public sealed class FmGenTool : ITool
         return true;
     }
 
-    private XmlDocument TransformWithResource(XmlDocument doc, string resource, XsltArgumentList args)
+    /// <summary>Apply a built-in (embedded) stylesheet. These are always plain XSLT.</summary>
+    private XmlDocument TransformWithResource(XmlDocument doc, string resource,
+        IReadOnlyDictionary<string, object?> baseParams)
     {
         using Stream styleStream = EmbeddedResources.Open(resource)
             ?? throw new FileNotFoundException($"Embedded stylesheet not found: {resource}");
-        return Transform(doc, reader => LoadStylesheet(reader), styleStream, args);
+        return ApplyStylesheetStream(doc, styleStream, BuildArgs(baseParams));
     }
 
-    private XmlDocument TransformWithFile(XmlDocument doc, string path, XsltArgumentList args)
+    /// <summary>
+    /// Apply a stylesheet read from a file. The file may be a plain XSLT
+    /// stylesheet or an XProc <c>&lt;p:pipeline&gt;</c> of <c>&lt;p:xslt&gt;</c>
+    /// steps. Mirrors <c>transform_doc</c>.
+    /// </summary>
+    private XmlDocument TransformWithFile(XmlDocument doc, string path,
+        IReadOnlyDictionary<string, object?> baseParams)
     {
         if (!File.Exists(path))
         {
             throw new FileNotFoundException(path);
         }
-        using Stream styleStream = File.OpenRead(path);
-        return Transform(doc, reader => LoadStylesheet(reader), styleStream, args);
+
+        XmlDocument styleDoc = XmlUtils.ReadDoc(path);
+
+        var nsmgr = new XmlNamespaceManager(styleDoc.NameTable);
+        nsmgr.AddNamespace("p", XProcNs);
+        XmlNodeList? steps = styleDoc.SelectNodes("/p:pipeline/p:xslt", nsmgr);
+
+        if (steps == null || steps.Count == 0)
+        {
+            // Not an XProc pipeline: treat the whole document as a plain XSLT
+            // stylesheet (this is what the built-in and ordinary -x stylesheets are).
+            return ApplyStylesheetDoc(doc, styleDoc, BuildArgs(baseParams));
+        }
+
+        // XProc pipeline: feed the input through each <p:xslt> step in turn.
+        XmlDocument current = doc;
+        foreach (XmlElement step in steps.OfType<XmlElement>())
+        {
+            current = ApplyXProcXslt(current, path, step, baseParams, nsmgr);
+        }
+        return current;
     }
 
-    private static XslCompiledTransform LoadStylesheet(XmlReader reader)
+    /// <summary>
+    /// Apply a single XProc <c>&lt;p:xslt&gt;</c> step. Mirrors <c>apply_xproc_xslt</c>:
+    /// the step's <c>&lt;p:with-param&gt;</c> children are combined with the base
+    /// parameters (base/user parameters win on conflict), and the stylesheet comes
+    /// from the <c>&lt;p:input port="stylesheet"&gt;</c> child — a referenced
+    /// <c>&lt;p:document&gt;</c> or an inline <c>&lt;p:inline&gt;</c> stylesheet. A
+    /// step with no stylesheet input passes the document through unchanged.
+    /// </summary>
+    private XmlDocument ApplyXProcXslt(XmlDocument doc, string pipelinePath, XmlElement step,
+        IReadOnlyDictionary<string, object?> baseParams, XmlNamespaceManager nsmgr)
+    {
+        // Combine the base parameters with the step's <p:with-param> values. The
+        // base (user/default) parameters override XProc parameters of the same name.
+        var combined = new Dictionary<string, object?>(baseParams, StringComparer.Ordinal);
+        foreach (XmlElement withParam in step.SelectNodes("p:with-param", nsmgr)!.OfType<XmlElement>())
+        {
+            string name = withParam.GetAttribute("name");
+            if (name.Length == 0 || combined.ContainsKey(name))
+            {
+                continue;
+            }
+            combined[name] = EvaluateXProcSelect(withParam.GetAttribute("select"));
+        }
+
+        XsltArgumentList args = BuildArgs(combined);
+
+        // Locate the stylesheet supplied on the "stylesheet" input port.
+        if (step.SelectSingleNode("p:input[@port='stylesheet']/p:*", nsmgr) is not XmlElement styleInput)
+        {
+            // No stylesheet: identity step.
+            return (XmlDocument)doc.Clone();
+        }
+
+        if (styleInput.LocalName == "document")
+        {
+            string href = styleInput.GetAttribute("href");
+            string resolved = ResolveHref(href, pipelinePath);
+            if (!File.Exists(resolved))
+            {
+                throw new FileNotFoundException(resolved);
+            }
+            XmlDocument styleDoc = XmlUtils.ReadDoc(resolved);
+            return ApplyStylesheetDoc(doc, styleDoc, args);
+        }
+
+        if (styleInput.LocalName == "inline")
+        {
+            XmlElement? sheet = styleInput.ChildNodes.OfType<XmlElement>().FirstOrDefault();
+            if (sheet == null)
+            {
+                return (XmlDocument)doc.Clone();
+            }
+            var styleDoc = XmlUtils.NewDocument();
+            styleDoc.AppendChild(styleDoc.ImportNode(sheet, true));
+            return ApplyStylesheetDoc(doc, styleDoc, args);
+        }
+
+        // Unknown stylesheet source: pass through unchanged (matches the C, which
+        // leaves the document untransformed when neither document nor inline).
+        return (XmlDocument)doc.Clone();
+    }
+
+    /// <summary>Resolve an XProc <c>href</c> relative to the pipeline file's location.</summary>
+    private static string ResolveHref(string href, string pipelinePath)
+    {
+        if (href.Length == 0)
+        {
+            return pipelinePath;
+        }
+        if (Path.IsPathRooted(href) || Uri.TryCreate(href, UriKind.Absolute, out _))
+        {
+            return href;
+        }
+        string? baseDir = Path.GetDirectoryName(Path.GetFullPath(pipelinePath));
+        return baseDir == null ? href : Path.GetFullPath(Path.Combine(baseDir, href));
+    }
+
+    /// <summary>
+    /// Evaluate an XProc <c>p:with-param/@select</c> expression. The C passes the
+    /// raw expression to libxslt, which evaluates it as XPath; we do the same with
+    /// no source-document context, which suffices for the literal / boolean /
+    /// number values the supported subset uses. Falls back to the literal text for
+    /// anything that cannot be evaluated standalone.
+    /// </summary>
+    private static object EvaluateXProcSelect(string select)
+    {
+        if (select.Length == 0)
+        {
+            return string.Empty;
+        }
+        try
+        {
+            object result = new XmlDocument().CreateNavigator()!.Evaluate(select);
+            return result switch
+            {
+                string or bool or double => result,
+                _ => select,
+            };
+        }
+        catch (Exception ex) when (ex is XPathException or ArgumentException)
+        {
+            return select;
+        }
+    }
+
+    private static XsltArgumentList BuildArgs(IReadOnlyDictionary<string, object?> parameters)
+    {
+        var args = new XsltArgumentList();
+        foreach (KeyValuePair<string, object?> kv in parameters)
+        {
+            if (kv.Value != null)
+            {
+                args.AddParam(kv.Key, string.Empty, kv.Value);
+            }
+        }
+        return args;
+    }
+
+    private static XmlDocument ApplyStylesheetStream(XmlDocument doc, Stream styleStream, XsltArgumentList args)
+    {
+        using XmlReader styleReader = XmlReader.Create(styleStream, ReaderSettings);
+        return Transform(doc, styleReader, args);
+    }
+
+    private static XmlDocument ApplyStylesheetDoc(XmlDocument doc, XmlDocument styleDoc, XsltArgumentList args)
+    {
+        using XmlReader styleReader = new XmlNodeReader(styleDoc);
+        return Transform(doc, styleReader, args);
+    }
+
+    private static readonly XmlReaderSettings ReaderSettings = new()
+    {
+        DtdProcessing = DtdProcessing.Ignore,
+        XmlResolver = null,
+    };
+
+    private static XmlDocument Transform(XmlDocument doc, XmlReader styleReader, XsltArgumentList args)
     {
         var xslt = new XslCompiledTransform();
-        xslt.Load(reader);
-        return xslt;
-    }
-
-    private static XmlDocument Transform(XmlDocument doc, Func<XmlReader, XslCompiledTransform> load,
-        Stream styleStream, XsltArgumentList args)
-    {
-        var readerSettings = new XmlReaderSettings
-        {
-            DtdProcessing = DtdProcessing.Ignore,
-            XmlResolver = null,
-        };
-
-        XslCompiledTransform xslt;
-        using (XmlReader styleReader = XmlReader.Create(styleStream, readerSettings))
-        {
-            xslt = load(styleReader);
-        }
+        xslt.Load(styleReader);
 
         var output = XmlUtils.NewDocument();
         using (var ms = new MemoryStream())
@@ -763,7 +913,7 @@ public sealed class FmGenTool : ITool
                 xslt.Transform(doc, args, writer);
             }
             ms.Position = 0;
-            using XmlReader resultReader = XmlReader.Create(ms, readerSettings);
+            using XmlReader resultReader = XmlReader.Create(ms, ReaderSettings);
             output.Load(resultReader);
         }
 
