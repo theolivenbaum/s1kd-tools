@@ -1,0 +1,34 @@
+applic                         All
+assyCode                       00
+brex                           S1000D-F-04-10-0301-00A-022A-D
+code                           S1KD2DB-A-00-00-00-00A-040A-D
+countryIsoCode                 CA
+disassyCode                    00
+disassyCodeVariant             A
+dmCode                         S1KD2DB-A-00-00-00-00A-040A-D
+infoCode                       040
+infoCodeVariant                A
+infoName                       Description
+inWork                         01
+issue                          4.2
+issueDate                      2017-06-09
+issueInfo                      000-01
+issueNumber                    000
+issueType                      new
+itemLocationCode               D
+language                       en-CA
+languageIsoCode                en
+modelIdentCode                 S1KD2DB
+originator                     
+qualityAssurance               unverified
+responsiblePartnerCompany      
+schema                         descript
+schemaUrl                      http://www.s1000d.org/S1000D_4-2/xml_schema_flat/descript.xsd
+securityClassification         01
+subSubSystemCode               0
+subSystemCode                  0
+systemCode                     00
+systemDiffCode                 A
+techName                       S1000D-to-DocBook stylesheet
+title                          S1000D-to-DocBook stylesheet - Description
+type                           dmodule

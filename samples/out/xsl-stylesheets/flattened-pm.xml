@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE pm [
+<!NOTATION anything SYSTEM "">
+<!ENTITY publisher-logo SYSTEM "" NDATA anything>
+]>
+<pm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-0-1/xml_schema_flat/pm.xsd">
+  <identAndStatusSection>
+    <pmAddress>
+      <pmIdent>
+        <pmCode modelIdentCode="S1000DXSL" pmIssuer="SMART" pmNumber="00001" pmVolume="00" />
+        <language languageIsoCode="en" countryIsoCode="GB" />
+        <issueInfo issueNumber="001" inWork="00" />
+      </pmIdent>
+      <pmAddressItems>
+        <issueDate year="2011" month="01" day="28" />
+        <pmTitle>S1000D XSL Stylesheets README</pmTitle>
+      </pmAddressItems>
+    </pmAddress>
+    <pmStatus>
+      <security securityClassification="01" />
+      <logo>
+        <symbol infoEntityIdent="publisher-logo" reproductionHeight="12mm" />
+      </logo>
+      <responsiblePartnerCompany>
+        <enterpriseName>Smart Avionics Ltd.</enterpriseName>
+      </responsiblePartnerCompany>
+      <applic>
+        <displayText>
+          <simplePara>All</simplePara>
+        </displayText>
+      </applic>
+      <qualityAssurance>
+        <unverified />
+      </qualityAssurance>
+    </pmStatus>
+  </identAndStatusSection>
+  <content>
+    <pmEntry>
+      <pmEntryTitle />
+      <xi:include href="/home/user/s1kd-tools/samples/datasets/xsl-stylesheets/sample/DMC-S1000DXSL-A-00-00-00-00A-040A-A_001-01_EN-GB.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </pmEntry>
+  </content>
+</pm>
+
+<!-- :xml.validate.ignore-dtd=true: -->
+
+
+

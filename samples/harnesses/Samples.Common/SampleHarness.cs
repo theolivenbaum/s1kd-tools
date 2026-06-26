@@ -35,7 +35,11 @@ public sealed class SampleHarness
         DatasetDir = System.IO.Path.Combine(samplesRoot, "datasets", datasetName);
         if (!Directory.Exists(DatasetDir))
             throw new DirectoryNotFoundException($"Dataset folder not found: {DatasetDir}");
+        // Start each run from a clean output folder so stale artifacts from a
+        // previous run (or a renamed step) never linger.
         OutDir = System.IO.Path.Combine(samplesRoot, "out", datasetName);
+        if (Directory.Exists(OutDir))
+            Directory.Delete(OutDir, recursive: true);
         Directory.CreateDirectory(OutDir);
 
         Console.WriteLine($"=== sample harness: {datasetName} ===");
