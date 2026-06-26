@@ -29,6 +29,16 @@ public static class Metadata
 {
     private const string Xsi = "http://www.w3.org/2001/XMLSchema-instance";
 
+    /// <summary>Default time format (mirrors <c>DEFAULT_TIMEFMT</c> "%Y-%m-%d").</summary>
+    public const string DefaultDateFormat = "%Y-%m-%d";
+
+    // Date format used by the current get/show operation, mirroring the C
+    // opts->timefmt threaded into get_issue_date. The C tool is single-threaded
+    // per invocation; we emulate that option via this field, set/reset around
+    // each public Get call that supplies a format.
+    [ThreadStatic]
+    private static string? _dateFormat;
+
     /// <summary>
     /// Internal handler set for a metadata key, mirroring the function pointers
     /// in the C <c>struct metadata</c>.
@@ -42,7 +52,21 @@ public static class Metadata
         Func<XmlDocument, string, bool>? Create)
     {
         public bool Editable => Edit != null || Create != null;
+
+        // Mirrors whether the C struct metadata entry had a non-null `get`
+        // function pointer (distinct from `show`). Used by condition evaluation
+        // (get_cond_content), which prefers `get` over raw node content.
+        public bool HasGetter => GetterKeys.Contains(Name);
     }
+
+    // Keys whose C metadata[] entry had a non-null `get` function pointer.
+    private static readonly HashSet<string> GetterKeys = new(StringComparer.Ordinal)
+    {
+        "act", "brex", "code", "commentCode", "dmCode", "ddnCode", "dmlCode",
+        "issue", "issueDate", "issueInfo", "language", "pmCode",
+        "qualityAssurance", "reasonForUpdate", "remarks", "schema",
+        "sourceDmCode", "sourcePmCode",
+    };
 
     // The full ordered table, mirroring metadata[] in the C source. "format",
     // "modified" and "path" are file-system metadata the C derives outside the
@@ -78,6 +102,73 @@ public static class Metadata
             return null;
         }
         return entry.Show(el);
+    }
+
+    /// <summary>
+    /// Retrieve a metadata value using a custom strftime date format for the
+    /// <c>issueDate</c> key (mirrors the C <c>-d</c> option). Other keys ignore
+    /// the format.
+    /// </summary>
+    public static string? Get(XmlDocument doc, string key, string? dateFormat)
+    {
+        string? prev = _dateFormat;
+        _dateFormat = dateFormat;
+        try
+        {
+            return Get(doc, key);
+        }
+        finally
+        {
+            _dateFormat = prev;
+        }
+    }
+
+    /// <summary>
+    /// Whether the document contains a node for the given key's XPath. Mirrors
+    /// the C check <c>first_xpath_node(metadata[i].path, ctxt)</c> used when
+    /// listing all metadata: only keys whose node exists are shown.
+    /// </summary>
+    public static bool HasNode(XmlDocument doc, string key)
+    {
+        if (!ByName.TryGetValue(key, out var entry))
+        {
+            return false;
+        }
+        return LocateElement(doc, entry.XPath) != null;
+    }
+
+    /// <summary>
+    /// Retrieve the raw content used when evaluating a <c>-w</c>/<c>-W</c>
+    /// condition (mirrors <c>get_cond_content</c>): if the key has a composite
+    /// getter, use it; otherwise return the located node's text content. Returns
+    /// null when the node is not present.
+    /// </summary>
+    public static string? GetConditionContent(XmlDocument doc, string key, string? dateFormat)
+    {
+        if (!ByName.TryGetValue(key, out var entry))
+        {
+            return null;
+        }
+        string? prev = _dateFormat;
+        _dateFormat = dateFormat;
+        try
+        {
+            XmlElement? el = LocateElement(doc, entry.XPath);
+            if (el == null)
+            {
+                return null;
+            }
+            // get_cond_content: prefer the composite getter; otherwise node content.
+            if (entry.Show != null && entry.HasGetter)
+            {
+                return entry.Show(el);
+            }
+            return el.InnerText;
+        }
+        finally
+        {
+            _dateFormat = prev;
+        }
     }
 
     /// <summary>
@@ -252,13 +343,64 @@ public static class Metadata
         }
         try
         {
-            // Default time format is %Y-%m-%d.
-            return new DateTime(y, m, d).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            return Strftime(_dateFormat ?? DefaultDateFormat, new DateTime(y, m, d));
         }
         catch (ArgumentOutOfRangeException)
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Minimal strftime-style formatter mirroring the conversion specifiers the
+    /// C tool uses for dates (the default is <c>%Y-%m-%d</c>; <c>-d</c> allows an
+    /// arbitrary strftime string). Only the common specifiers are supported;
+    /// unknown ones are emitted verbatim, as a best-effort match.
+    /// </summary>
+    public static string Strftime(string fmt, DateTime t)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < fmt.Length; i++)
+        {
+            if (fmt[i] != '%' || i + 1 >= fmt.Length)
+            {
+                sb.Append(fmt[i]);
+                continue;
+            }
+            char c = fmt[++i];
+            switch (c)
+            {
+                case 'Y': sb.Append(t.Year.ToString("D4", CultureInfo.InvariantCulture)); break;
+                case 'y': sb.Append((t.Year % 100).ToString("D2", CultureInfo.InvariantCulture)); break;
+                case 'm': sb.Append(t.Month.ToString("D2", CultureInfo.InvariantCulture)); break;
+                case 'd': sb.Append(t.Day.ToString("D2", CultureInfo.InvariantCulture)); break;
+                case 'e': sb.Append(t.Day.ToString(CultureInfo.InvariantCulture).PadLeft(2)); break;
+                case 'H': sb.Append(t.Hour.ToString("D2", CultureInfo.InvariantCulture)); break;
+                case 'M': sb.Append(t.Minute.ToString("D2", CultureInfo.InvariantCulture)); break;
+                case 'S': sb.Append(t.Second.ToString("D2", CultureInfo.InvariantCulture)); break;
+                case 'j': sb.Append(t.DayOfYear.ToString("D3", CultureInfo.InvariantCulture)); break;
+                case 'B': sb.Append(t.ToString("MMMM", CultureInfo.InvariantCulture)); break;
+                case 'b':
+                case 'h': sb.Append(t.ToString("MMM", CultureInfo.InvariantCulture)); break;
+                case 'A': sb.Append(t.ToString("dddd", CultureInfo.InvariantCulture)); break;
+                case 'a': sb.Append(t.ToString("ddd", CultureInfo.InvariantCulture)); break;
+                case 'p': sb.Append(t.Hour < 12 ? "AM" : "PM"); break;
+                case 'I':
+                {
+                    int h = t.Hour % 12;
+                    if (h == 0) h = 12;
+                    sb.Append(h.ToString("D2", CultureInfo.InvariantCulture));
+                    break;
+                }
+                case 'F': sb.Append(Strftime("%Y-%m-%d", t)); break;
+                case 'T': sb.Append(Strftime("%H:%M:%S", t)); break;
+                case '%': sb.Append('%'); break;
+                case 'n': sb.Append('\n'); break;
+                case 't': sb.Append('\t'); break;
+                default: sb.Append('%').Append(c); break;
+            }
+        }
+        return sb.ToString();
     }
 
     private static bool EditIssueDate(XmlElement n, string v)

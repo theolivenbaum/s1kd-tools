@@ -68,7 +68,7 @@ Authoring:
 - [x] s1kd-ls (1050) — type selection, official/inwork, latest/old, recursive,
       list input, writable/read-only, null output, -e/--exec (runs the command
       via /bin/sh -c, expanding {} to the path) and -N file inwork lookup.
-- [~] s1kd-metadata (3240) — list/edit metadata (big key table)
+- [x] s1kd-metadata (3240) — list/edit metadata (big key table)
 - [x] s1kd-mvref (768) — recode dmRef/pmRef from a source object to a target.
 - [x] s1kd-ref (2040) — build/insert references from codes; -T transform;
       .externalpubs; downgrade via to*.xsl.
