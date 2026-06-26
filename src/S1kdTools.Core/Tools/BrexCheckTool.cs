@@ -26,8 +26,16 @@ namespace S1kdTools.Tools;
 /// </para>
 ///
 /// <para>
-/// Not ported (see todo.md): severity-level configuration (<c>-w</c>), summary
-/// stats (<c>-T</c>), progress bars, and XPath 2.0 (<c>-X</c>).
+/// Also ported: severity-level configuration (<c>-w</c> / auto-discovered
+/// <c>.brseveritylevels</c>): each violated rule is tagged with its
+/// <c>brSeverityLevel</c> and the user-defined <c>type</c> name from the brsl
+/// file, and a rule whose severity has <c>fail="no"</c> is reported but excluded
+/// from the failure count / exit status (mirrors <c>is_failure</c>).
+/// </para>
+///
+/// <para>
+/// Not ported (see todo.md): summary stats (<c>-T</c>), progress bars, and XPath
+/// 2.0 (<c>-X</c>).
 /// </para>
 /// </summary>
 public sealed class BrexCheckTool : ITool
@@ -42,6 +50,9 @@ public sealed class BrexCheckTool : ITool
     private const int ExitBadDmodule = 2;
     private const int ExitBrexNotFound = 3;
     private const int ExitBadXPathVersion = 4;
+
+    /// <summary>Default severity-levels config file name (mirrors <c>DEFAULT_BRSL_FNAME</c>).</summary>
+    private const string DefaultBrslFileName = ".brseveritylevels";
 
     public int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
     {
@@ -62,6 +73,7 @@ public sealed class BrexCheckTool : ITool
         bool remDelete = false;
         bool isList = false;
         bool layered = false;
+        string? brslFile = null;
         var showFnames = ShowFnames.None;
 
         for (int i = 0; i < args.Count; i++)
@@ -152,6 +164,7 @@ public sealed class BrexCheckTool : ITool
                     break;
                 case "-w" or "--severity-levels":
                     if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: -w requires an argument"); return ExitBadDmodule; }
+                    brslFile = args[i];
                     break;
                 default:
                     if (a.StartsWith('-') && a.Length > 1 && a != "-")
@@ -188,6 +201,28 @@ public sealed class BrexCheckTool : ITool
         }
 
         BrexCheckOptions opts = BuildOptions(checkValues, checkSns, strictSns, unstrictSns, checkNotations, quiet, verbose);
+
+        // Resolve the BREX severity levels (brsl) file. If -w was not given, search
+        // the current directory and its parents for a ".brseveritylevels" file
+        // (mirrors find_config(DEFAULT_BRSL_FNAME)). If one is found/given, load it.
+        if (brslFile == null && Csdb.FindConfig(DefaultBrslFileName, out string foundBrsl))
+        {
+            brslFile = foundBrsl;
+        }
+
+        BrexSeverityLevels? brsl = null;
+        if (brslFile != null)
+        {
+            try
+            {
+                brsl = new BrexSeverityLevels(XmlUtils.ReadDoc(brslFile));
+            }
+            catch (Exception ex) when (ex is IOException or XmlException)
+            {
+                if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read severity levels file \"{brslFile}\".");
+                return ExitBadDmodule;
+            }
+        }
 
         XmlDocument outDoc = XmlUtils.NewDocument();
         XmlElement brexCheck = outDoc.CreateElement("brexCheck");
@@ -289,7 +324,7 @@ public sealed class BrexCheckTool : ITool
             }
 
             string firstBrexPath = chain.Count > 0 ? chain[0].Path : "-";
-            int errs = BrexCheck.Check(objDoc, chain, opts, objPath, layered, out XmlDocument report);
+            int errs = BrexCheck.Check(objDoc, chain, opts, objPath, layered, brsl, out XmlDocument report);
 
             // Splice this object's <document> result into the combined report.
             XmlNode? documentNode = report.DocumentElement?.SelectSingleNode("document");
@@ -612,6 +647,7 @@ public sealed class BrexCheckTool : ITool
         stdout.WriteLine("  -t, --strict           Strict SNS checking.");
         stdout.WriteLine("  -u, --unstrict         Unstrict SNS checking.");
         stdout.WriteLine("  -v, --verbose          Verbose mode.");
+        stdout.WriteLine("  -w, --severity-levels <file>  Use <file> as the severity levels list.");
         stdout.WriteLine("  -X, --xpath-version    Force XPath version (only 1.0 supported).");
         stdout.WriteLine("  -x, --xml              XML output.");
         stdout.WriteLine("  -^, --remove-deleted   Check with \"delete\" elements removed.");
