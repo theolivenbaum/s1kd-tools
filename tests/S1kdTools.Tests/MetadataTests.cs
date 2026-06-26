@@ -471,4 +471,87 @@ public class MetadataTests
     {
         Assert.Equal(new[] { "code", "issueNumber", "securityClassification", "type" }, Metadata.IcnKeys);
     }
+
+    // ---------------------------------------------------------------------
+    // Custom date format (-d)
+    // ---------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("%Y-%m-%d", "2026-06-25")]
+    [InlineData("%Y/%m/%d", "2026/06/25")]
+    [InlineData("%d.%m.%Y", "25.06.2026")]
+    [InlineData("%Y", "2026")]
+    [InlineData("%y", "26")]
+    [InlineData("%j", "176")]
+    public void Get_IssueDate_HonoursDateFormat(string fmt, string expected)
+    {
+        var doc = XmlUtils.ReadMem(Fixtures.DataModule);
+        Assert.Equal(expected, Metadata.Get(doc, "issueDate", fmt));
+    }
+
+    [Fact]
+    public void Get_IssueDate_NullFormat_UsesDefault()
+    {
+        var doc = XmlUtils.ReadMem(Fixtures.DataModule);
+        Assert.Equal("2026-06-25", Metadata.Get(doc, "issueDate", null));
+    }
+
+    [Fact]
+    public void Strftime_LiteralPercentAndUnknown()
+    {
+        var t = new DateTime(2026, 6, 25);
+        Assert.Equal("100%", Metadata.Strftime("100%%", t));
+        // Unknown specifier is emitted verbatim.
+        Assert.Equal("%Q-2026", Metadata.Strftime("%Q-%Y", t));
+    }
+
+    // ---------------------------------------------------------------------
+    // HasNode
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public void HasNode_TrueForPresent_FalseForAbsent()
+    {
+        var doc = XmlUtils.ReadMem(Fixtures.DataModule);
+        Assert.True(Metadata.HasNode(doc, "techName"));
+        Assert.True(Metadata.HasNode(doc, "issueNumber"));
+        Assert.False(Metadata.HasNode(doc, "pmTitle"));
+        Assert.False(Metadata.HasNode(doc, "notAKey"));
+    }
+
+    // ---------------------------------------------------------------------
+    // Condition content (get_cond_content): getter keys use the composite
+    // getter; non-getter keys use raw node content.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public void GetConditionContent_GetterKey_UsesComposite()
+    {
+        var doc = XmlUtils.ReadMem(Fixtures.DataModule);
+        // dmCode has a composite getter.
+        Assert.Equal("EX-A-00-00-00-00A-040A-D",
+            Metadata.GetConditionContent(doc, "dmCode", null));
+        // issueDate getter honours the date format.
+        Assert.Equal("2026/06/25",
+            Metadata.GetConditionContent(doc, "issueDate", "%Y/%m/%d"));
+    }
+
+    [Fact]
+    public void GetConditionContent_NonGetterKey_UsesNodeContent()
+    {
+        var doc = XmlUtils.ReadMem(Fixtures.DataModule);
+        // issueNumber has no get pointer in C => condition uses node content,
+        // which is the located node (the issueInfo element) text content.
+        // The issueInfo element has no text, so content is empty (not the attr).
+        Assert.Equal(string.Empty, Metadata.GetConditionContent(doc, "issueNumber", null));
+        // techName: show==node content and no get => node content "Example".
+        Assert.Equal("Example", Metadata.GetConditionContent(doc, "techName", null));
+    }
+
+    [Fact]
+    public void GetConditionContent_MissingNode_ReturnsNull()
+    {
+        var doc = XmlUtils.ReadMem(Fixtures.DataModule);
+        Assert.Null(Metadata.GetConditionContent(doc, "pmTitle", null));
+    }
 }
