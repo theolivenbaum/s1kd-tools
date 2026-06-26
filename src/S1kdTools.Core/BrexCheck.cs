@@ -37,6 +37,77 @@ public enum BrexCheckOptions
 }
 
 /// <summary>
+/// A parsed BREX severity-levels (<c>brsl</c>) configuration, mirroring the
+/// <c>.brseveritylevels</c> file consumed by the C tool's <c>-w</c> option.
+///
+/// <para>
+/// The file lists the severity levels referenced by a BREX rule's
+/// <c>brSeverityLevel</c> attribute, giving each a user-defined <c>type</c> name
+/// (the element text) and, optionally, a <c>fail</c> flag. A violated rule whose
+/// severity level has <c>fail="no"</c> is reported but is <em>not</em> counted as
+/// an error in the exit status; any other value (or an absent flag, or an
+/// unknown severity) counts as a failure. Mirrors the C <c>is_failure</c> /
+/// <c>brsl_type</c> helpers.
+/// </para>
+/// </summary>
+public sealed class BrexSeverityLevels
+{
+    private readonly XmlDocument _doc;
+
+    public BrexSeverityLevels(XmlDocument doc) => _doc = doc;
+
+    /// <summary>The underlying <c>brSeverityLevels</c> document.</summary>
+    public XmlDocument Document => _doc;
+
+    /// <summary>
+    /// Whether a violated rule with the given severity level counts as a failure.
+    /// Mirrors <c>is_failure</c>: true unless a matching <c>brSeverityLevel</c>
+    /// has <c>fail="no"</c>. An unknown severity defaults to a failure.
+    /// </summary>
+    public bool IsFailure(string severity)
+    {
+        XmlNodeList? levels = _doc.SelectNodes("//brSeverityLevel");
+        if (levels != null)
+        {
+            foreach (XmlNode n in levels)
+            {
+                if (n is XmlElement el &&
+                    string.Equals(el.GetAttribute("value"), severity, StringComparison.Ordinal))
+                {
+                    // xmlGetProp returns NULL when @fail is absent; xmlStrcmp(NULL,"no")
+                    // is non-zero, so an absent @fail counts as a failure.
+                    return !string.Equals(el.GetAttribute("fail"), "no", StringComparison.Ordinal);
+                }
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The user-defined type name (element text) for the given severity level, or
+    /// null when no <c>brSeverityLevel</c> with that <c>value</c> exists. Mirrors
+    /// <c>brsl_type</c> (which returns the node content, i.e. "" for an empty
+    /// element).
+    /// </summary>
+    public string? Type(string severity)
+    {
+        XmlNodeList? levels = _doc.SelectNodes("//brSeverityLevel");
+        if (levels != null)
+        {
+            foreach (XmlNode n in levels)
+            {
+                if (n is XmlElement el &&
+                    string.Equals(el.GetAttribute("value"), severity, StringComparison.Ordinal))
+                {
+                    return el.InnerText;
+                }
+            }
+        }
+        return null;
+    }
+}
+
+/// <summary>
 /// A single BREX data module in a (possibly layered) BREX chain, paired with the
 /// path/identifier recorded for it in the report's <c>brex/@path</c>.
 /// </summary>
@@ -107,6 +178,20 @@ public static class BrexCheck
     public static int Check(XmlDocument doc, IReadOnlyList<BrexModule> brexChain, BrexCheckOptions opts,
         string docPath, bool layered, out XmlDocument report)
     {
+        return Check(doc, brexChain, opts, docPath, layered, null, out report);
+    }
+
+    /// <summary>
+    /// Check <paramref name="doc"/> against a chain of BREX modules, applying a
+    /// BREX severity-levels (<c>brsl</c>) configuration. Violated rules are tagged
+    /// with their <c>brSeverityLevel</c> and a <c>type</c> element; rules whose
+    /// severity has <c>fail="no"</c> are reported but not counted towards the
+    /// returned error total. Mirrors the C <c>check_brex_rules</c> when a
+    /// <c>.brseveritylevels</c> file is in effect.
+    /// </summary>
+    public static int Check(XmlDocument doc, IReadOnlyList<BrexModule> brexChain, BrexCheckOptions opts,
+        string docPath, bool layered, BrexSeverityLevels? brsl, out XmlDocument report)
+    {
         report = XmlUtils.NewDocument();
         XmlElement brexCheck = report.CreateElement("brexCheck");
         report.AppendChild(brexCheck);
@@ -135,7 +220,7 @@ public static class BrexCheck
         // Structure object rules are checked per-BREX (one <brex> per layer).
         foreach (BrexModule layer in brexChain)
         {
-            total += CheckStructureRules(layer.Document, doc, layer.Path, documentNode, opts);
+            total += CheckStructureRules(layer.Document, doc, layer.Path, documentNode, opts, brsl);
         }
 
         return total;
@@ -166,7 +251,7 @@ public static class BrexCheck
     // ---- Structure object rules -------------------------------------------------
 
     private static int CheckStructureRules(XmlDocument brex, XmlDocument doc, string brexPath,
-        XmlElement documentNode, BrexCheckOptions opts)
+        XmlElement documentNode, BrexCheckOptions opts, BrexSeverityLevels? brsl = null)
     {
         XmlDocument report = documentNode.OwnerDocument!;
         XmlElement brexNode = (XmlElement)documentNode.AppendChild(report.CreateElement("brex"))!;
@@ -221,6 +306,14 @@ public static class BrexCheck
             if (severity != null)
             {
                 brexError.SetAttribute("brSeverityLevel", severity);
+
+                // With a brsl configuration, record the user-defined type name of
+                // the severity level (mirrors the brsl_fname branch in the C).
+                if (brsl != null)
+                {
+                    XmlElement typeNode = (XmlElement)brexError.AppendChild(report.CreateElement("type"))!;
+                    typeNode.InnerText = brsl.Type(severity) ?? string.Empty;
+                }
             }
             else
             {
@@ -249,7 +342,26 @@ public static class BrexCheck
                 DumpNodesXml(matched, brexError, rule, opts);
             }
 
-            ++nerr;
+            // Decide whether this violation counts as a true failure. Mirrors the
+            // tail of the C is_invalid block: a rule with a severity level whose
+            // brsl entry has fail="no" is reported (with fail="no") but not
+            // counted; everything else (including any severity when no brsl is in
+            // effect) counts as an error.
+            if (severity != null && brsl != null)
+            {
+                if (brsl.IsFailure(severity))
+                {
+                    ++nerr;
+                }
+                else
+                {
+                    brexError.SetAttribute("fail", "no");
+                }
+            }
+            else
+            {
+                ++nerr;
+            }
         }
 
         if (!brexNode.HasChildNodes)

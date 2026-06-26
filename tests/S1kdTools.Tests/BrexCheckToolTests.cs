@@ -439,6 +439,180 @@ public class BrexCheckToolTests
         }
     }
 
+    // ---- Severity levels (brsl) ---------------------------------------------
+
+    // The same prohibiting rule as Brex, but tagged with a severity level.
+    private static string SeverityBrex(string severity) =>
+        $"""
+        <dmodule>
+          <content>
+            <brex>
+              <contextRules>
+                <structureObjectRule brSeverityLevel="{severity}">
+                  <brDecisionRef brDecisionIdentNumber="BREX-TEST-00001"/>
+                  <objectPath allowedObjectFlag="0">//prohibited</objectPath>
+                  <objectUse>The prohibited element must not be used.</objectUse>
+                </structureObjectRule>
+              </contextRules>
+            </brex>
+          </content>
+        </dmodule>
+        """;
+
+    // A BREX declaring a default severity level for all of its rules.
+    private const string DefaultSeverityBrex =
+        """
+        <dmodule>
+          <content>
+            <brex defaultBrSeverityLevel="brsl02">
+              <contextRules>
+                <structureObjectRule>
+                  <brDecisionRef brDecisionIdentNumber="BREX-TEST-00001"/>
+                  <objectPath allowedObjectFlag="0">//prohibited</objectPath>
+                  <objectUse>The prohibited element must not be used.</objectUse>
+                </structureObjectRule>
+              </contextRules>
+            </brex>
+          </content>
+        </dmodule>
+        """;
+
+    // A severity levels (brsl) file: brsl01 is a counted error, brsl02 a warning.
+    private const string Brsl =
+        """
+        <?xml version="1.0"?>
+        <brSeverityLevels>
+          <brSeverityLevel value="brsl01" fail="yes">Error</brSeverityLevel>
+          <brSeverityLevel value="brsl02" fail="no">Warning</brSeverityLevel>
+        </brSeverityLevels>
+        """;
+
+    private static BrexSeverityLevels Levels(string xml) => new(Doc(xml));
+
+    [Fact]
+    public void Severity_IsFailure_RespectsFailFlag()
+    {
+        var brsl = Levels(Brsl);
+        Assert.True(brsl.IsFailure("brsl01"));   // fail="yes"
+        Assert.False(brsl.IsFailure("brsl02"));  // fail="no"
+        Assert.True(brsl.IsFailure("unknown"));  // not listed -> failure
+    }
+
+    [Fact]
+    public void Severity_Type_ReturnsUserType()
+    {
+        var brsl = Levels(Brsl);
+        Assert.Equal("Error", brsl.Type("brsl01"));
+        Assert.Equal("Warning", brsl.Type("brsl02"));
+        Assert.Null(brsl.Type("unknown"));
+    }
+
+    [Fact]
+    public void Library_Severity_WarningNotCounted_ButReported()
+    {
+        int errs = BrexCheck.Check(Doc(ViolatingObject), new[] { new BrexModule(Doc(SeverityBrex("brsl02")), "-") },
+            BrexCheckOptions.None, "-", layered: false, Levels(Brsl), out XmlDocument report);
+
+        // fail="no" -> the violation is reported but not counted as an error.
+        Assert.Equal(0, errs);
+
+        var error = report.SelectSingleNode("//brex/error") as XmlElement;
+        Assert.NotNull(error);
+        Assert.Equal("brsl02", error!.GetAttribute("brSeverityLevel"));
+        Assert.Equal("no", error.GetAttribute("fail"));
+        Assert.Equal("Warning", error.SelectSingleNode("type")!.InnerText);
+    }
+
+    [Fact]
+    public void Library_Severity_ErrorLevelCounted()
+    {
+        int errs = BrexCheck.Check(Doc(ViolatingObject), new[] { new BrexModule(Doc(SeverityBrex("brsl01")), "-") },
+            BrexCheckOptions.None, "-", layered: false, Levels(Brsl), out XmlDocument report);
+
+        Assert.Equal(1, errs);
+        var error = report.SelectSingleNode("//brex/error") as XmlElement;
+        Assert.NotNull(error);
+        Assert.Equal("brsl01", error!.GetAttribute("brSeverityLevel"));
+        // fail="yes" levels are not annotated with fail="no".
+        Assert.Equal("", error.GetAttribute("fail"));
+        Assert.Equal("Error", error.SelectSingleNode("type")!.InnerText);
+    }
+
+    [Fact]
+    public void Library_Severity_NoBrsl_AnySeverityCounts()
+    {
+        // Without a brsl configuration, a severity-tagged violation still counts
+        // and no <type> element is emitted (mirrors brsl == NULL in the C).
+        int errs = BrexCheck.Check(Doc(ViolatingObject), Doc(SeverityBrex("brsl02")),
+            BrexCheckOptions.None, out XmlDocument report);
+
+        Assert.Equal(1, errs);
+        var error = report.SelectSingleNode("//brex/error") as XmlElement;
+        Assert.NotNull(error);
+        Assert.Equal("brsl02", error!.GetAttribute("brSeverityLevel"));
+        Assert.Null(error.SelectSingleNode("type"));
+    }
+
+    [Fact]
+    public void Library_Severity_DefaultSeverityLevelApplied()
+    {
+        // No per-rule brSeverityLevel: the brex/@defaultBrSeverityLevel applies,
+        // and brsl02 is a non-counted warning.
+        int errs = BrexCheck.Check(Doc(ViolatingObject), new[] { new BrexModule(Doc(DefaultSeverityBrex), "-") },
+            BrexCheckOptions.None, "-", layered: false, Levels(Brsl), out XmlDocument report);
+
+        Assert.Equal(0, errs);
+        var error = report.SelectSingleNode("//brex/error") as XmlElement;
+        Assert.NotNull(error);
+        Assert.Equal("brsl02", error!.GetAttribute("brSeverityLevel"));
+        Assert.Equal("no", error.GetAttribute("fail"));
+    }
+
+    [Fact]
+    public void Tool_Severity_Warning_ExitsZero()
+    {
+        string objPath = WriteTemp(ViolatingObject);
+        string brexPath = WriteTemp(SeverityBrex("brsl02"));
+        string brslPath = WriteTemp(Brsl);
+        try
+        {
+            var (code, outText, _) = RunTool("-b", brexPath, "-w", brslPath, "-x", objPath);
+
+            // The warning is reported but the exit status is success.
+            Assert.Equal(0, code);
+            Assert.Contains("brSeverityLevel=\"brsl02\"", outText);
+            Assert.Contains("fail=\"no\"", outText);
+            Assert.Contains("<type>Warning</type>", outText);
+        }
+        finally { File.Delete(objPath); File.Delete(brexPath); File.Delete(brslPath); }
+    }
+
+    [Fact]
+    public void Tool_Severity_Error_ExitsBrexError()
+    {
+        string objPath = WriteTemp(ViolatingObject);
+        string brexPath = WriteTemp(SeverityBrex("brsl01"));
+        string brslPath = WriteTemp(Brsl);
+        try
+        {
+            var (code, outText, _) = RunTool("-b", brexPath, "-w", brslPath, "-x", objPath);
+
+            Assert.Equal(1, code);
+            Assert.Contains("brSeverityLevel=\"brsl01\"", outText);
+            Assert.Contains("<type>Error</type>", outText);
+        }
+        finally { File.Delete(objPath); File.Delete(brexPath); File.Delete(brslPath); }
+    }
+
+    [Fact]
+    public void Tool_Severity_MissingBrslFile_Errors()
+    {
+        var (code, _, errText) = RunTool("-w", "/nonexistent/path/.brseveritylevels", "-q");
+        // -q suppresses the message, but the bad-dmodule exit code is still returned.
+        Assert.Equal(2, code);
+        Assert.Equal("", errText);
+    }
+
     private static (int code, string outText, string errText) RunTool(params string[] args)
     {
         var tool = new BrexCheckTool();
