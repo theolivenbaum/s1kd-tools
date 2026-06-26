@@ -1,5 +1,6 @@
 using System.Text;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -14,12 +15,19 @@ namespace S1kdTools.Tools;
 /// specification). It then evaluates each <c>test</c> XPath against the supplied
 /// CIR data modules.</para>
 ///
-/// <para>This port reproduces that logic directly over the <see cref="XmlDocument"/>
-/// DOM (the XSLT is a plain XSLT 1.0 identity transform with no EXSLT use, so
-/// porting the per-element template matches is exact and avoids the namespaced
-/// attribute quirks of <see cref="System.Xml.Xsl.XslCompiledTransform"/>). The
-/// original stylesheets are embedded under <c>Resources/repcheck/</c> so the
-/// <c>-D</c>/<c>--dump-xsl</c> option still emits the authoritative source.</para>
+/// <para>By default this port reproduces that logic directly over the
+/// <see cref="XmlDocument"/> DOM (the built-in XSLT is a plain XSLT 1.0 identity
+/// transform with no EXSLT use, so porting the per-element template matches is
+/// exact and avoids the namespaced attribute quirks of
+/// <see cref="System.Xml.Xsl.XslCompiledTransform"/>). The original stylesheets
+/// are embedded under <c>Resources/repcheck/</c> so the <c>-D</c>/<c>--dump-xsl</c>
+/// option still emits the authoritative source.</para>
+///
+/// <para>When a custom extraction stylesheet is supplied with <c>-X</c>/<c>--xsl</c>,
+/// the DOM rules are bypassed: the stylesheet is applied with
+/// <see cref="System.Xml.Xsl.XslCompiledTransform"/> and CIR references are read
+/// from the resulting <c>urn:s1kd-tools:s1kd-repcheck</c> <c>type</c>/<c>name</c>/
+/// <c>test</c> attributes, mirroring the C tool's behaviour.</para>
 /// </summary>
 public sealed class RepCheckTool : ITool
 {
@@ -50,10 +58,23 @@ public sealed class RepCheckTool : ITool
         public bool RemDelete;
         public bool AllRefs;
         public string? Type;
+
+        /// <summary>
+        /// Path to a user-supplied extraction stylesheet (<c>-X</c>/<c>--xsl</c>).
+        /// When set, CIR references are extracted by applying this stylesheet
+        /// (which must decorate ref elements with the
+        /// <c>urn:s1kd-tools:s1kd-repcheck</c> <c>type</c>/<c>name</c>/<c>test</c>
+        /// attributes) instead of using the built-in DOM rules.
+        /// </summary>
+        public string? CustomXsl;
+
         public readonly List<string> Objects = new();
         public readonly List<string> Cirs = new();
         public XmlElement? Report;
     }
+
+    /// <summary>Namespace for the attributes that drive CIR-reference extraction.</summary>
+    private const string RepCheckNs = "urn:s1kd-tools:s1kd-repcheck";
 
     public int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
     {
@@ -133,9 +154,7 @@ public sealed class RepCheckTool : ITool
                     break;
                 case "-X" or "--xsl":
                     if (++i >= args.Count) return ArgError(stderr, "-X");
-                    // Custom XSLT extraction is not supported by the DOM port.
-                    stderr.WriteLine($"{ErrPrefix}Custom extraction XSLT (-X) is not supported by this port; using built-in rules.");
-                    _ = args[i];
+                    opts.CustomXsl = args[i];
                     break;
                 case "-x" or "--xml":
                     xmlReport = true;
@@ -156,9 +175,13 @@ public sealed class RepCheckTool : ITool
 
         if (dumpXsl)
         {
-            stdout.Write(EmbeddedResources.ReadText(opts.AllRefs
-                ? "repcheck/cirrefsall.xsl"
-                : "repcheck/cirrefs.xsl"));
+            // The C tool dumps whichever extraction stylesheet is in effect: the
+            // custom one given with -X, otherwise the relevant built-in.
+            stdout.Write(opts.CustomXsl != null
+                ? File.ReadAllText(opts.CustomXsl)
+                : EmbeddedResources.ReadText(opts.AllRefs
+                    ? "repcheck/cirrefsall.xsl"
+                    : "repcheck/cirrefs.xsl"));
             return 0;
         }
 
@@ -469,11 +492,74 @@ public sealed class RepCheckTool : ITool
     /// </summary>
     private static List<CirRef> ExtractCirRefs(XmlDocument doc, Options opts)
     {
+        if (opts.CustomXsl != null)
+        {
+            return ExtractCirRefsWithXsl(doc, opts);
+        }
+
         var refs = new List<CirRef>();
         if (doc.DocumentElement != null)
         {
             Walk(doc.DocumentElement, opts, refs);
         }
+        return refs;
+    }
+
+    /// <summary>
+    /// Extract CIR references by applying a user-supplied extraction stylesheet
+    /// (<c>-X</c>). The stylesheet decorates ref elements with the
+    /// <c>s1kd-repcheck:type</c>/<c>name</c>/<c>test</c> attributes; this reads
+    /// those attributes back, strips them from the element (so the report copy
+    /// matches the C tool, which removes them before reporting) and produces the
+    /// corresponding <see cref="CirRef"/> list in document order.
+    /// </summary>
+    private static List<CirRef> ExtractCirRefsWithXsl(XmlDocument doc, Options opts)
+    {
+        var refs = new List<CirRef>();
+
+        var xslt = new XslCompiledTransform();
+        var settings = new XsltSettings(enableDocumentFunction: false, enableScript: false);
+        xslt.Load(opts.CustomXsl!, settings, new XmlUrlResolver());
+
+        var result = XmlUtils.NewDocument();
+        using (var writer = result.CreateNavigator()!.AppendChild())
+        {
+            xslt.Transform(doc, null, writer);
+        }
+
+        if (result.DocumentElement == null)
+        {
+            return refs;
+        }
+
+        // Select every element decorated with a test attribute, in document order.
+        var nsmgr = new XmlNamespaceManager(result.NameTable);
+        nsmgr.AddNamespace("rc", RepCheckNs);
+        XmlNodeList? nodes = result.SelectNodes("//*[@rc:test]", nsmgr);
+        if (nodes == null)
+        {
+            return refs;
+        }
+
+        foreach (XmlNode node in nodes)
+        {
+            if (node is not XmlElement el)
+            {
+                continue;
+            }
+
+            string type = el.GetAttribute("type", RepCheckNs);
+            string ident = el.GetAttribute("name", RepCheckNs);
+            string test = el.GetAttribute("test", RepCheckNs);
+
+            // Remove the tool-added attributes (mirror remove_repcheck_attrs).
+            el.RemoveAttribute("type", RepCheckNs);
+            el.RemoveAttribute("name", RepCheckNs);
+            el.RemoveAttribute("test", RepCheckNs);
+
+            refs.Add(new CirRef(el, type, ident, test));
+        }
+
         return refs;
     }
 

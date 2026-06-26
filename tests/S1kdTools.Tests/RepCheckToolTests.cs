@@ -260,6 +260,136 @@ public class RepCheckToolTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // A custom extraction stylesheet that recognises a non-standard <myRef num="">
+    // element (which the built-in rules ignore) and decorates it so the reference
+    // resolves against a functionalItemIdent in the CIR.
+    private const string CustomXsl = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <xsl:transform
+          xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+          xmlns:s1kd-repcheck="urn:s1kd-tools:s1kd-repcheck"
+          version="1.0">
+          <xsl:template match="@*|node()">
+            <xsl:copy>
+              <xsl:apply-templates select="@*|node()"/>
+            </xsl:copy>
+          </xsl:template>
+          <xsl:template match="myRef">
+            <xsl:variable name="num" select="@num"/>
+            <xsl:copy>
+              <xsl:apply-templates select="@*"/>
+              <xsl:attribute name="s1kd-repcheck:type">fin</xsl:attribute>
+              <xsl:attribute name="s1kd-repcheck:name">
+                <xsl:text>My ref </xsl:text>
+                <xsl:value-of select="$num"/>
+              </xsl:attribute>
+              <xsl:attribute name="s1kd-repcheck:test">
+                <xsl:text>//functionalItemIdent[@functionalItemNumber='</xsl:text>
+                <xsl:value-of select="$num"/>
+                <xsl:text>']</xsl:text>
+              </xsl:attribute>
+              <xsl:apply-templates select="node()"/>
+            </xsl:copy>
+          </xsl:template>
+        </xsl:transform>
+        """;
+
+    [Fact]
+    public void CustomXsl_ExtractsAndResolvesCustomReference()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string cir = WriteTemp(dir, "CIR.XML", Cir);
+            string xsl = WriteTemp(dir, "custom.xsl", CustomXsl);
+            string ok = WriteTemp(dir, "OK.XML",
+                "<dmodule><content><myRef num=\"FI001\"/></content></dmodule>");
+            string bad = WriteTemp(dir, "BAD.XML",
+                "<dmodule><content><myRef num=\"FI999\"/></content></dmodule>");
+
+            Assert.Equal(0, Run("-X", xsl, "-R", cir, ok).code);
+            Assert.Equal(1, Run("-X", xsl, "-q", "-R", cir, bad).code);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void CustomXsl_IgnoresBuiltInReferenceTypes()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string cir = WriteTemp(dir, "CIR.XML", Cir);
+            string xsl = WriteTemp(dir, "custom.xsl", CustomXsl);
+            // A standard functionalItemRef: the built-in rules would check it,
+            // but the custom XSLT does not decorate it, so it is not validated.
+            string obj = WriteTemp(dir, "OBJ.XML",
+                "<dmodule><content><functionalItemRef functionalItemNumber=\"FI999\"/></content></dmodule>");
+
+            // No decorated refs -> trivially passes under the custom stylesheet.
+            Assert.Equal(0, Run("-X", xsl, "-R", cir, obj).code);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void CustomXsl_ListRefsUsesCustomNames()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string xsl = WriteTemp(dir, "custom.xsl", CustomXsl);
+            string obj = WriteTemp(dir, "OBJ.XML",
+                "<dmodule><content><myRef num=\"FI001\"/></content></dmodule>");
+
+            var (code, outText, _) = Run("-X", xsl, "-L", obj);
+            Assert.Equal(0, code);
+            Assert.Contains("My ref FI001", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void CustomXsl_XmlReportOmitsToolAttributes()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string cir = WriteTemp(dir, "CIR.XML", Cir);
+            string xsl = WriteTemp(dir, "custom.xsl", CustomXsl);
+            string obj = WriteTemp(dir, "OBJ.XML",
+                "<dmodule><content><myRef num=\"FI001\"/></content></dmodule>");
+
+            var (code, outText, _) = Run("-X", xsl, "-x", "-R", cir, obj);
+            Assert.Equal(0, code);
+
+            var report = new XmlDocument();
+            report.LoadXml(outText.Trim());
+            XmlElement? r = report.SelectSingleNode("/repCheck/object/ref") as XmlElement;
+            Assert.NotNull(r);
+            Assert.Equal("fin", r!.GetAttribute("type"));
+            Assert.Equal("My ref FI001", r.GetAttribute("name"));
+            // The copied reference element must not retain the tool-added attrs.
+            Assert.DoesNotContain("s1kd-repcheck:test", r.InnerXml);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void CustomXsl_DumpXsl_OutputsCustomStylesheet()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string xsl = WriteTemp(dir, "custom.xsl", CustomXsl);
+            var (code, outText, _) = Run("-X", xsl, "-D");
+            Assert.Equal(0, code);
+            Assert.Contains("myRef", outText);
+            Assert.DoesNotContain("functionalItemRef", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     [Fact]
     public void DumpXsl_OutputsStylesheet()
     {

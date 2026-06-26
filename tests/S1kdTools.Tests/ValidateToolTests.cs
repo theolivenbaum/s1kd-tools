@@ -193,11 +193,32 @@ public class ValidateToolTests
         {
             var (code, _, errText) = Run("-T", "-q", clean, bad);
             Assert.Equal(1, code);
-            Assert.Contains("Validated 2 files", errText);
-            Assert.Contains("1 valid", errText);
-            Assert.Contains("1 invalid", errText);
+            // Output produced by the original stats.xsl applied to the report.
+            Assert.Contains("Total documents checked: 2", errText);
+            Assert.Contains("Total documents that pass the check: 1", errText);
+            Assert.Contains("Total documents that fail the check: 1", errText);
+            Assert.Contains("Percentage passed: 50%", errText);
+            Assert.Contains("Percentage failed: 50%", errText);
         }
         finally { File.Delete(clean); File.Delete(bad); }
+    }
+
+    [Fact]
+    public void Summary_AllValid_ReportsZeroErrorsAndHundredPercent()
+    {
+        string a = TempFile(CleanDm);
+        string b = TempFile(CleanDm);
+        try
+        {
+            var (code, _, errText) = Run("-T", "-q", a, b);
+            Assert.Equal(0, code);
+            Assert.Contains("Total documents checked: 2", errText);
+            Assert.Contains("Total errors: 0", errText);
+            Assert.Contains("Total documents that pass the check: 2", errText);
+            Assert.Contains("Percentage passed: 100%", errText);
+            Assert.Contains("Percentage failed: 0%", errText);
+        }
+        finally { File.Delete(a); File.Delete(b); }
     }
 
     [Fact]
