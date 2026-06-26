@@ -25,20 +25,28 @@ namespace S1kdTools.Tools;
 ///   -h/--help, --version.
 ///
 /// CIR resolution: -R/--cir (explicit file or * to auto-find), -x/--xsl (custom
-///   stylesheet), -D/--dump (dump built-in XSLT), -d/--dir, -r/--recursive,
-///   -S/--no-repository-ident. All 17 built-in CIR types are resolved via the
-///   ported repository stylesheets (see <see cref="S1kdTools.Instance.ResolveCir"/>).
+///   stylesheet), -D/--dump (dump built-in XSLT), -d/--dir, -r/--recursive.
+///   All 17 built-in CIR types are resolved via the ported repository
+///   stylesheets (see <see cref="S1kdTools.Instance.ResolveCir"/>).
 /// Product filtering: -P/--pct + -p/--product assign a product's applicability
 ///   from a PCT, with -1/--act resolving the PCT per data module when no -P is
 ///   given. ACT/CCT primary-key resolution mirrors the C tool.
 ///
+/// Source/repository ident control: -S/--no-source-ident and
+///   -3/--no-repository-ident (matching the C flag mapping). A source ident is
+///   added by default only when the extension, code, issue info or language is
+///   changed.
+/// Whole-object applicability overwrite/merge: -W/--set-applic, -y/--update-applic,
+///   -Y/--applic. Whole-object checks: -w/--whole-objects, -0/--print-non-applic.
+/// Originator: -g/--set-orig, -G/--custom-orig. Skill metadata: -k/--skill.
+/// Comments: -C/--comment, -X/--comment-xpath. Acronym fixing: -M/--fix-acronyms.
+/// Entity cleanup: -j/--clean-ents. Add-required: -Z/--add-required.
+/// Read-only output: -%/--read-only. List input: -L/--list.
+/// List properties report: -H/--list-properties (standalone/applic/all).
+///
 /// Partial / not ported (clearly noted): CCT dependency-test injection (-2/-~),
-/// container resolution (-Q),
-/// alts flattening (-F/-4), automatic naming/output-dir (-O/-5/-N),
-/// update-instances (-@), source/repository ident control (-S/-3/-8),
-/// set-applic (-W/-Y/-y), list-properties (-H), comments (-C/-X),
-/// acronym fixing (-M), entity cleanup (-j), add-required (-Z), read-only (-%),
-/// list input (-L), set originator (-g/-G), skill metadata (-k).
+/// container resolution (-Q), alts flattening (-F/-4),
+/// automatic naming/output-dir (-O/-5/-N), update-instances (-@/-8/-7).
 /// </summary>
 public sealed class InstanceTool : ITool
 {
@@ -72,6 +80,26 @@ public sealed class InstanceTool : ITool
         bool noInfoName = false;   // -!
         bool overwrite = false;    // -f
         bool quiet = false;        // -q
+        bool verbose = false;      // -v
+
+        // New options.
+        bool newApplic = false;       // -W/-Y/-y (overwrite/merge whole-object applic)
+        bool combineApplic = true;    // false when -W (overwrite instead of combine)
+        string newDisplayText = "";   // -Y
+        string commentText = "";      // -C
+        string commentPath = "/";     // -X
+        bool fixAcronyms = false;     // -M
+        bool cleanEnts = false;       // -j
+        bool autocomp = false;        // -Z (add-required)
+        bool lockFiles = false;       // -% (read-only)
+        bool dmList = false;          // -L (list input)
+        bool setOrig = false;         // -g/-G
+        string? origSpec = null;      // -G
+        string? skill = null;         // -k (set skill level)
+        bool wholeDm = false;         // -w/-0
+        bool printNonApplic = false;  // -0
+        bool addSourceIdent = true;   // disabled via -S
+        ListPropsRequest? listProps = null; // -H
 
         string? secClasses = null; // -U
         string? skillCodes = null; // -K
@@ -135,7 +163,46 @@ public sealed class InstanceTool : ITool
                 case "-!" or "--no-infoname": noInfoName = true; break;
                 case "-f" or "--overwrite": overwrite = true; break;
                 case "-q" or "--quiet": quiet = true; break;
-                case "-v" or "--verbose": break; // accepted, no extra output
+                case "-v" or "--verbose": verbose = true; break;
+
+                // Whole-object applicability (-W overwrite, -y merge, -Y merge + display text).
+                case "-W" or "--set-applic": newApplic = true; combineApplic = false; break;
+                case "-y" or "--update-applic": newApplic = true; break;
+                case "-Y" or "--applic":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; newApplic = true; newDisplayText = v; break; }
+
+                // Comments (-C text, -X xpath).
+                case "-C" or "--comment":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; commentText = v; break; }
+                case "-X" or "--comment-xpath":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; commentPath = v; break; }
+
+                case "-M" or "--fix-acronyms": fixAcronyms = true; break;
+                case "-j" or "--clean-ents": cleanEnts = true; break;
+                case "-Z" or "--add-required": autocomp = true; break;
+                case "-%" or "--read-only": lockFiles = true; break;
+                case "-L" or "--list": dmList = true; break;
+                case "-w" or "--whole-objects": wholeDm = true; break;
+                case "-0" or "--print-non-applic": printNonApplic = true; wholeDm = true; break;
+
+                case "-g" or "--set-orig": setOrig = true; break;
+                case "-G" or "--custom-orig":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; setOrig = true; origSpec = v; break; }
+
+                case "-k" or "--skill":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; skill = v; break; }
+
+                case "-H" or "--list-properties":
+                {
+                    string? v = RequireArg(a); if (v == null) return ExitMissingArgs;
+                    listProps ??= new ListPropsRequest(v switch
+                    {
+                        "all" => Instance.ListPropsMethod.All,
+                        "applic" => Instance.ListPropsMethod.Applic,
+                        _ => Instance.ListPropsMethod.Standalone,
+                    });
+                    break;
+                }
 
                 case "-s" or "--assign":
                 {
@@ -203,7 +270,10 @@ public sealed class InstanceTool : ITool
                 { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; searchDir = v; break; }
                 case "-r" or "--recursive":
                     recursive = true; break;
-                case "-S" or "--no-repository-ident":
+                // Mirrors the C flag mapping: -S = --no-source-ident, -3 = --no-repository-ident.
+                case "-S" or "--no-source-ident":
+                    addSourceIdent = false; break;
+                case "-3" or "--no-repository-ident":
                     addRepIdent = false; break;
 
                 case "-P" or "--pct":
@@ -233,7 +303,22 @@ public sealed class InstanceTool : ITool
         {
             return errCode;
         }
-        _ = napplics;
+
+        // -H: build and print a properties report, then exit (mirrors the C
+        // props_report path of main, which runs before the filtering loop).
+        if (listProps != null)
+        {
+            return RunListProperties(listProps.Method, files, dmList, userAct, userCct, userPct,
+                searchDir, recursive, verbose, quiet, stdout, stderr);
+        }
+
+        // Except in update mode (-@, not supported here), only add a source ident
+        // by default when the extension, code, issue info or language is changed.
+        if (string.IsNullOrEmpty(extension) && string.IsNullOrEmpty(code) &&
+            string.IsNullOrEmpty(issinfo) && string.IsNullOrEmpty(language))
+        {
+            addSourceIdent = false;
+        }
 
         // Read a user-supplied PCT (-P) once; it applies to all data modules.
         XmlDocument? userPctDoc = null;
@@ -293,8 +378,8 @@ public sealed class InstanceTool : ITool
             }
         }
 
-        // CCT dependency-test injection (-2/-~) is not ported yet; the option is
-        // accepted so command lines parse, but produces no extra output.
+        // CCT dependency-test injection (-2/-~ in the filtering loop) is not
+        // ported yet; -2 is still used by -H list-properties above.
         _ = userCct;
 
         FilterMode mode = prune ? FilterMode.Prune
@@ -305,6 +390,39 @@ public sealed class InstanceTool : ITool
         if (files.Count == 0)
         {
             files.Add("-");
+        }
+
+        // -L: the named files are lists of object paths (one per line); read
+        // stdin when no list file is given. Mirrors the dmlist handling in main.
+        if (dmList)
+        {
+            var expanded = new List<string>();
+            foreach (string listFile in files)
+            {
+                IEnumerable<string> lines;
+                if (listFile == "-")
+                {
+                    lines = ReadLines(new StreamReader(Console.OpenStandardInput()));
+                }
+                else if (File.Exists(listFile))
+                {
+                    lines = File.ReadAllLines(listFile);
+                }
+                else
+                {
+                    if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read list file: {listFile}");
+                    return ExitMissingFile;
+                }
+                foreach (string line in lines)
+                {
+                    string p = line.Trim();
+                    if (p.Length > 0)
+                    {
+                        expanded.Add(p);
+                    }
+                }
+            }
+            files = expanded;
         }
 
         // Date validation/normalisation for -I.
@@ -363,6 +481,37 @@ public sealed class InstanceTool : ITool
                 perDmLoaded = LoadPctPerDm(doc, defs, product!, userAct, searchDir, recursive, quiet, stderr);
             }
 
+            // -w/-0: only create the instance if the whole object is applicable
+            // (and matches skill/security/issue-type filters).
+            if (wholeDm && !Instance.CreateInstance(doc, defs, skillCodes, secClasses, delete))
+            {
+                if (printNonApplic)
+                {
+                    stdout.WriteLine(file);
+                }
+                if (verbose)
+                {
+                    stderr.WriteLine($"{Name}: INFO: Ignoring non-applicable object: {file}");
+                }
+                if (perDmLoaded)
+                {
+                    Instance.ClearPerDmApplic(defs);
+                }
+                continue;
+            }
+
+            // Copy acronym definitions to acronyms prior to filtering (-M).
+            if (fixAcronyms)
+            {
+                Instance.FixAcronymsPre(doc);
+            }
+
+            // Add a sourceDmIdent/sourcePmIdent linking to the source object.
+            if (addSourceIdent)
+            {
+                Instance.AddSource(doc);
+            }
+
             // Resolve CIR references before applicability filtering, mirroring
             // the order in the C main loop.
             if (cirs.Count > 0)
@@ -409,17 +558,25 @@ public sealed class InstanceTool : ITool
             ApplyFilter(doc, defs, napplics, mode, reduce || simplify, prune, simplify,
                 tagNonApplic, cleanDispText, remDupl, remUnused, delete, secClasses, skillCodes);
 
-            if (perDmLoaded)
-            {
-                Instance.ClearPerDmApplic(defs);
-            }
-
-            // Metadata setters (subset; order mirrors the C tool).
+            // Metadata setters (order mirrors the C tool).
             if (!string.IsNullOrEmpty(extension)) SetExtension(doc, extension);
             if (noExtension) StripExtension(doc);
             if (!string.IsNullOrEmpty(code)) SetCode(doc, code, quiet, stderr);
             SetTitle(doc, tech, info, infoNameVariant, noInfoName);
             if (!string.IsNullOrEmpty(language)) SetLang(doc, language);
+
+            // -W/-y/-Y: overwrite/merge the whole-object applicability.
+            if (newApplic && napplics > 0)
+            {
+                // Simplify the whole-object applic before merging, to remove
+                // duplicate information. Not needed when overwriting.
+                if (combineApplic)
+                {
+                    Instance.SimplWholeApplic(defs, doc, !prune);
+                }
+                Instance.SetApplic(doc, defs, napplics, newDisplayText, combineApplic);
+            }
+
             if (!string.IsNullOrEmpty(issinfo))
             {
                 if (!SetIssue(doc, issinfo, quiet, stderr)) { status = ExitMissingArgs; }
@@ -427,7 +584,44 @@ public sealed class InstanceTool : ITool
             if (issYear != null) SetIssueDate(doc, issYear, issMonth!, issDay!);
             if (!string.IsNullOrEmpty(isstype)) SetIssueType(doc, isstype);
             if (!string.IsNullOrEmpty(security)) SetSecurity(doc, security);
+            if (setOrig) Instance.SetOrig(doc, origSpec);
+            if (!string.IsNullOrEmpty(skill)) Instance.SetSkill(doc, skill);
             if (remarks != null) SetRemarks(doc, remarks);
+
+            // -C: insert an XML comment at -X path (default the root).
+            if (commentText.Length > 0)
+            {
+                Instance.InsertComment(doc, commentText, commentPath);
+            }
+
+            // Remove empty PM entries left after filtering a PM.
+            if (doc.DocumentElement?.LocalName == "pm")
+            {
+                Instance.RemoveEmptyPmEntries(doc);
+            }
+
+            // -j: remove unused external entities (e.g. ICNs).
+            if (cleanEnts)
+            {
+                Instance.CleanEntities(doc);
+            }
+
+            // -Z: fix certain elements automatically after filtering.
+            if (autocomp)
+            {
+                Instance.Autocomplete(doc);
+            }
+
+            // -M: reference repeated acronyms after the first.
+            if (fixAcronyms)
+            {
+                Instance.FixAcronymsPost(doc);
+            }
+
+            if (perDmLoaded)
+            {
+                Instance.ClearPerDmApplic(defs);
+            }
 
             // Output.
             string target = outFile ?? (overwrite && file != "-" ? file : "-");
@@ -447,6 +641,12 @@ public sealed class InstanceTool : ITool
                     try
                     {
                         XmlUtils.SaveDoc(doc, target);
+                        // -%: make the written instance read-only.
+                        if (lockFiles)
+                        {
+                            try { File.SetAttributes(target, File.GetAttributes(target) | FileAttributes.ReadOnly); }
+                            catch (IOException) { /* best-effort, mirrors mkreadonly */ }
+                        }
                     }
                     catch (IOException)
                     {
@@ -955,6 +1155,141 @@ public sealed class InstanceTool : ITool
         }
     }
 
+    // ---- list-properties (-H) ----
+
+    /// <summary>A pending <c>-H</c> request: the property listing method.</summary>
+    private sealed class ListPropsRequest
+    {
+        public ListPropsRequest(Instance.ListPropsMethod method) => Method = method;
+        public Instance.ListPropsMethod Method { get; }
+    }
+
+    /// <summary>
+    /// Build and print a properties report for the named objects (or lists, with
+    /// <paramref name="dmList"/>). Mirrors the <c>props_report</c> branch of the C
+    /// <c>main</c> function.
+    /// </summary>
+    private int RunListProperties(Instance.ListPropsMethod method, List<string> files, bool dmList,
+        string? userAct, string? userCct, string? userPct, string searchDir, bool recursive,
+        bool verbose, bool quiet, TextWriter stdout, TextWriter stderr)
+    {
+        _ = verbose;
+
+        // Resolve the list of object paths.
+        var paths = new List<string>();
+        IEnumerable<string> inputs = files.Count == 0 ? new[] { "-" } : files;
+        foreach (string f in inputs)
+        {
+            if (dmList)
+            {
+                IEnumerable<string> lines;
+                if (f == "-")
+                {
+                    lines = ReadLines(new StreamReader(Console.OpenStandardInput()));
+                }
+                else if (File.Exists(f))
+                {
+                    lines = File.ReadAllLines(f);
+                }
+                else
+                {
+                    if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read list file: {f}");
+                    continue;
+                }
+                foreach (string line in lines)
+                {
+                    string p = line.Trim();
+                    if (p.Length > 0)
+                    {
+                        paths.Add(p);
+                    }
+                }
+            }
+            else
+            {
+                paths.Add(f);
+            }
+        }
+
+        XmlDocument? ReadObject(string path)
+        {
+            try
+            {
+                return path == "-" ? XmlUtils.ReadStream(Console.OpenStandardInput()) : XmlUtils.ReadDoc(path);
+            }
+            catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        // ACT/CCT/PCT resolution for non-standalone modes.
+        XmlDocument? FindActDoc(XmlDocument doc)
+        {
+            if (userAct != null)
+            {
+                try { return XmlUtils.ReadDoc(userAct); }
+                catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException) { return null; }
+            }
+            string? file = FindRefDmFile(
+                doc.SelectSingleNode("//applicCrossRefTableRef/dmRef/dmRefIdent|//actref/refdm"),
+                searchDir, recursive);
+            return ReadRefDoc(file);
+        }
+
+        XmlDocument? FindCctDoc(XmlDocument act)
+        {
+            if (userCct != null)
+            {
+                try { return XmlUtils.ReadDoc(userCct); }
+                catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException) { return null; }
+            }
+            string? file = FindRefDmFile(
+                act.SelectSingleNode("//condCrossRefTableRef/dmRef/dmRefIdent|//cctref/refdm"),
+                searchDir, recursive);
+            return ReadRefDoc(file);
+        }
+
+        XmlDocument? FindPctDoc(XmlDocument act)
+        {
+            if (userPct != null)
+            {
+                try { return XmlUtils.ReadDoc(userPct); }
+                catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException) { return null; }
+            }
+            string? file = FindRefDmFile(
+                act.SelectSingleNode("//productCrossRefTableRef/dmRef/dmRefIdent|//pctref/refdm"),
+                searchDir, recursive);
+            return ReadRefDoc(file);
+        }
+
+        XmlDocument report = Instance.BuildPropertiesReport(paths, method, ReadObject,
+            FindActDoc, FindCctDoc, FindPctDoc);
+
+        stdout.Write(XmlUtils.ToXmlString(report));
+        stdout.Write('\n');
+        return ExitSuccess;
+    }
+
+    private static XmlDocument? ReadRefDoc(string? file)
+    {
+        if (file == null)
+        {
+            return null;
+        }
+        try { return XmlUtils.ReadDoc(file); }
+        catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException) { return null; }
+    }
+
+    private static IEnumerable<string> ReadLines(TextReader reader)
+    {
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            yield return line;
+        }
+    }
+
     private void ShowHelp(TextWriter stdout)
     {
         stdout.WriteLine($"Usage: s1kd-{Name} [options] [<object>...]");
@@ -989,7 +1324,24 @@ public sealed class InstanceTool : ITool
         stdout.WriteLine("  -D, --dump <CIR type>                 Dump the built-in XSLT for a CIR type and exit.");
         stdout.WriteLine("  -d, --dir <dir>                       Directory to search for CIRs/ACTs/PCTs.");
         stdout.WriteLine("  -r, --recursive                       Search for CIRs recursively.");
-        stdout.WriteLine("  -S, --no-repository-ident             Do not add a repositorySourceDmIdent.");
+        stdout.WriteLine("  -S, --no-source-ident                 Do not add a sourceDmIdent/sourcePmIdent.");
+        stdout.WriteLine("  -3, --no-repository-ident             Do not add a repositorySourceDmIdent.");
+        stdout.WriteLine("  -W, --set-applic                      Overwrite whole-object applicability.");
+        stdout.WriteLine("  -y, --update-applic                   Set whole-object applicability from the defs.");
+        stdout.WriteLine("  -Y, --applic <text>                   Set whole-object applic with display text.");
+        stdout.WriteLine("  -g, --set-orig                        Set originator to identify this tool.");
+        stdout.WriteLine("  -G, --custom-orig <NCAGE/name>        Set a custom NCAGE/name originator.");
+        stdout.WriteLine("  -k, --skill <level>                   Set the skill level of the instance.");
+        stdout.WriteLine("  -C, --comment <comment>               Add an XML comment to the instance.");
+        stdout.WriteLine("  -X, --comment-xpath <xpath>           XPath where the -C comment is inserted.");
+        stdout.WriteLine("  -M, --fix-acronyms                    Keep acronyms valid after filtering.");
+        stdout.WriteLine("  -j, --clean-ents                      Remove unused external entities.");
+        stdout.WriteLine("  -Z, --add-required                    Fix certain elements after filtering.");
+        stdout.WriteLine("  -w, --whole-objects                   Check the status of the whole object.");
+        stdout.WriteLine("  -0, --print-non-applic                Print names of non-applicable objects.");
+        stdout.WriteLine("  -H, --list-properties <method>        List applicability properties used.");
+        stdout.WriteLine("  -L, --list                            Treat input as a list of objects.");
+        stdout.WriteLine("  -%, --read-only                       Make output instances read-only.");
         stdout.WriteLine("  -P, --pct <PCT>                       PCT file to read products from.");
         stdout.WriteLine("  -p, --product <product>               ID/primary key of a product in the PCT to filter on.");
         stdout.WriteLine("  -1, --act <ACT>                       Use the given ACT data module.");
