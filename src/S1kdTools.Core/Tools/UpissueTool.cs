@@ -49,8 +49,29 @@ public sealed class UpissueTool : ITool
     private bool _removeMarks;
     private bool _setUnverif;
 
+    /// <summary>Exit code to return when option parsing signals an early stop.</summary>
+    private int _exitCode;
+
     /// <summary>Container element holding the queued RFUs (mirrors the C "rfus" node).</summary>
     private XmlElement _rfus = null!;
+
+    /// <summary>Outcome of handling a single option token.</summary>
+    private enum ParseResult { Continue, Stop }
+
+    /// <summary>State shared by the option handlers during a single parse.</summary>
+    private sealed class ParseContext(
+        IReadOnlyList<string> args,
+        XmlDocument rfuDoc,
+        List<string> files,
+        TextWriter stdout,
+        TextWriter stderr)
+    {
+        public IReadOnlyList<string> Args { get; } = args;
+        public XmlDocument RfuDoc { get; } = rfuDoc;
+        public List<string> Files { get; } = files;
+        public TextWriter Stdout { get; } = stdout;
+        public TextWriter Stderr { get; } = stderr;
+    }
 
     /// <summary>Thrown internally to mirror the C tool's <c>exit()</c> calls.</summary>
     private sealed class ExitException(int code) : Exception
@@ -68,130 +89,56 @@ public sealed class UpissueTool : ITool
         _rfus = rfuDoc.CreateElement("rfus");
         rfuDoc.AppendChild(_rfus);
 
+        // Captures the bundle context shared with HandleShort so a flag that
+        // takes an argument can splice the rest of the current token.
+        var ctx = new ParseContext(args, rfuDoc, files, stdout, stderr);
+
         try
         {
+            // Mirror the C getopt_long parse: long options (one per token),
+            // bundled short flags (e.g. -ife splits into -i -f -e) and the
+            // libxml2 parser long-options. An arg-taking short flag pulls its
+            // value from the remainder of its bundle token, or the next argument.
             for (int i = 0; i < args.Count; i++)
             {
                 string a = args[i];
 
-                // Combined short options (e.g. -ife) are not split here; the C
-                // getopt does, but in practice the tool is driven one flag per
-                // token. Each recognised token is handled explicitly.
-                switch (a)
+                if (a.StartsWith("--", StringComparison.Ordinal))
                 {
-                    case "-h" or "-?" or "--help":
-                        ShowHelp(stdout);
-                        return 0;
-                    case "--version":
-                        ShowVersion(stdout);
-                        return 0;
-                    case "-0" or "--unverified":
-                        _setUnverif = true;
-                        break;
-                    case "-1" or "--first-ver":
-                        _firstver = NextArg(args, ref i, "-1", stderr);
-                        break;
-                    case "-2" or "--second-ver":
-                        _secondver = NextArg(args, ref i, "-2", stderr);
-                        break;
-                    case "-4" or "--remove-marks":
-                        _removeMarks = true;
-                        break;
-                    case "-5" or "--print":
-                        _printFnames = true;
-                        break;
-                    case "-c" or "--reason":
+                    if (HandleLong(a, ctx, ref i, ref islist) == ParseResult.Stop)
                     {
-                        string reason = NextArg(args, ref i, "-c", stderr);
-                        var rfu = rfuDoc.CreateElement("reasonForUpdate");
-                        rfu.InnerText = reason;
-                        _rfus.AppendChild(rfu);
-                        break;
+                        return _exitCode;
                     }
-                    case "-d" or "--dry-run":
-                        _dryRun = true;
-                        break;
-                    case "-e" or "--erase":
-                        _remold = true;
-                        break;
-                    case "-f" or "--overwrite":
-                        _overwrite = true;
-                        break;
-                    case "-I" or "--date":
-                        _issdate = NextArg(args, ref i, "-I", stderr);
-                        break;
-                    case "-i" or "--official":
-                        _newissue = true;
-                        break;
-                    case "-l" or "--list":
-                        islist = true;
-                        break;
-                    case "-m" or "--modify":
-                        _onlyMod = true;
-                        _noIssue = true;
-                        break;
-                    case "-N" or "--omit-issue":
-                        _noIssue = true;
-                        _overwrite = true;
-                        break;
-                    case "-Q" or "--keep-qa":
-                        _resetQa = false;
-                        break;
-                    case "-q" or "--quiet":
-                        _verbosity--;
-                        break;
-                    case "-R" or "--keep-unassoc-marks":
-                        _onlyAssocRfus = true;
-                        break;
-                    case "-r" or "--keep-changes" or "--remove-changes":
-                        _keepRfus = true;
-                        break;
-                    case "-s" or "--keep-date" or "--change-date":
-                        _setDate = false;
-                        break;
-                    case "-t" or "--type":
-                    {
-                        string urt = NextArg(args, ref i, "-t", stderr);
-                        if (_rfus.LastChild is XmlElement last)
-                        {
-                            last.SetAttribute("updateReasonType", urt);
-                        }
-                        break;
-                    }
-                    case "-u" or "--clean-rfus":
-                        _cleanRfus = true;
-                        break;
-                    case "-H" or "--highlight":
-                        if (_rfus.LastChild is XmlElement lastH)
-                        {
-                            lastH.SetAttribute("updateHighlight", "1");
-                        }
-                        break;
-                    case "-v" or "--verbose":
-                        _verbosity++;
-                        break;
-                    case "-w" or "--lock":
-                        _lock = true;
-                        break;
-                    case "-z" or "--issue-type":
-                        _status = NextArg(args, ref i, "-z", stderr);
-                        if (!(_status == "changed" || _status == "rinstate-changed"))
-                        {
-                            _removeMarks = true;
-                        }
-                        break;
-                    case "-^" or "--remove-deleted":
-                        _remdel = true;
-                        break;
-                    default:
-                        if (a.StartsWith('-') && a.Length > 1 && a != "-")
-                        {
-                            stderr.WriteLine($"{Name}: ERROR: Unknown option: {a}");
-                            return 2;
-                        }
-                        files.Add(a);
-                        break;
+                    continue;
                 }
+
+                if (a.Length >= 2 && a[0] == '-' && a != "-")
+                {
+                    bool stop = false;
+                    for (int c = 1; c < a.Length; c++)
+                    {
+                        char opt = a[c];
+                        string? rest = c + 1 < a.Length ? a[(c + 1)..] : null;
+                        ParseResult sr = HandleShort(opt, rest, ctx, ref i, ref islist, out bool consumedRest);
+                        if (sr == ParseResult.Stop)
+                        {
+                            stop = true;
+                            break;
+                        }
+                        if (consumedRest)
+                        {
+                            break;
+                        }
+                    }
+                    if (stop)
+                    {
+                        return _exitCode;
+                    }
+                    continue;
+                }
+
+                // Operand (filename, list entry or "-").
+                files.Add(a);
             }
 
             if (files.Count > 0)
@@ -227,14 +174,295 @@ public sealed class UpissueTool : ITool
         return 0;
     }
 
-    private string NextArg(IReadOnlyList<string> args, ref int i, string opt, TextWriter stderr)
+    /// <summary>
+    /// Handle a single bundled short flag. <paramref name="rest"/> is the
+    /// remainder of the bundle token after this flag (or null). For an
+    /// argument-taking flag the value is <paramref name="rest"/> if present,
+    /// otherwise the next argument; in both cases <paramref name="consumedRest"/>
+    /// is set so the caller stops walking the current token.
+    /// </summary>
+    private ParseResult HandleShort(char opt, string? rest, ParseContext ctx, ref int i, ref bool islist, out bool consumedRest)
     {
-        if (++i >= args.Count)
+        consumedRest = false;
+        switch (opt)
         {
-            stderr.WriteLine($"{Name}: ERROR: {opt} requires an argument");
+            case 'h' or '?':
+                ShowHelp(ctx.Stdout);
+                _exitCode = 0;
+                return ParseResult.Stop;
+            case '0':
+                _setUnverif = true;
+                break;
+            case '1':
+                _firstver = ShortArg(rest, ctx, ref i, "-1", out consumedRest);
+                break;
+            case '2':
+                _secondver = ShortArg(rest, ctx, ref i, "-2", out consumedRest);
+                break;
+            case '4':
+                _removeMarks = true;
+                break;
+            case '5':
+                _printFnames = true;
+                break;
+            case 'c':
+            {
+                string reason = ShortArg(rest, ctx, ref i, "-c", out consumedRest);
+                var rfu = ctx.RfuDoc.CreateElement("reasonForUpdate");
+                rfu.InnerText = reason;
+                _rfus.AppendChild(rfu);
+                break;
+            }
+            case 'd':
+                _dryRun = true;
+                break;
+            case 'e':
+                _remold = true;
+                break;
+            case 'f':
+                _overwrite = true;
+                break;
+            case 'I':
+                _issdate = ShortArg(rest, ctx, ref i, "-I", out consumedRest);
+                break;
+            case 'i':
+                _newissue = true;
+                break;
+            case 'l':
+                islist = true;
+                break;
+            case 'm':
+                _onlyMod = true;
+                _noIssue = true;
+                break;
+            case 'N':
+                _noIssue = true;
+                _overwrite = true;
+                break;
+            case 'Q':
+                _resetQa = false;
+                break;
+            case 'q':
+                _verbosity--;
+                break;
+            case 'R':
+                _onlyAssocRfus = true;
+                break;
+            case 'r':
+                _keepRfus = true;
+                break;
+            case 's':
+                _setDate = false;
+                break;
+            case 't':
+            {
+                string urt = ShortArg(rest, ctx, ref i, "-t", out consumedRest);
+                if (_rfus.LastChild is XmlElement last)
+                {
+                    last.SetAttribute("updateReasonType", urt);
+                }
+                break;
+            }
+            case 'u':
+                _cleanRfus = true;
+                break;
+            case 'H':
+                if (_rfus.LastChild is XmlElement lastH)
+                {
+                    lastH.SetAttribute("updateHighlight", "1");
+                }
+                break;
+            case 'v':
+                _verbosity++;
+                break;
+            case 'w':
+                _lock = true;
+                break;
+            case 'z':
+                _status = ShortArg(rest, ctx, ref i, "-z", out consumedRest);
+                if (!(_status == "changed" || _status == "rinstate-changed"))
+                {
+                    _removeMarks = true;
+                }
+                break;
+            case '^':
+                _remdel = true;
+                break;
+            default:
+                ctx.Stderr.WriteLine($"{Name}: ERROR: Unknown option: -{opt}");
+                _exitCode = 2;
+                return ParseResult.Stop;
+        }
+        return ParseResult.Continue;
+    }
+
+    /// <summary>
+    /// Handle a single long option token. Recognises the tool's own long
+    /// options plus the libxml2 parser long-options (<c>--huge</c>,
+    /// <c>--net</c>, <c>--noent</c>, <c>--xinclude</c>, <c>--xml-catalog</c>, …)
+    /// which getopt_long accepts via the LIBXML2_PARSE_LONGOPT table.
+    /// </summary>
+    private ParseResult HandleLong(string a, ParseContext ctx, ref int i, ref bool islist)
+    {
+        switch (a)
+        {
+            case "--help":
+                ShowHelp(ctx.Stdout);
+                _exitCode = 0;
+                return ParseResult.Stop;
+            case "--version":
+                ShowVersion(ctx.Stdout);
+                _exitCode = 0;
+                return ParseResult.Stop;
+            case "--unverified":
+                _setUnverif = true;
+                break;
+            case "--first-ver":
+                _firstver = LongArg(ctx, ref i, a);
+                break;
+            case "--second-ver":
+                _secondver = LongArg(ctx, ref i, a);
+                break;
+            case "--remove-marks":
+                _removeMarks = true;
+                break;
+            case "--print":
+                _printFnames = true;
+                break;
+            case "--reason":
+            {
+                string reason = LongArg(ctx, ref i, a);
+                var rfu = ctx.RfuDoc.CreateElement("reasonForUpdate");
+                rfu.InnerText = reason;
+                _rfus.AppendChild(rfu);
+                break;
+            }
+            case "--dry-run":
+                _dryRun = true;
+                break;
+            case "--erase":
+                _remold = true;
+                break;
+            case "--overwrite":
+                _overwrite = true;
+                break;
+            case "--date":
+                _issdate = LongArg(ctx, ref i, a);
+                break;
+            case "--official":
+                _newissue = true;
+                break;
+            case "--list":
+                islist = true;
+                break;
+            case "--modify":
+                _onlyMod = true;
+                _noIssue = true;
+                break;
+            case "--omit-issue":
+                _noIssue = true;
+                _overwrite = true;
+                break;
+            case "--keep-qa":
+                _resetQa = false;
+                break;
+            case "--quiet":
+                _verbosity--;
+                break;
+            case "--keep-unassoc-marks":
+                _onlyAssocRfus = true;
+                break;
+            case "--keep-changes" or "--remove-changes":
+                _keepRfus = true;
+                break;
+            case "--keep-date" or "--change-date":
+                _setDate = false;
+                break;
+            case "--type":
+            {
+                string urt = LongArg(ctx, ref i, a);
+                if (_rfus.LastChild is XmlElement last)
+                {
+                    last.SetAttribute("updateReasonType", urt);
+                }
+                break;
+            }
+            case "--clean-rfus":
+                _cleanRfus = true;
+                break;
+            case "--highlight":
+                if (_rfus.LastChild is XmlElement lastH)
+                {
+                    lastH.SetAttribute("updateHighlight", "1");
+                }
+                break;
+            case "--verbose":
+                _verbosity++;
+                break;
+            case "--lock":
+                _lock = true;
+                break;
+            case "--issue-type":
+                _status = LongArg(ctx, ref i, a);
+                if (!(_status == "changed" || _status == "rinstate-changed"))
+                {
+                    _removeMarks = true;
+                }
+                break;
+            case "--remove-deleted":
+                _remdel = true;
+                break;
+
+            // libxml2 parser long-options (LIBXML2_PARSE_LONGOPT_DEFS). These
+            // tune the libxml2 parser; the .NET parser front-end honours its own
+            // defaults, so they are accepted and consumed for CLI compatibility.
+            case "--dtdload":
+            case "--huge":
+            case "--net":
+            case "--noent":
+            case "--parser-errors":
+            case "--parser-warnings":
+            case "--xinclude":
+                break;
+            case "--xml-catalog":
+                // required_argument: consume and ignore the catalog path.
+                LongArg(ctx, ref i, a);
+                break;
+
+            default:
+                ctx.Stderr.WriteLine($"{Name}: ERROR: Unknown option: {a}");
+                _exitCode = 2;
+                return ParseResult.Stop;
+        }
+        return ParseResult.Continue;
+    }
+
+    /// <summary>Resolve an argument for a bundled short flag (rest of token, else next arg).</summary>
+    private string ShortArg(string? rest, ParseContext ctx, ref int i, string opt, out bool consumedRest)
+    {
+        if (rest != null)
+        {
+            consumedRest = true;
+            return rest;
+        }
+        consumedRest = true;
+        if (++i >= ctx.Args.Count)
+        {
+            ctx.Stderr.WriteLine($"{Name}: ERROR: {opt} requires an argument");
             throw new ExitException(2);
         }
-        return args[i];
+        return ctx.Args[i];
+    }
+
+    /// <summary>Resolve the argument for a long option (the next argument).</summary>
+    private string LongArg(ParseContext ctx, ref int i, string opt)
+    {
+        if (++i >= ctx.Args.Count)
+        {
+            ctx.Stderr.WriteLine($"{Name}: ERROR: {opt} requires an argument");
+            throw new ExitException(2);
+        }
+        return ctx.Args[i];
     }
 
     private void UpissueList(string? path, TextWriter stdout, TextWriter stderr)
@@ -1116,5 +1344,15 @@ public sealed class UpissueTool : ITool
         stdout.WriteLine("  -z, --issue-type <type>      Set the issue type of the new issue.");
         stdout.WriteLine("  -^, --remove-deleted         Remove \"delete\"d elements.");
         stdout.WriteLine("      --version                Show version information");
+        stdout.WriteLine();
+        stdout.WriteLine("XML parser options:");
+        stdout.WriteLine("  --dtdload             Load external DTD.");
+        stdout.WriteLine("  --huge                Remove any internal arbitrary parser limits.");
+        stdout.WriteLine("  --net                 Allow network access.");
+        stdout.WriteLine("  --noent               Resolve entities.");
+        stdout.WriteLine("  --parser-errors       Emit errors from parser.");
+        stdout.WriteLine("  --parser-warnings     Emit warnings from parser.");
+        stdout.WriteLine("  --xinclude            Do XInclude processing.");
+        stdout.WriteLine("  --xml-catalog <file>  Use an XML catalog.");
     }
 }

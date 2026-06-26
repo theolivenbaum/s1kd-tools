@@ -32,13 +32,16 @@ namespace S1kdTools.Tools;
 ///   from a PCT, with -1/--act resolving the PCT per data module when no -P is
 ///   given. ACT/CCT primary-key resolution mirrors the C tool.
 ///
+/// Depth features: container resolution (-Q), alts flattening (-F/-4),
+/// automatic naming/output-dir (-O/-5/-N), update-instances (-@) with reapply
+/// (-8) and dry-run (-7).
+///
 /// Partial / not ported (clearly noted): CCT dependency-test injection (-2/-~),
-/// container resolution (-Q),
-/// alts flattening (-F/-4), automatic naming/output-dir (-O/-5/-N),
-/// update-instances (-@), source/repository ident control (-S/-3/-8),
-/// set-applic (-W/-Y/-y), list-properties (-H), comments (-C/-X),
-/// acronym fixing (-M), entity cleanup (-j), add-required (-Z), read-only (-%),
-/// list input (-L), set originator (-g/-G), skill metadata (-k).
+/// source/repository ident control (-S/-3), set-applic (-W/-Y/-y),
+/// list-properties (-H), comments (-C/-X), acronym fixing (-M),
+/// entity cleanup (-j), add-required (-Z), read-only (-%), list input (-L),
+/// set originator (-g/-G), skill metadata (-k), whole-objects (-w),
+/// print-non-applic (-0).
 /// </summary>
 public sealed class InstanceTool : ITool
 {
@@ -50,6 +53,7 @@ public sealed class InstanceTool : ITool
     private const int ExitSuccess = 0;
     private const int ExitMissingArgs = 1;
     private const int ExitMissingFile = 2;
+    private const int ExitMissingSource = 3;
     private const int ExitBadApplic = 4;
     private const int ExitBadXml = 6;
     private const int ExitBadArg = 7;
@@ -72,6 +76,17 @@ public sealed class InstanceTool : ITool
         bool noInfoName = false;   // -!
         bool overwrite = false;    // -f
         bool quiet = false;        // -q
+        bool verbose = false;      // -v
+
+        bool flatAlts = false;     // -F / -4
+        bool fixAltsRefs = false;  // -4
+        bool resolveContainers = false; // -Q
+        string? outDir = null;     // -O (automatic naming)
+        bool printFnames = false;  // -5
+        bool omitIssue = false;    // -N
+        bool updateInst = false;   // -@
+        bool reApplic = false;     // -8
+        bool dryRun = false;       // -7
 
         string? secClasses = null; // -U
         string? skillCodes = null; // -K
@@ -135,7 +150,18 @@ public sealed class InstanceTool : ITool
                 case "-!" or "--no-infoname": noInfoName = true; break;
                 case "-f" or "--overwrite": overwrite = true; break;
                 case "-q" or "--quiet": quiet = true; break;
-                case "-v" or "--verbose": break; // accepted, no extra output
+                case "-v" or "--verbose": verbose = true; break;
+
+                case "-F" or "--flatten-alts": flatAlts = true; break;
+                case "-4" or "--flatten-alts-refs": flatAlts = true; fixAltsRefs = true; break;
+                case "-Q" or "--resolve-containers": resolveContainers = true; break;
+                case "-N" or "--omit-issue": omitIssue = true; break;
+                case "-5" or "--print": printFnames = true; break;
+                case "-@" or "--update-instances": updateInst = true; break;
+                case "-8" or "--reapply": reApplic = true; break;
+                case "-7" or "--dry-run": dryRun = true; break;
+                case "-O" or "--outdir":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; outDir = v; break; }
 
                 case "-s" or "--assign":
                 {
@@ -335,24 +361,89 @@ public sealed class InstanceTool : ITool
         int status = ExitSuccess;
         foreach (string file in files)
         {
+            // When updating an instance (-@), the named file is the instance;
+            // resolve its source master object, which is what we filter. The
+            // instance's applicability/skill/security/CIRs are loaded into the
+            // active definitions so the source is re-derived identically.
+            string src = file;
+            string? instSrc = null;
+            string? perFileSkill = skillCodes;
+            string? perFileSec = secClasses;
+            var perFileCirs = new List<CirSpec>(cirs);
+
+            if (updateInst)
+            {
+                if (file != "-" && !File.Exists(file))
+                {
+                    if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read source object: {file}");
+                    return ExitMissingFile;
+                }
+
+                XmlDocument inst;
+                try
+                {
+                    inst = file == "-"
+                        ? XmlUtils.ReadStream(Console.OpenStandardInput())
+                        : XmlUtils.ReadDoc(file);
+                }
+                catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException)
+                {
+                    if (!quiet) stderr.WriteLine($"{Name}: ERROR: {file} does not contain valid XML.");
+                    status = ExitBadXml;
+                    continue;
+                }
+
+                string? sourceFile = FindSourceFile(inst, searchDir, recursive);
+                if (sourceFile == null)
+                {
+                    if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not find source object for instance {file}");
+                    status = ExitMissingSource;
+                    continue;
+                }
+
+                instSrc = file;
+                src = sourceFile;
+                if (verbose) stderr.WriteLine($"{Name}: INFO: Updating instance {file} from source {src}...");
+
+                Instance.LoadApplicFromInst(defs, inst);
+                perFileSkill = Instance.LoadSkillFromInst(inst) ?? perFileSkill;
+                perFileSec = Instance.LoadSecFromInst(inst) ?? perFileSec;
+                foreach (XmlNode repIdent in Instance.TakeCirsFromInst(inst))
+                {
+                    // repositorySourceDmIdent carries dmCode directly (copied from
+                    // the CIR's dmIdent).
+                    string? cirFile = FindRefDmFile(repIdent, searchDir, recursive);
+                    if (cirFile != null)
+                    {
+                        perFileCirs.Add(new CirSpec(cirFile));
+                    }
+                }
+            }
+
             XmlDocument doc;
             try
             {
-                doc = file == "-"
+                doc = src == "-"
                     ? XmlUtils.ReadStream(Console.OpenStandardInput())
-                    : XmlUtils.ReadDoc(file);
+                    : XmlUtils.ReadDoc(src);
             }
             catch (FileNotFoundException)
             {
-                if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read source object: {file}");
+                if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read source object: {src}");
                 status = ExitMissingFile;
                 continue;
             }
             catch (Exception ex) when (ex is IOException or XmlException)
             {
-                if (!quiet) stderr.WriteLine($"{Name}: ERROR: {file} does not contain valid XML.");
+                if (!quiet) stderr.WriteLine($"{Name}: ERROR: {src} does not contain valid XML.");
                 status = ExitBadXml;
                 continue;
+            }
+
+            // Reapply the source object's own applicability (-8).
+            if (reApplic)
+            {
+                Instance.LoadApplicFromInst(defs, doc);
             }
 
             // Load the product applicability per data module (when no -P given):
@@ -365,10 +456,10 @@ public sealed class InstanceTool : ITool
 
             // Resolve CIR references before applicability filtering, mirroring
             // the order in the C main loop.
-            if (cirs.Count > 0)
+            if (perFileCirs.Count > 0)
             {
                 bool isPm = doc.DocumentElement?.LocalName == "pm";
-                foreach (CirSpec cir in cirs)
+                foreach (CirSpec cir in perFileCirs)
                 {
                     if (!File.Exists(cir.File))
                     {
@@ -407,12 +498,7 @@ public sealed class InstanceTool : ITool
             }
 
             ApplyFilter(doc, defs, napplics, mode, reduce || simplify, prune, simplify,
-                tagNonApplic, cleanDispText, remDupl, remUnused, delete, secClasses, skillCodes);
-
-            if (perDmLoaded)
-            {
-                Instance.ClearPerDmApplic(defs);
-            }
+                tagNonApplic, cleanDispText, remDupl, remUnused, delete, perFileSec, perFileSkill);
 
             // Metadata setters (subset; order mirrors the C tool).
             if (!string.IsNullOrEmpty(extension)) SetExtension(doc, extension);
@@ -429,29 +515,119 @@ public sealed class InstanceTool : ITool
             if (!string.IsNullOrEmpty(security)) SetSecurity(doc, security);
             if (remarks != null) SetRemarks(doc, remarks);
 
-            // Output.
-            string target = outFile ?? (overwrite && file != "-" ? file : "-");
-            if (target == "-")
+            // Flatten alts elements (-F / -4), after metadata.
+            if (flatAlts)
             {
-                stdout.Write(XmlUtils.ToXmlString(doc));
-                stdout.Write('\n');
+                Instance.FlattenAlts(doc, fixAltsRefs);
+            }
+
+            // Resolve references to container data modules (-Q).
+            if (resolveContainers)
+            {
+                Instance.ResolveContainers(doc, defs,
+                    refIdent =>
+                    {
+                        string? path = FindRefDmFile(refIdent, searchDir, recursive);
+                        if (path == null)
+                        {
+                            return null;
+                        }
+                        try { return (XmlUtils.ReadDoc(path), path); }
+                        catch (Exception ex) when (ex is IOException or XmlException) { return null; }
+                    },
+                    path =>
+                    {
+                        if (!quiet) stderr.WriteLine($"{Name}: WARNING: Could not resolve container {path}");
+                    });
+            }
+
+            // The ACT/PCT may differ for the next object, so per-DM assigns (and
+            // those loaded from an instance) must be cleared. Defs set with -s
+            // carry over. Mirrors the C "load_applic_per_dm || re_applic" check.
+            if (perDmLoaded || reApplic || updateInst)
+            {
+                Instance.ClearPerDmApplic(defs);
+            }
+
+            // When updating an instance, reset the source name to the instance so
+            // overwrite (-f) targets the instance file.
+            if (updateInst && instSrc != null)
+            {
+                src = instSrc;
+            }
+
+            // Determine the output target. With -O the file is named automatically
+            // in the output directory; otherwise it goes to -o, the source (-f) or
+            // stdout.
+            string target;
+            if (outDir != null)
+            {
+                if (!Directory.Exists(outDir))
+                {
+                    try { Directory.CreateDirectory(outDir); }
+                    catch (IOException)
+                    {
+                        if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not create directory {outDir}");
+                        return ExitBadArg;
+                    }
+                }
+
+                string? name = Instance.AutoName(src, doc, outDir, omitIssue);
+                if (name == null)
+                {
+                    if (!quiet) stderr.WriteLine($"{Name}: ERROR: Cannot automatically name unsupported object types.");
+                    return ExitBadXml;
+                }
+                target = name;
+            }
+            else if (outFile != null)
+            {
+                target = outFile;
+            }
+            else if (overwrite && src != "-")
+            {
+                target = src;
             }
             else
             {
-                if (File.Exists(target) && !overwrite && outFile == null)
+                target = "-";
+            }
+
+            if (target == "-")
+            {
+                if (!dryRun)
+                {
+                    stdout.Write(XmlUtils.ToXmlString(doc));
+                    stdout.Write('\n');
+                }
+            }
+            else
+            {
+                // An existing output file is only overwritten when -f is given
+                // (mirrors the C "!use_stdout && access(out)==0 && !force_overwrite"
+                // check, which applies to both -o and -O).
+                bool exists = File.Exists(target);
+                if (exists && !overwrite)
                 {
                     if (!quiet) stderr.WriteLine($"{Name}: WARNING: {target} already exists. Use -f to overwrite.");
                 }
                 else
                 {
-                    try
+                    if (!dryRun)
                     {
-                        XmlUtils.SaveDoc(doc, target);
+                        try
+                        {
+                            XmlUtils.SaveDoc(doc, target);
+                        }
+                        catch (IOException)
+                        {
+                            if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not write {target}");
+                            status = ExitMissingFile;
+                        }
                     }
-                    catch (IOException)
+                    if (printFnames)
                     {
-                        if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not write {target}");
-                        status = ExitMissingFile;
+                        stdout.WriteLine(target);
                     }
                 }
             }
@@ -995,6 +1171,15 @@ public sealed class InstanceTool : ITool
         stdout.WriteLine("  -1, --act <ACT>                       Use the given ACT data module.");
         stdout.WriteLine("  -2, --cct <CCT>                       Use the given CCT data module.");
         stdout.WriteLine("  -o, --out <file>                      Output to file instead of stdout.");
+        stdout.WriteLine("  -O, --outdir <dir>                    Output to dir with an automatically generated filename.");
+        stdout.WriteLine("  -5, --print                           Print the names of the output files.");
+        stdout.WriteLine("  -N, --omit-issue                      Omit issue/inwork from automatic filenames.");
+        stdout.WriteLine("  -F, --flatten-alts                    Flatten alts elements with a single child.");
+        stdout.WriteLine("  -4, --flatten-alts-refs               Flatten alts and fix internalRefTargetType.");
+        stdout.WriteLine("  -Q, --resolve-containers              Resolve references to container data modules.");
+        stdout.WriteLine("  -@, --update-instances                Update existing instances from their source.");
+        stdout.WriteLine("  -8, --reapply                         Reapply the source object's applicability.");
+        stdout.WriteLine("  -7, --dry-run                         Do not actually create or update any instances.");
         stdout.WriteLine("  -f, --overwrite                       Overwrite output files.");
         stdout.WriteLine("  -q, --quiet                           Quiet mode.");
         stdout.WriteLine("  -v, --verbose                         Verbose output.");
@@ -1146,6 +1331,73 @@ public sealed class InstanceTool : ITool
 
         // Prefer the latest matching issue.
         var matches = candidates.Where(p => Csdb.IsDataModule(Path.GetFileName(p))).ToList();
+        if (matches.Count == 0)
+        {
+            return null;
+        }
+        return Csdb.ExtractLatestObjects(matches).FirstOrDefault() ?? matches[0];
+    }
+
+    /// <summary>
+    /// Locate the master object file an instance was derived from, via its
+    /// <c>sourceDmIdent</c> / <c>sourcePmIdent</c> / <c>srcdmaddres</c>. A focused
+    /// port of <c>find_source</c> (the node lookup is in
+    /// <see cref="Instance.FindSourceIdent"/>; the file search is here).
+    /// </summary>
+    private static string? FindSourceFile(XmlDocument inst, string searchDir, bool recursive)
+    {
+        XmlNode? sdi = Instance.FindSourceIdent(inst);
+        if (sdi == null)
+        {
+            return null;
+        }
+
+        if (sdi.LocalName is "sourceDmIdent" or "srcdmaddres")
+        {
+            return FindRefDmFile(sdi, searchDir, recursive);
+        }
+
+        if (sdi.LocalName == "sourcePmIdent")
+        {
+            return FindRefPmFile(sdi, searchDir, recursive);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Build the CSDB filename code from a pmCode-bearing ident and locate the
+    /// matching publication module. Companion to <see cref="FindRefDmFile"/> for
+    /// PM source idents.
+    /// </summary>
+    private static string? FindRefPmFile(XmlNode pmRefIdent, string searchDir, bool recursive)
+    {
+        XmlNode? pmCode = pmRefIdent.SelectSingleNode("pmCode|pmc");
+        if (pmCode is not XmlElement c)
+        {
+            return null;
+        }
+
+        string V(string attr) => c.GetAttribute(attr);
+        string code = $"PMC-{V("modelIdentCode")}-{V("pmIssuer")}-{V("pmNumber")}-{V("pmVolume")}";
+
+        if (!Directory.Exists(searchDir))
+        {
+            return null;
+        }
+
+        var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        IEnumerable<string> candidates;
+        try
+        {
+            candidates = Directory.EnumerateFiles(searchDir, code + "*", option);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+
+        var matches = candidates.Where(p => Csdb.IsPublicationModule(Path.GetFileName(p))).ToList();
         if (matches.Count == 0)
         {
             return null;
