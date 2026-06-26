@@ -163,6 +163,15 @@ Publication:
       assembly manifest in single-file mode). See README "Packaging".
 - [x] Port/port-equivalent of `libs1kd` tests — `Libs1kdParityTests.cs` ports all
       six C test functions from `reference/.../libs1kd/tests/tests.c`.
+- [x] Real-world testing dataset under `samples/` — five curated CSDBs sourced
+      from upstream open-source S1000D projects (FOSSIG, the S1000D spec-as-CSDB,
+      s1kd-tools-doc, S1000D-XSL-Stylesheets, s1kd2db), spanning schema Issues
+      4.0/4.2/5.0, each with a README (provenance + license). One tiny CLI
+      project per dataset (`samples/harnesses/Samples.*`, in `S1kdTools.slnx`)
+      consumes `S1kdTools.Core` and builds the sample files (ls/validate/
+      metadata/flatten/brexcheck/refs/syncrefs). The s1000d-spec corpus doubles
+      as a negative-test fixture (dangling internalRefs → validate exit 1;
+      missing reasonForUpdate → brexcheck exit 1), matching the C tools.
 
 ## Known risks / decisions
 - EXSLT coverage in `XslCompiledTransform` (str:/exsl:/dyn:) — shim per stylesheet.
