@@ -64,14 +64,29 @@ public sealed class AcronymsTool : ITool
     private XmlDocument _defaultChoicesDoc = null!;
     private XmlElement _defaultChoices = null!;
 
+    /// <summary>Where interactive prompts are read from (mirrors <c>stdin</c>).</summary>
+    private TextReader _input = null!;
+
+    /// <summary>Where interactive prompts are written to (mirrors <c>printf</c> to stdout).</summary>
+    private TextWriter _promptOut = null!;
+
     /// <summary>Thrown internally to mirror the C tool's <c>exit()</c> calls.</summary>
     private sealed class ExitException(int code) : Exception
     {
         public int Code { get; } = code;
     }
 
-    public int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
+    /// <summary>Entry point used by the CLI; interactive prompts read from the
+    /// process's standard input.</summary>
+    public int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr) =>
+        Run(args, stdout, stderr, Console.In);
+
+    /// <summary>Overload allowing an interactive input reader to be injected (for
+    /// testing the <c>-i</c>/<c>-I</c> prompting in-process).</summary>
+    public int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr, TextReader input)
     {
+        _input = input;
+        _promptOut = stdout;
         bool xmlOut = false;
         string? types = null;
         string outPath = "-";
@@ -608,8 +623,10 @@ public sealed class AcronymsTool : ITool
     /// Resolve the acronym to insert at a particular occurrence (mirrors
     /// <c>chooseAcronym</c>). Honours previously-recorded default choices and,
     /// when <c>--defer-choice</c> is set, emits a <c>chooseAcronym</c> element
-    /// listing all candidate definitions. Interactive console prompting is not
-    /// supported in this in-process port (see remarks).
+    /// listing all candidate definitions. Otherwise, when there is more than one
+    /// candidate definition (or <c>-I</c> is in effect), the user is prompted via
+    /// <see cref="_input"/> to choose a definition, ignore the occurrence, or
+    /// apply the choice to all remaining occurrences of the term.
     /// </summary>
     private XmlNode? ChooseAcronym(XmlNode acronym, string term, string content)
     {
@@ -645,10 +662,80 @@ public sealed class AcronymsTool : ITool
 
         if (noDefault && (_alwaysAsk || candidates.Count > 1))
         {
-            // Interactive stdin prompting cannot run in-process; fall back to
-            // the first definition, matching non-interactive default behaviour.
-            chosen = candidates.Count > 0 ? candidates[0] : acronym;
+            chosen = PromptForAcronym(candidates, term, content);
         }
+
+        return chosen;
+    }
+
+    /// <summary>Interactively prompt the user to choose how to mark up one
+    /// occurrence of an acronym term (mirrors the prompting block in the C
+    /// <c>chooseAcronym</c>). Returns the chosen acronym node, or <c>null</c> to
+    /// ignore the occurrence. Reads character-by-character from <see cref="_input"/>;
+    /// when input is exhausted (EOF / non-interactive) the occurrence is ignored,
+    /// matching the C behaviour where <c>getchar()</c> returns EOF.</summary>
+    private XmlNode? PromptForAcronym(XmlNodeList candidates, string term, string content)
+    {
+        _promptOut.Write($"Found acronym term {term} in the following context:\n\n");
+        _promptOut.Write($"{content}\n\n");
+        _promptOut.Write("Choose definition:\n");
+
+        for (int i = 0; i < candidates.Count && i < 9; ++i)
+        {
+            XmlNode? definition = candidates[i]!.SelectSingleNode("acronymDefinition");
+            _promptOut.Write($"{i + 1}) {definition?.InnerText ?? string.Empty}\n");
+        }
+
+        _promptOut.Write("s) Ignore this one\n");
+        _promptOut.Write("\n");
+        _promptOut.Write("Add 'a' after your choice to apply to all remaining occurrences of this acronym\n");
+        _promptOut.Write("\n");
+        _promptOut.Write("Choice: ");
+        _promptOut.Flush();
+
+        // First character: a digit selects that definition; anything else (or
+        // EOF) ignores the occurrence.
+        int c = _input.Read();
+        XmlNode? chosen;
+        if (c >= '0' && c <= '9')
+        {
+            int index = c - '0' - 1;
+            chosen = index >= 0 && index < candidates.Count ? candidates[index] : null;
+        }
+        else
+        {
+            chosen = null;
+        }
+
+        // If the choice is followed by 'a', apply it to all remaining
+        // occurrences of this acronym (record a default choice).
+        if (_input.Peek() == 'a')
+        {
+            _input.Read();
+            if (chosen != null)
+            {
+                _defaultChoices.AppendChild(_defaultChoices.OwnerDocument!.ImportNode(chosen, true));
+            }
+            else
+            {
+                XmlDocument doc = _defaultChoices.OwnerDocument!;
+                XmlElement n = doc.CreateElement("acronym");
+                n.SetAttribute("ignore", "1");
+                XmlElement t = doc.CreateElement("acronymTerm");
+                t.AppendChild(doc.CreateTextNode(term));
+                n.AppendChild(t);
+                _defaultChoices.AppendChild(n);
+            }
+        }
+
+        // Consume the rest of the line.
+        int rest;
+        while ((rest = _input.Read()) != -1 && rest != '\n')
+        {
+            // discard
+        }
+
+        _promptOut.Write('\n');
 
         return chosen;
     }

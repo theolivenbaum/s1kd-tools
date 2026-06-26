@@ -300,4 +300,94 @@ public class DefaultsToolTests
         }
         finally { File.Delete(path); }
     }
+
+    /* ---- Initialize a new CSDB (-i) ---- */
+
+    private static string TempDir()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-def-init-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    [Fact]
+    public void Init_Xml_CreatesAllThreeConfigFilesInProcess()
+    {
+        string dir = TempDir();
+        try
+        {
+            // -i drives .defaults locally and s1kd-newdm / s1kd-fmgen in-process
+            // (their -, XML dump) to produce .dmtypes and .fmtypes.
+            var (code, _, _) = Run("-i", "-o", dir);
+            Assert.Equal(0, code);
+
+            Assert.True(File.Exists(Path.Combine(dir, ".defaults")));
+            Assert.True(File.Exists(Path.Combine(dir, ".dmtypes")));
+            Assert.True(File.Exists(Path.Combine(dir, ".fmtypes")));
+
+            // The XML dumps are well-formed config documents.
+            Assert.Contains("<dmtypes", File.ReadAllText(Path.Combine(dir, ".dmtypes")));
+            Assert.Contains("<fmtypes", File.ReadAllText(Path.Combine(dir, ".fmtypes")));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Init_Text_CreatesAllThreeConfigFilesInProcess()
+    {
+        string dir = TempDir();
+        try
+        {
+            // -i -t uses the simple text dump (s1kd-newdm -. / s1kd-fmgen -.).
+            var (code, _, errText) = Run("-i", "-t", "-o", dir);
+            Assert.Equal(0, code);
+
+            Assert.True(File.Exists(Path.Combine(dir, ".defaults")));
+            Assert.True(File.Exists(Path.Combine(dir, ".dmtypes")));
+            Assert.True(File.Exists(Path.Combine(dir, ".fmtypes")));
+
+            // The text dumps are not XML.
+            Assert.DoesNotContain("<dmtypes", File.ReadAllText(Path.Combine(dir, ".dmtypes")));
+            // No "could not create" errors when the tools run successfully.
+            Assert.DoesNotContain("Could not create", errText);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Init_DoesNotOverwriteExistingFilesWithoutForce()
+    {
+        string dir = TempDir();
+        try
+        {
+            string dmtypes = Path.Combine(dir, ".dmtypes");
+            File.WriteAllText(dmtypes, "PRESERVE ME\n");
+
+            var (code, _, _) = Run("-i", "-o", dir);
+            Assert.Equal(0, code);
+
+            // Existing .dmtypes is left untouched (mirrors the access(...) guard).
+            Assert.Equal("PRESERVE ME\n", File.ReadAllText(dmtypes));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Init_Force_OverwritesExistingFiles()
+    {
+        string dir = TempDir();
+        try
+        {
+            string dmtypes = Path.Combine(dir, ".dmtypes");
+            File.WriteAllText(dmtypes, "PRESERVE ME\n");
+
+            var (code, _, _) = Run("-i", "-f", "-o", dir);
+            Assert.Equal(0, code);
+
+            // -f forces regeneration via the in-process s1kd-newdm dump.
+            Assert.NotEqual("PRESERVE ME\n", File.ReadAllText(dmtypes));
+            Assert.Contains("<dmtypes", File.ReadAllText(dmtypes));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
 }

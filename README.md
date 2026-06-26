@@ -15,6 +15,30 @@ A set of small, free and open source software tools for manipulating
 > dotnet test               # run the test suite
 > dotnet run --project src/S1kdTools.Cli -- metadata -n issueInfo FILE.XML
 > ```
+>
+> ### Packaging
+>
+> The core library (`S1kdTools.Core`) is published as a NuGet package and the
+> `s1kd` CLI as a single self-contained (or framework-dependent) executable:
+>
+> ```
+> # Build the S1kdTools.Core NuGet package (.nupkg lands in bin/Release/)
+> dotnet pack src/S1kdTools.Core/S1kdTools.Core.csproj -c Release
+>
+> # Build a single-file CLI executable for a runtime (RID), self-contained:
+> dotnet publish src/S1kdTools.Cli -c Release -r linux-x64 \
+>     -p:PublishSingleFile=true --self-contained
+>
+> # ...or framework-dependent (smaller; requires the .NET runtime to be present):
+> dotnet publish src/S1kdTools.Cli -c Release -r linux-x64 \
+>     -p:PublishSingleFile=true --self-contained=false
+> ```
+>
+> Supported RIDs include `linux-x64`, `linux-arm64`, `win-x64`, `win-arm64`,
+> `osx-x64`, `osx-arm64`. The published single file (`s1kd` / `s1kd.exe`) lands
+> in `src/S1kdTools.Cli/bin/Release/net10.0/<RID>/publish/`. The embedded XSLT,
+> templates and data resources are read from the assembly's manifest, so they
+> resolve correctly when bundled into the single-file host.
 
   - [Introduction](INTRO.md)
 

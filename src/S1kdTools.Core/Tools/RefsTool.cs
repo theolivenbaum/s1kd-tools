@@ -26,9 +26,12 @@ namespace S1kdTools.Tools;
 /// Hotspot matching (-H/-j/-J) and exec (-e) are now ported: hotspots in a
 /// graphic are matched against APS IDs in the referenced (XML-based) ICN using
 /// the configurable hotspot XPath, and -e runs a command for each matched
-/// object. Still documented as partial: the non-chapterized IPD SNS
-/// construction (-b). ICN entity rewriting on update (-U of an infoEntityIdent)
-/// is not performed because System.Xml's entity handling differs from libxml2.
+/// object. The non-chapterized IPD SNS construction (-b) is also ported: missing
+/// SNS components on a CSN/IPD reference are filled in from the supplied SNS (or
+/// inherited from the containing DM when the SNS is "-"), so non-chapterized CSN
+/// refs resolve to an IPD DMC. ICN entity rewriting on update (-U of an
+/// infoEntityIdent) is not performed because System.Xml's entity handling
+/// differs from libxml2.
 /// </summary>
 public sealed class RefsTool : ITool
 {
@@ -96,6 +99,15 @@ public sealed class RefsTool : ITool
         public bool RemDelete;          // -^
         public bool XmlOutput;          // -x
         public string? FigNumVarFormat = "%"; // -k
+
+        // Non-chapterized IPD SNS (-b). When set, missing SNS components on a
+        // CSN/IPD reference are filled in from this SNS (or, when the SNS is
+        // "-", inherited from the containing data module).
+        public bool NonChapIpdSns;
+        public string NonChapIpdSystemCode = "";
+        public string NonChapIpdSubSystemCode = "";
+        public string NonChapIpdSubSubSystemCode = "";
+        public string NonChapIpdAssyCode = "";
 
         // Mutating modes.
         public bool UpdateRefs;         // -U
@@ -197,8 +209,9 @@ public sealed class RefsTool : ITool
                     extPubsFname = args[i];
                     break;
                 case "-b" or "--ipd-sns":
-                    // Non-chapterized IPD SNS construction is not ported; consume arg.
                     if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: -b requires an argument"); return 2; }
+                    if (!ReadNonChapIpdSns(args[i], opts, stderr)) { return ExitBadCsnCode; }
+                    opts.NonChapIpdSns = true;
                     break;
                 case "-j" or "--hotspot-xpath":
                     if (++i >= args.Count) { stderr.WriteLine($"{Name}: ERROR: {a} requires an argument"); return 2; }
@@ -1867,9 +1880,68 @@ public sealed class RefsTool : ITool
         return code != null ? code.InnerText : reff.InnerText;
     }
 
-    // IPD / CSN code construction. Full chapterized-CSN-to-DMC resolution is only
-    // performed when all SNS attributes are present on the ref itself; the
-    // non-chapterized IPD SNS construction (-b) is not ported.
+    // Read a non-chapterized IPD SNS code (-b), mirroring readnonChapIpdSns.
+    // "-" means the SNS is also relative to the containing DM. Otherwise the
+    // form is "SYS-SUBSUBSUB-ASSY", e.g. "ZD-00-35", parsed as system "ZD",
+    // subSystem "0", subSubSystem "0", assy "35". Returns false on a bad code.
+    private bool ReadNonChapIpdSns(string s, Options opts, TextWriter stderr)
+    {
+        if (s == "-")
+        {
+            opts.NonChapIpdSystemCode = "-";
+            return true;
+        }
+
+        // sscanf "%3[0-9A-Z]-%1[0-9A-Z]%1[0-9A-Z]-%4[0-9A-Z]": four greedy
+        // alphanumeric fields with widths 3,1,1,4 separated by '-'.
+        if (TryParseNonChapSns(s,
+                out string sys, out string sub, out string subsub, out string assy))
+        {
+            opts.NonChapIpdSystemCode = sys;
+            opts.NonChapIpdSubSystemCode = sub;
+            opts.NonChapIpdSubSubSystemCode = subsub;
+            opts.NonChapIpdAssyCode = assy;
+            return true;
+        }
+
+        stderr.WriteLine($"{Name}: ERROR: Invalid non-chapterized IPD SNS: {s}");
+        return false;
+    }
+
+    // Mirror of the sscanf "%3[0-9A-Z]-%1[0-9A-Z]%1[0-9A-Z]-%4[0-9A-Z]" parse:
+    // all four conversions must succeed (n == 4) for the SNS to be valid.
+    private static bool TryParseNonChapSns(string s,
+        out string sys, out string sub, out string subsub, out string assy)
+    {
+        sys = sub = subsub = assy = "";
+
+        static bool IsField(char c) => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z');
+
+        int p = 0;
+        // %3[0-9A-Z]: 1..3 chars.
+        string Scan(int max)
+        {
+            int start = p;
+            while (p < s.Length && p - start < max && IsField(s[p])) p++;
+            return s[start..p];
+        }
+
+        sys = Scan(3);
+        if (sys.Length == 0 || p >= s.Length || s[p] != '-') return false;
+        p++;
+        sub = Scan(1);
+        if (sub.Length == 0) return false;
+        subsub = Scan(1);
+        if (subsub.Length == 0 || p >= s.Length || s[p] != '-') return false;
+        p++;
+        assy = Scan(4);
+        return assy.Length != 0;
+    }
+
+    // IPD / CSN code construction (mirrors getCsnCode/getIpdCode). When a
+    // non-chapterized IPD SNS is supplied (-b), missing SNS components are
+    // filled in (from the given SNS, or from the containing DM when the SNS is
+    // "-"), allowing non-chapterized CSN refs to resolve to an IPD DMC.
     private string GetIpdCode(XmlNode reff, Options opts)
     {
         string? csnValue = FirstValue(reff, "@catalogSeqNumberValue|@refcsn");
@@ -1896,8 +1968,9 @@ public sealed class RefsTool : ITool
             ilc = GetAttr(reff, "itemLocationCode");
         }
 
-        // Inherit model/systemDiff from the containing DM for old-style CSNs.
-        if (csnValue != null)
+        // Apply attributes to non-chapterized or old style CSN refs (these are
+        // always interpreted as relative to the current DM).
+        if (opts.NonChapIpdSns || csnValue != null)
         {
             XmlNode? dmCode = FirstNode(reff,
                 "ancestor::dmodule/identAndStatusSection/dmAddress/dmIdent/dmCode|ancestor::dmodule/idstatus/dmaddres/dmc/avee");
@@ -1906,6 +1979,27 @@ public sealed class RefsTool : ITool
                 mic ??= FirstValue(dmCode, "@modelIdentCode|modelic");
                 sdc ??= FirstValue(dmCode, "@systemDiffCode|sdc");
                 ilc ??= "?";
+
+                // If a non-chapterized IPD SNS is given, apply it.
+                if (opts.NonChapIpdSns)
+                {
+                    if (opts.NonChapIpdSystemCode == "-")
+                    {
+                        // SNS is also relative to the current DM.
+                        sys ??= FirstValue(dmCode, "@systemCode|chapnum");
+                        sub ??= FirstValue(dmCode, "@subSystemCode|section");
+                        subsub ??= FirstValue(dmCode, "@subSubSystemCode|subsect");
+                        assy ??= FirstValue(dmCode, "@assyCode|subject");
+                    }
+                    else
+                    {
+                        // Construct the SNS from the given code.
+                        sys ??= opts.NonChapIpdSystemCode;
+                        sub ??= opts.NonChapIpdSubSystemCode;
+                        subsub ??= opts.NonChapIpdSubSubSystemCode;
+                        assy ??= opts.NonChapIpdAssyCode;
+                    }
+                }
             }
         }
 
@@ -1977,6 +2071,7 @@ public sealed class RefsTool : ITool
         stdout.WriteLine("Options:");
         stdout.WriteLine("  -a, --all              Print unmatched codes.");
         stdout.WriteLine("  -B, --ipd              List IPD references.");
+        stdout.WriteLine("  -b, --ipd-sns <SNS>    The SNS for non-chapterized IPDs.");
         stdout.WriteLine("  -C, --com              List comment references.");
         stdout.WriteLine("  -c, --content          Only show references in content section.");
         stdout.WriteLine("  -D, --dm               List data module references.");

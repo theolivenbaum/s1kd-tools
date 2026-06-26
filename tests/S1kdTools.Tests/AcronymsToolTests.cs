@@ -463,4 +463,179 @@ public class AcronymsToolTests
         Assert.Equal(0, vCode);
         Assert.Contains("2.0.0", vOut);
     }
+
+    // --------------------------------------------------------------------
+    // Interactive markup (-i / -I) with injected stdin
+    // --------------------------------------------------------------------
+
+    private static (int code, string outText, string errText) RunInteractive(
+        string stdin, params string[] args)
+    {
+        var tool = new AcronymsTool();
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        using var input = new StringReader(stdin);
+        int code = tool.Run(args, stdout, stderr, input);
+        return (code, stdout.ToString(), stderr.ToString());
+    }
+
+    // Two definitions for the same term, forcing an interactive choice.
+    private static string TwoDefList() =>
+        "<acronyms>" +
+        "<acronym acronymType=\"at01\"><acronymTerm>XML</acronymTerm>" +
+        "<acronymDefinition>Extensible Markup Language</acronymDefinition></acronym>" +
+        "<acronym acronymType=\"at02\"><acronymTerm>XML</acronymTerm>" +
+        "<acronymDefinition>X Markup Lang</acronymDefinition></acronym>" +
+        "</acronyms>";
+
+    [Fact]
+    public void Interactive_PromptsAndChoosesDefinition()
+    {
+        string dir = TempDir();
+        try
+        {
+            string mod = Path.Combine(dir, "mod.xml");
+            string acr = Path.Combine(dir, "acr.xml");
+            File.WriteAllText(mod,
+                "<dmodule><content><description><para>Use XML here.</para></description></content></dmodule>");
+            File.WriteAllText(acr, TwoDefList());
+
+            // Choose definition 2 ("X Markup Lang").
+            var (code, outText, _) = RunInteractive("2\n", "-i", "-M", acr, mod);
+
+            Assert.Equal(0, code);
+            // The prompt text mirrors the C tool.
+            Assert.Contains("Found acronym term XML in the following context:", outText);
+            Assert.Contains("Choose definition:", outText);
+            Assert.Contains("1) Extensible Markup Language", outText);
+            Assert.Contains("2) X Markup Lang", outText);
+            Assert.Contains("s) Ignore this one", outText);
+
+            // The resulting document should contain the chosen definition.
+            var doc = Parse(outText.Substring(outText.IndexOf("<dmodule", StringComparison.Ordinal)));
+            Assert.NotNull(doc.SelectSingleNode("//acronym[acronymDefinition='X Markup Lang']"));
+            Assert.Null(doc.SelectSingleNode("//acronym[acronymDefinition='Extensible Markup Language']"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Interactive_IgnoreChoice_InsertsIgnoredAcronym()
+    {
+        string dir = TempDir();
+        try
+        {
+            string mod = Path.Combine(dir, "mod.xml");
+            string acr = Path.Combine(dir, "acr.xml");
+            File.WriteAllText(mod,
+                "<dmodule><content><description><para>Use XML here.</para></description></content></dmodule>");
+            File.WriteAllText(acr, TwoDefList());
+
+            // 's' (or any non-digit) ignores this occurrence.
+            var (code, outText, _) = RunInteractive("s\n", "-i", "-M", acr, mod);
+
+            Assert.Equal(0, code);
+            string xml = outText.Substring(outText.IndexOf("<dmodule", StringComparison.Ordinal));
+            var doc = Parse(xml);
+            // No acronym markup should have been inserted.
+            Assert.Null(doc.SelectSingleNode("//acronym"));
+            Assert.Contains("XML", doc.SelectSingleNode("//para")!.InnerText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Interactive_ApplyToAll_ReusesChoiceForRemainingOccurrences()
+    {
+        string dir = TempDir();
+        try
+        {
+            string mod = Path.Combine(dir, "mod.xml");
+            string acr = Path.Combine(dir, "acr.xml");
+            // Two occurrences of XML.
+            File.WriteAllText(mod,
+                "<dmodule><content><description><para>Use XML and more XML here.</para></description></content></dmodule>");
+            File.WriteAllText(acr, TwoDefList());
+
+            // First occurrence: choose 1 and apply to all ("1a"). The second
+            // occurrence must reuse the choice without prompting again.
+            var (code, outText, _) = RunInteractive("1a\n", "-i", "-M", acr, mod);
+
+            Assert.Equal(0, code);
+            // Only one prompt should have been shown (one "Choose definition:");
+            // the second occurrence reuses the recorded "apply to all" choice.
+            int prompts = CountOccurrences(outText, "Choose definition:");
+            Assert.Equal(1, prompts);
+
+            string xml = outText.Substring(outText.IndexOf("<dmodule", StringComparison.Ordinal));
+            var doc = Parse(xml);
+            // The chosen definition (at01) is used; the alternate (at02) never is.
+            Assert.NotNull(doc.SelectSingleNode("//acronym[acronymDefinition='Extensible Markup Language']"));
+            Assert.Null(doc.SelectSingleNode("//acronymDefinition[.='X Markup Lang']"));
+            // Both occurrences are marked up: a full acronym for the first, and a
+            // back-reference (term/id resolution) for the repeat.
+            Assert.NotNull(doc.SelectSingleNode("//acronymTerm[@internalRefId]"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Interactive_AlwaysAsk_PromptsForSingleDefinition()
+    {
+        string dir = TempDir();
+        try
+        {
+            string mod = Path.Combine(dir, "mod.xml");
+            string acr = Path.Combine(dir, "acr.xml");
+            File.WriteAllText(mod,
+                "<dmodule><content><description><para>Use XML here.</para></description></content></dmodule>");
+            // Single definition: -i alone would NOT prompt, but -I (always-ask) does.
+            File.WriteAllText(acr,
+                "<acronyms>" +
+                "<acronym acronymType=\"at01\"><acronymTerm>XML</acronymTerm>" +
+                "<acronymDefinition>Extensible Markup Language</acronymDefinition></acronym>" +
+                "</acronyms>");
+
+            var (code, outText, _) = RunInteractive("1\n", "-I", "-M", acr, mod);
+
+            Assert.Equal(0, code);
+            Assert.Contains("Choose definition:", outText);
+            var doc = Parse(outText.Substring(outText.IndexOf("<dmodule", StringComparison.Ordinal)));
+            Assert.NotNull(doc.SelectSingleNode("//acronym[acronymDefinition='Extensible Markup Language']"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Interactive_ExhaustedInput_IgnoresOccurrence()
+    {
+        string dir = TempDir();
+        try
+        {
+            string mod = Path.Combine(dir, "mod.xml");
+            string acr = Path.Combine(dir, "acr.xml");
+            File.WriteAllText(mod,
+                "<dmodule><content><description><para>Use XML here.</para></description></content></dmodule>");
+            File.WriteAllText(acr, TwoDefList());
+
+            // Empty stdin: EOF on the first read => occurrence ignored.
+            var (code, outText, _) = RunInteractive(string.Empty, "-i", "-M", acr, mod);
+
+            Assert.Equal(0, code);
+            var doc = Parse(outText.Substring(outText.IndexOf("<dmodule", StringComparison.Ordinal)));
+            Assert.Null(doc.SelectSingleNode("//acronym"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        int count = 0, idx = 0;
+        while ((idx = haystack.IndexOf(needle, idx, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            idx += needle.Length;
+        }
+        return count;
+    }
 }

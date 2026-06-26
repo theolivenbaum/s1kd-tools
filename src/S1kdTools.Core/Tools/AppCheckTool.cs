@@ -35,11 +35,13 @@ namespace S1kdTools.Tools;
 /// external validation is performed in-process. The C tool shells out to
 /// <c>s1kd-instance</c> to filter and <c>s1kd-validate</c> / <c>s1kd-brexcheck</c>
 /// to validate; this port filters in-process (dropping non-applicable annotated
-/// elements) and detects the most common resulting error — broken
-/// <c>internalRef</c> / <c>dmRef</c>-style cross references to filtered-out
-/// content. CCT dependency injection (<c>-~</c>) is supported via
-/// <see cref="Applicability.AddCctDepends"/>. Custom validators (<c>-e</c>), the
-/// BREX check (<c>-b</c>), parallel threads (<c>-#</c>), the
+/// elements), detects broken <c>internalRef</c> / <c>dmRef</c>-style cross
+/// references to filtered-out content, and then runs the validators in-process:
+/// the default schema validator (<see cref="ValidateTool"/>) always, the BREX
+/// check (<see cref="BrexCheckTool"/>) when <c>-b</c> is set, and custom
+/// validators (<c>-e</c>) dispatched through <see cref="ToolRegistry"/>. CCT
+/// dependency injection (<c>-~</c>) is supported via
+/// <see cref="Applicability.AddCctDepends"/>. Parallel threads (<c>-#</c>), the
 /// <c>-o</c>/<c>-K</c>/<c>-k</c> external-filter options and the progress bar are
 /// parsed for compatibility but are not fully ported.
 /// </para>
@@ -86,6 +88,14 @@ public sealed class AppCheckTool : ITool
     private string _searchDir = ".";
     private readonly HashSet<string> _ignoredProperties = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Custom validator commands collected from <c>-e</c>/<c>--exec</c>. In the C
+    /// tool these are shell command lines piped the filtered instance; here they
+    /// are dispatched in-process when their leading token resolves to a ported
+    /// tool (see <see cref="RunValidators"/>).
+    /// </summary>
+    private readonly List<string> _validators = new();
+
     public int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
     {
         var objects = new List<string>();
@@ -131,7 +141,7 @@ public sealed class AppCheckTool : ITool
                     case "--custom": _mode = CheckMode.Custom; continue;
                     case "--duplicate": _checkDuplicate = true; continue;
                     case "--dir": { var v = RequireArg(a); if (v == null) return ExitFailure; _searchDir = v; continue; }
-                    case "--exec": { if (RequireArg(a) == null) return ExitFailure; continue; }
+                    case "--exec": { var v = RequireArg(a); if (v == null) return ExitFailure; _validators.Add(v); continue; }
                     case "--valid-filenames": _filenames = ShowFilenames.Valid; continue;
                     case "--filenames": _filenames = ShowFilenames.Invalid; continue;
                     case "--ignore": { var v = RequireArg(a); if (v == null) return ExitFailure; _ignoredProperties.Add(v); continue; }
@@ -219,7 +229,8 @@ public sealed class AppCheckTool : ITool
                                 case 'P': _userPct = val; break;
                                 case 'd': _searchDir = val; break;
                                 case 'i': _ignoredProperties.Add(val); break;
-                                // e/K/k/# parsed but not ported
+                                case 'e': _validators.Add(val); break;
+                                // K/k/# parsed but not ported
                             }
                             c = a.Length; // consumed rest of cluster
                             break;
@@ -276,13 +287,14 @@ public sealed class AppCheckTool : ITool
             objects.Add("-");
         }
 
-        // The BREX check (-b) and omit-issue (-N) filename handling are parsed
-        // for compatibility but not fully ported; warn when they were requested
-        // so behaviour is not silently different. CCT-dependency injection (-~)
-        // is supported (see Applicability.AddCctDepends).
-        if ((_brexcheck || _noIssue) && _verbosity >= Verbosity.Verbose)
+        // Omit-issue (-N) filename handling is parsed for compatibility but not
+        // fully ported; warn when requested so behaviour is not silently
+        // different. The default schema validator, the BREX check (-b) and any
+        // custom validators (-e) ARE ported in-process (see RunValidators); CCT
+        // dependency injection (-~) is supported (see Applicability.AddCctDepends).
+        if (_noIssue && _verbosity >= Verbosity.Verbose)
         {
-            stderr.WriteLine($"{MsgPrefix}: WARNING: Options -b/-N are not fully supported in this port.");
+            stderr.WriteLine($"{MsgPrefix}: WARNING: Option -N is not fully supported in this port.");
         }
 
         int err = 0;
@@ -758,7 +770,7 @@ public sealed class AppCheckTool : ITool
             asserts.AppendChild(assign);
         }
 
-        bool valid = FilterAndValidate(doc, assigns);
+        bool valid = FilterAndValidate(doc, assigns, stderr);
 
         asserts.SetAttribute("valid", valid ? "yes" : "no");
         report.AppendChild(asserts);
@@ -780,11 +792,13 @@ public sealed class AppCheckTool : ITool
     }
 
     /// <summary>
-    /// In-process replacement for s1kd-instance + s1kd-validate: produce the
-    /// filtered tree for a set of assignments and check it for broken internal
-    /// references. Returns true if the filtered object is valid.
+    /// In-process replacement for the C tool's <c>check_assigns</c> pipeline
+    /// (s1kd-instance filter + s1kd-validate / s1kd-brexcheck / custom <c>-e</c>
+    /// validators): produce the filtered tree for a set of assignments, check it
+    /// for broken internal references, and run the external validators in-process
+    /// on the filtered tree. Returns true if the filtered object is valid.
     /// </summary>
-    private bool FilterAndValidate(XmlDocument doc, List<Assignment> assigns)
+    private bool FilterAndValidate(XmlDocument doc, List<Assignment> assigns, TextWriter stderr)
     {
         var defs = new Applicability();
         foreach (var a in assigns)
@@ -836,7 +850,151 @@ public sealed class AppCheckTool : ITool
             }
         }
 
-        return true;
+        // Run the external validators on the filtered tree (mirrors the
+        // validator loop in check_assigns: a non-zero accumulated exit status
+        // marks the assignment combination invalid).
+        return RunValidators(clone, stderr) == 0;
+    }
+
+    /// <summary>
+    /// Run the configured validators on a filtered instance, in-process,
+    /// returning the accumulated exit status (0 == valid). Mirrors the
+    /// validator portion of the C <c>check_assigns</c>: when custom validators
+    /// (<c>-e</c>) are present they replace the defaults; otherwise the default
+    /// schema validator runs, followed by the BREX check when <c>-b</c> is set.
+    /// </summary>
+    private int RunValidators(XmlDocument filtered, TextWriter stderr)
+    {
+        // Serialize the filtered tree to a temp file so the ported tools (which
+        // read CSDB objects by path) can validate it, mirroring the C tool
+        // piping the filtered doc to each validator's stdin.
+        string tmp = Path.Combine(Path.GetTempPath(), $"s1kd-appcheck-{Guid.NewGuid():N}.XML");
+        try
+        {
+            XmlUtils.SaveDoc(filtered, tmp);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // If the filtered doc cannot be written there is nothing to validate
+            // against; treat as valid (the C tool would have produced no report).
+            return 0;
+        }
+
+        try
+        {
+            int e = 0;
+
+            // Verbosity flag passed through to the validators (NORMAL/QUIET map
+            // to -q, DEBUG to -v, VERBOSE to neither), mirroring the C switch.
+            string? verbFlag = _verbosity switch
+            {
+                Verbosity.Quiet or Verbosity.Normal => "-q",
+                Verbosity.Debug => "-v",
+                _ => null,
+            };
+
+            // Discard validator stdout: the C tool only cares about exit codes
+            // unless -X (include errors) is set, which this port does not embed.
+            var sink = TextWriter.Null;
+
+            if (_validators.Count > 0)
+            {
+                // Custom validators (-e).
+                foreach (string cmd in _validators)
+                {
+                    e += RunCustomValidator(cmd, tmp, sink, stderr);
+                }
+            }
+            else
+            {
+                // Default schema validation.
+                var validateArgs = new List<string>();
+                if (verbFlag != null) { validateArgs.Add(verbFlag); }
+                validateArgs.Add(tmp);
+                e += RunTool("validate", validateArgs, sink, stderr);
+
+                // BREX validation (-b): s1kd-brexcheck -cl -d <dir> [-r] [-q|-v].
+                if (_brexcheck)
+                {
+                    var brexArgs = new List<string> { "-c", "-l", "-d", _searchDir };
+                    if (_recursiveSearch) { brexArgs.Add("-r"); }
+                    if (verbFlag != null) { brexArgs.Add(verbFlag); }
+                    brexArgs.Add(tmp);
+                    e += RunTool("brexcheck", brexArgs, sink, stderr);
+                }
+            }
+
+            return e;
+        }
+        finally
+        {
+            try { File.Delete(tmp); } catch (IOException) { /* best effort */ }
+        }
+    }
+
+    /// <summary>
+    /// Dispatch a custom <c>-e</c> validator command in-process. The command is
+    /// split into tokens; the leading token (with any <c>s1kd-</c> prefix
+    /// stripped) is resolved against <see cref="ToolRegistry"/>. The filtered
+    /// instance path is appended as the object to check. Commands that do not
+    /// resolve to a ported tool are reported and counted as a failure, since the
+    /// C tool would have executed them and the result cannot be reproduced.
+    /// </summary>
+    private int RunCustomValidator(string cmd, string objectPath, TextWriter stdout, TextWriter stderr)
+    {
+        string[] tokens = cmd.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length == 0)
+        {
+            return 0;
+        }
+
+        ITool? tool = ToolRegistry.Resolve(tokens[0]);
+        if (tool == null)
+        {
+            if (_verbosity >= Verbosity.Normal)
+            {
+                stderr.WriteLine($"{MsgPrefix}: ERROR: Custom validator '{tokens[0]}' is not an available in-process tool.");
+            }
+            return 1;
+        }
+
+        var args = new List<string>(tokens.Length);
+        for (int i = 1; i < tokens.Length; i++)
+        {
+            args.Add(tokens[i]);
+        }
+        args.Add(objectPath);
+
+        return RunTool(tool, args, stdout, stderr);
+    }
+
+    /// <summary>Resolve a ported tool by name and run it, returning its exit code.</summary>
+    private int RunTool(string name, IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
+    {
+        ITool? tool = ToolRegistry.Resolve(name);
+        if (tool == null)
+        {
+            // The default validators are always available in this port; guard
+            // anyway so a missing tool surfaces rather than crashes.
+            if (_verbosity >= Verbosity.Normal)
+            {
+                stderr.WriteLine($"{MsgPrefix}: ERROR: Validator '{name}' is not available.");
+            }
+            return 1;
+        }
+        return RunTool(tool, args, stdout, stderr);
+    }
+
+    private static int RunTool(ITool tool, IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
+    {
+        try
+        {
+            return tool.Run(args, stdout, stderr);
+        }
+        catch (Exception)
+        {
+            return 1;
+        }
     }
 
     /// <summary>

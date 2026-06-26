@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\S1kdTools.Core\S1kdTools.Core.csproj" />
@@ -11,6 +11,20 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Single-file publish support. These RIDs let
+       `dotnet publish -c Release -r <RID> -p:PublishSingleFile=true` work
+       without affecting a plain `dotnet build`. Embedded resources are read
+       from the assembly (Assembly.GetManifestResourceStream), so they resolve
+       correctly when bundled into the single-file host. -->
+  <PropertyGroup>
+    <RuntimeIdentifiers>linux-x64;linux-arm64;win-x64;win-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Embedded resources are read via the manifest resource stream, which the
+         single-file host supports natively; no extra config required. -->
   </PropertyGroup>
 
 </Project>

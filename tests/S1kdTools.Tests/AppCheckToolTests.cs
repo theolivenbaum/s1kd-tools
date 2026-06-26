@@ -24,9 +24,14 @@ public class AppCheckToolTests
 
     // DM applicable to version A or B; a levelledPara applies only to B and is
     // referenced by another para. Filtering for A breaks the reference -> invalid.
+    //
+    // The fixtures carry an unreachable noNamespaceSchemaLocation so the
+    // in-process schema validator (run by appcheck's default validator path in
+    // standalone/PCT/all modes) degrades gracefully (no local schema -> warning,
+    // not an error) and the applicability logic under test is isolated.
     private const string BrokenRefDm =
         """
-        <dmodule>
+        <dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://example.invalid/descript.xsd">
           <identAndStatusSection>
             <dmStatus>
               <applic>
@@ -60,7 +65,7 @@ public class AppCheckToolTests
     // Same content but the reference target is not conditional -> always valid.
     private const string ValidDm =
         """
-        <dmodule>
+        <dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://example.invalid/descript.xsd">
           <referencedApplicGroup>
             <applic id="app-VersionB">
               <assert applicPropertyIdent="version" applicPropertyType="prodattr" applicPropertyValues="B"/>
@@ -453,7 +458,7 @@ public class AppCheckToolTests
     // DM whose content is applicable when cond001 = running.
     private const string DmUsingCond =
         """
-        <dmodule>
+        <dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://example.invalid/descript.xsd">
           <referencedApplicGroup>
             <applic id="app-run">
               <assert applicPropertyIdent="cond001" applicPropertyType="condition" applicPropertyValues="running"/>
@@ -462,6 +467,27 @@ public class AppCheckToolTests
           <content>
             <description>
               <para applicRefId="app-run">Engine is running.</para>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    /* ---- Default schema validation of the filtered instance ---- */
+
+    // A standalone object with no schema: the in-process schema validator (run
+    // on each filtered combination) reports "has no schema" -> exit code 1, just
+    // as the C tool's default s1kd-validate would.
+    private const string SchemalessDm =
+        """
+        <dmodule>
+          <referencedApplicGroup>
+            <applic id="app-A">
+              <assert applicPropertyIdent="version" applicPropertyType="prodattr" applicPropertyValues="A"/>
+            </applic>
+          </referencedApplicGroup>
+          <content>
+            <description>
+              <para applicRefId="app-A">Conditional text.</para>
             </description>
           </content>
         </dmodule>
@@ -515,5 +541,156 @@ public class AppCheckToolTests
             Assert.Contains("<cct", outText);
         }
         finally { File.Delete(cct); File.Delete(dm); }
+    }
+
+    [Fact]
+    public void Default_SchemalessFilteredInstance_FailsValidation()
+    {
+        string path = WriteTemp(SchemalessDm);
+        try
+        {
+            // Standalone mode filters per value combination and runs the default
+            // schema validator; a schemaless instance fails -> invalid.
+            var (code, _, _) = Run(path);
+            Assert.Equal(1, code);
+        }
+        finally { File.Delete(path); }
+    }
+
+    /* ---- Custom validators (-e) ---- */
+
+    [Fact]
+    public void Exec_CustomValidatorThatFails_MarksObjectInvalid()
+    {
+        // -e replaces the default validators. Running the ported schema validator
+        // on this schemaless instance fails, so the object is reported invalid.
+        string path = WriteTemp(SchemalessDm);
+        try
+        {
+            var (code, _, _) = Run("-e", "s1kd-validate", path);
+            Assert.Equal(1, code);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Exec_UnknownValidatorCommand_IsReportedAndFails()
+    {
+        // A custom validator that does not resolve to a ported in-process tool
+        // cannot be reproduced; it is reported and counted as a failure.
+        string path = WriteTemp(ValidDm);
+        try
+        {
+            var (code, _, err) = Run("-e", "no-such-validator --flag", path);
+            Assert.Equal(1, code);
+            Assert.Contains("is not an available in-process tool", err);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Exec_CustomValidatorThatPasses_KeepsObjectValid()
+    {
+        // The schema-bearing ValidDm degrades gracefully (no local schema ->
+        // warning, not error), so the custom schema validator passes.
+        string path = WriteTemp(ValidDm);
+        try
+        {
+            var (code, _, _) = Run("-e", "s1kd-validate", path);
+            Assert.Equal(0, code);
+        }
+        finally { File.Delete(path); }
+    }
+
+    /* ---- BREX check (-b) ---- */
+
+    // A BREX DM that prohibits the //prohibited element. Filenames are matched
+    // by DM code, so the file must be named to match the object's brexDmRef.
+    private const string BrexProhibitDm =
+        """
+        <dmodule>
+          <content>
+            <brex>
+              <contextRules>
+                <structureObjectRule>
+                  <brDecisionRef brDecisionIdentNumber="BREX-APPCHK-00001"/>
+                  <objectPath allowedObjectFlag="0">//prohibited</objectPath>
+                  <objectUse>The prohibited element must not be used.</objectUse>
+                </structureObjectRule>
+              </contextRules>
+            </brex>
+          </content>
+        </dmodule>
+        """;
+
+    // The brexDmRef dmCode below must match the BREX file name written to disk.
+    private const string DmRefsBrexWithProhibited =
+        """
+        <dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://example.invalid/descript.xsd">
+          <identAndStatusSection>
+            <dmStatus>
+              <brexDmRef>
+                <dmRef>
+                  <dmRefIdent>
+                    <dmCode modelIdentCode="TEST" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/>
+                  </dmRefIdent>
+                </dmRef>
+              </brexDmRef>
+            </dmStatus>
+          </identAndStatusSection>
+          <referencedApplicGroup>
+            <applic id="app-A">
+              <assert applicPropertyIdent="version" applicPropertyType="prodattr" applicPropertyValues="A"/>
+            </applic>
+          </referencedApplicGroup>
+          <content>
+            <description>
+              <prohibited applicRefId="app-A">Bad content for version A.</prohibited>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    // The filename derived from the brexDmRef dmCode above (issue/lang wildcards
+    // are matched by StrMatch, so a concrete issue/lang in the name is fine).
+    private const string BrexFileName =
+        "DMC-TEST-A-00-00-00-00A-022A-D_001-00_EN-US.XML";
+
+    [Fact]
+    public void Brex_ViolationInFilteredInstance_IsInvalid()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-appcheck-brex-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, BrexFileName), BrexProhibitDm);
+            string obj = Path.Combine(dir, "object.XML");
+            File.WriteAllText(obj, DmRefsBrexWithProhibited);
+
+            // With -b, appcheck runs the BREX check on each filtered instance; the
+            // version-A combination keeps the prohibited element -> BREX error.
+            var (code, _, _) = Run("-b", "-d", dir, obj);
+            Assert.Equal(1, code);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Brex_NoViolation_RemainsValid()
+    {
+        // Same object/BREX but without -b: only the default schema validator
+        // runs, which degrades gracefully for the schema-bearing object -> valid.
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-appcheck-brex-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, BrexFileName), BrexProhibitDm);
+            string obj = Path.Combine(dir, "object.XML");
+            File.WriteAllText(obj, DmRefsBrexWithProhibited);
+
+            var (code, _, _) = Run("-d", dir, obj);
+            Assert.Equal(0, code);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }

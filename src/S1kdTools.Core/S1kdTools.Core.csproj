@@ -1,9 +1,24 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata. Produced via `dotnet pack -c Release`. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>S1kdTools.Core</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>s1kd-tools contributors</Authors>
+    <Company>s1kd-tools contributors</Company>
+    <Description>C#/.NET port of the s1kd-tools shared library (libs1kd): a programmatic API for creating and manipulating S1000D (technical publications) CSDB objects — metadata, applicability filtering (instance), and BREX checking.</Description>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/theolivenbaum/s1kd-tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/theolivenbaum/s1kd-tools</PackageProjectUrl>
+    <PackageTags>s1000d;csdb;technical-publications;xml;brex;metadata</PackageTags>
   </PropertyGroup>
 
   <!-- Embed every file under Resources/ (templates, XSLT, data files) so tools
