@@ -322,4 +322,130 @@ public class UomToolTests
         // scientific notation
         Assert.Equal(2e6, FormulaEvaluator.Evaluate("$value * 1e+6", 2), 6);
     }
+
+    // ---- -p / -P display preformatting -----------------------------------
+
+    [Fact]
+    public void Preformat_RendersQuantityAsValueAndUnit()
+    {
+        string dir = TempDir();
+        try
+        {
+            string path = Path.Combine(dir, "pre.XML");
+            File.WriteAllText(path, Doc);
+
+            // Imperial: "." decimal, "," grouping. degC renders as " °C", mm as " mm".
+            var (code, outText, _) = Run("-p", "imperial", path);
+            Assert.Equal(0, code);
+
+            // The quantity elements are replaced by rendered inline text.
+            Assert.DoesNotContain("<quantity", outText);
+            Assert.Contains("275 mm", outText);
+            Assert.Contains("23 °C", outText); // 23 °C
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Preformat_SI_UsesCommaDecimalAndSpaceGrouping()
+    {
+        string dir = TempDir();
+        try
+        {
+            const string bigDoc = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <dmodule><content><description><para>
+                  <quantity><quantityGroup>
+                    <quantityValue quantityUnitOfMeasure="mm">1234.5</quantityValue>
+                  </quantityGroup></quantity>
+                </para></description></content></dmodule>
+                """;
+            string path = Path.Combine(dir, "si.XML");
+            File.WriteAllText(path, bigDoc);
+
+            var (code, outText, _) = Run("-p", "SI", path);
+            Assert.Equal(0, code);
+            // 1234.5 -> "1 234,5" (space grouping, comma decimal) + " mm".
+            Assert.Contains("1 234,5 mm".Replace(" ", " "), outText.Replace(" ", " "));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Preformat_RendersSuperScriptMarkupFromConfig()
+    {
+        string dir = TempDir();
+        try
+        {
+            const string areaDoc = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <dmodule><content><description><para>
+                  <quantity><quantityGroup>
+                    <quantityValue quantityUnitOfMeasure="cm2">5</quantityValue>
+                  </quantityGroup></quantity>
+                </para></description></content></dmodule>
+                """;
+            string path = Path.Combine(dir, "area.XML");
+            File.WriteAllText(path, areaDoc);
+
+            var (code, outText, _) = Run("-p", "imperial", path);
+            Assert.Equal(0, code);
+
+            // cm2 display is " cm<superScript>2</superScript>".
+            var doc = Parse(outText);
+            var sup = doc.SelectSingleNode("//superScript");
+            Assert.NotNull(sup);
+            Assert.Equal("2", sup!.InnerText);
+            Assert.Contains("5 cm", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Preformat_AfterConversion_FormatsConvertedValue()
+    {
+        string dir = TempDir();
+        try
+        {
+            string path = Path.Combine(dir, "conv.XML");
+            File.WriteAllText(path, Doc);
+
+            // Convert in -> cm (2 * 2.54 = 5.08), then preformat: "5.08 cm".
+            var (code, outText, _) = Run("-u", "in", "-t", "cm", "-p", "imperial", path);
+            Assert.Equal(0, code);
+            Assert.DoesNotContain("<quantity", outText);
+            Assert.Contains("5.08 cm", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Preformat_CustomUomDisplayFile_IsApplied()
+    {
+        string dir = TempDir();
+        try
+        {
+            string path = Path.Combine(dir, "cust.XML");
+            File.WriteAllText(path, Doc);
+
+            // Custom .uomdisplay overriding the "mm" display string.
+            string dispPath = Path.Combine(dir, "mydisp.xml");
+            File.WriteAllText(dispPath, """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <uomDisplay>
+                  <format name="custom" decimalSeparator="." groupingSeparator=","/>
+                  <uoms>
+                    <uom name="mm"> millimetres</uom>
+                  </uoms>
+                </uomDisplay>
+                """);
+
+            var (code, outText, _) = Run("-p", "custom", "-P", dispPath, path);
+            Assert.Equal(0, code);
+            Assert.Contains("275 millimetres", outText);
+            // degC is not in the custom config -> default " degC".
+            Assert.Contains("23 degC", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

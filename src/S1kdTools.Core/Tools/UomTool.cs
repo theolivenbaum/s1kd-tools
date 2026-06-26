@@ -19,9 +19,18 @@ namespace S1kdTools.Tools;
 /// Implemented: unit conversion (<c>-u/-t/-e/-F</c>), predefined and custom
 /// conversion sets (<c>-s/-S</c>), duplicate quantities (<c>-d/-D</c>), custom
 /// <c>.uom</c> files (<c>-U</c>), dumping the built-in configuration
-/// (<c>-,</c>/<c>-.</c>), list input (<c>-l</c>), overwrite (<c>-f</c>) and the
-/// matching exit codes. The display preformatting feature (<c>-p</c>/<c>-P</c>)
-/// is recognised but not applied — see the remark on <see cref="_dispFmt"/>.
+/// (<c>-,</c>/<c>-.</c>), list input (<c>-l</c>), overwrite (<c>-f</c>), the
+/// matching exit codes, and display preformatting (<c>-p</c>/<c>-P</c>).
+/// </para>
+/// <para>
+/// Preformatting reproduces the effect of the C tool's two-stage transform
+/// (<c>uomdisplay.xsl</c> turns the <c>.uomdisplay</c> configuration into a
+/// stylesheet that is then applied to the data module). Rather than chain two
+/// XSLT passes, this port walks the DOM and rewrites the quantity structures
+/// into their rendered display form: group-type prefixes, the value formatted
+/// with the selected decimal/grouping separators, and the unit-of-measure
+/// display string (including any <c>&lt;superScript&gt;</c> markup) looked up
+/// from the configuration. See <see cref="PreformatQuantities"/>.
 /// </para>
 /// </summary>
 public sealed class UomTool : ITool
@@ -46,13 +55,18 @@ public sealed class UomTool : ITool
     // its own (mirrors the user-format param / -F at the global level).
     private string? _format;
 
-    // Display preformat (-p) / custom uomdisplay file (-P). Recorded but not
-    // applied; preformatting is a separate, large presentation subsystem.
+    // Display preformat (-p) selects the decimal format (SI/euro/imperial);
+    // (-P) supplies a custom .uomdisplay configuration. When _dispFmt is set the
+    // quantity data is rewritten into its rendered display form after conversion.
     private string? _dispFmt;
 
     // Duplicate-quantity options (-d / -D).
     private bool _duplicate;
     private string? _duplFmt;
+
+    // The loaded .uomdisplay configuration (built-in or custom via -P), used for
+    // preformatting when -p is given. Set in Run before any object is processed.
+    private XmlDocument? _uomDisp;
 
     /// <summary>Thrown internally to mirror the C tool's <c>exit()</c> calls.</summary>
     private sealed class ExitException(int code) : Exception
@@ -220,14 +234,7 @@ public sealed class UomTool : ITool
                 }
             }
             uomDisp ??= EmbeddedResources.LoadXml("uom/uomdisplay.xml");
-
-            // The display preformatting feature (-p) is recognised but not yet
-            // applied by this port. Warn so behaviour is not silently dropped.
-            if (_dispFmt != null && uomDisp.DocumentElement != null && _verbosity >= Verbosity.Normal)
-            {
-                stderr.WriteLine($"{WrnPrefix}Preformatting (-p {_dispFmt}) is not supported by this port; " +
-                                 "quantities will be converted but not display-formatted.");
-            }
+            _uomDisp = uomDisp;
 
             // Narrow the configuration down to the requested conversions.
             if (conversions.HasChildNodes && uom.DocumentElement != null)
@@ -491,6 +498,13 @@ public sealed class UomTool : ITool
         }
 
         ApplyConversions(doc.DocumentElement, uom, allowDuplicate: _duplicate);
+
+        // -p: preformat quantity data to the selected decimal format. Mirrors the
+        // C tool's final uomdisplay transform, applied after the conversion pass.
+        if (_dispFmt != null && _uomDisp?.DocumentElement != null)
+        {
+            PreformatQuantities(doc, _uomDisp.DocumentElement, _dispFmt);
+        }
 
         if (overwrite && path != null)
         {
@@ -797,6 +811,449 @@ public sealed class UomTool : ITool
         't' => '\t',
         _ => c,
     };
+
+    /* ---- preformatting (-p / -P) ----------------------------------------- */
+
+    /// <summary>
+    /// Decimal/grouping separators plus the lookup tables drawn from a
+    /// <c>.uomdisplay</c> configuration for a selected format.
+    /// </summary>
+    private sealed class DisplayConfig
+    {
+        public string DecimalSeparator = ".";
+        public string GroupingSeparator = ",";
+
+        // Group-type prefixes (<groupTypePrefixes>).
+        public string Minimum = "";
+        public string Maximum = "";
+        public string MinimumRange = "";
+        public string MaximumRange = "";
+
+        // uom name -> its display child nodes (text and <superScript> elements).
+        public readonly Dictionary<string, XmlElement> Uoms = new(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Rewrite every <c>quantity</c> element in <paramref name="doc"/> into its
+    /// rendered display form, reproducing the stylesheet that the C tool
+    /// generates from <c>uomdisplay.xsl</c> for the selected
+    /// <paramref name="format"/> (default <c>SI</c>).
+    /// </summary>
+    private static void PreformatQuantities(XmlDocument doc, XmlElement uomDisplay, string format)
+    {
+        var cfg = BuildDisplayConfig(uomDisplay, format);
+
+        // Collect quantity elements first; replacing them mutates the tree.
+        var quantities = new List<XmlElement>();
+        CollectQuantityElements(doc.DocumentElement!, quantities);
+
+        foreach (XmlElement quantity in quantities)
+        {
+            XmlNode? parent = quantity.ParentNode;
+            if (parent == null)
+            {
+                continue;
+            }
+
+            var rendered = new List<XmlNode>();
+            RenderQuantity(quantity, cfg, rendered);
+
+            foreach (XmlNode n in rendered)
+            {
+                parent.InsertBefore(n, quantity);
+            }
+            parent.RemoveChild(quantity);
+        }
+    }
+
+    private static void CollectQuantityElements(XmlNode node, List<XmlElement> result)
+    {
+        if (node is XmlElement el && el.Name == "quantity")
+        {
+            result.Add(el);
+            // Nested quantities are handled when rendering this one.
+            return;
+        }
+        foreach (XmlNode child in node.ChildNodes)
+        {
+            CollectQuantityElements(child, result);
+        }
+    }
+
+    private static DisplayConfig BuildDisplayConfig(XmlElement uomDisplay, string format)
+    {
+        var cfg = new DisplayConfig();
+
+        // format[@name = $format]
+        foreach (XmlNode node in uomDisplay.ChildNodes)
+        {
+            if (node is XmlElement f && f.Name == "format" && f.GetAttribute("name") == format)
+            {
+                if (f.HasAttribute("decimalSeparator"))
+                {
+                    cfg.DecimalSeparator = f.GetAttribute("decimalSeparator");
+                }
+                if (f.HasAttribute("groupingSeparator"))
+                {
+                    cfg.GroupingSeparator = f.GetAttribute("groupingSeparator");
+                }
+                break;
+            }
+        }
+
+        foreach (XmlNode node in uomDisplay.ChildNodes)
+        {
+            if (node is not XmlElement el)
+            {
+                continue;
+            }
+            switch (el.Name)
+            {
+                case "groupTypePrefixes":
+                    cfg.Minimum = ChildText(el, "minimum");
+                    cfg.Maximum = ChildText(el, "maximum");
+                    cfg.MinimumRange = ChildText(el, "minimumRange");
+                    cfg.MaximumRange = ChildText(el, "maximumRange");
+                    break;
+                case "uoms":
+                    foreach (XmlNode u in el.ChildNodes)
+                    {
+                        if (u is XmlElement ue && ue.Name == "uom" && ue.HasAttribute("name"))
+                        {
+                            cfg.Uoms[ue.GetAttribute("name")] = ue;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return cfg;
+    }
+
+    private static string ChildText(XmlElement parent, string name)
+    {
+        foreach (XmlNode child in parent.ChildNodes)
+        {
+            if (child is XmlElement el && el.Name == name)
+            {
+                return el.InnerText;
+            }
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// Render a <c>quantity</c> element. Mirrors the generated stylesheet's
+    /// <c>quantity</c> / named <c>quantity</c> templates: optional
+    /// <c>wrapInto</c>, the quantityTypeSpecifics prefix/postfix, and the
+    /// rendered child quantity groups/values.
+    /// </summary>
+    private static void RenderQuantity(XmlElement quantity, DisplayConfig cfg, List<XmlNode> output)
+    {
+        XmlDocument doc = quantity.OwnerDocument;
+
+        // <xsl:when test="wrapInto/*"> -> apply-templates select="wrapInto/*"
+        XmlElement? wrapInto = FirstChildElement(quantity, "wrapInto");
+        XmlElement? wrapChild = wrapInto != null ? FirstElementChild(wrapInto) : null;
+        if (wrapChild != null)
+        {
+            // wrapInto/* template: copy the element + its attributes, then render
+            // the quantity content inside it.
+            XmlElement copy = (XmlElement)doc.ImportNode(wrapChild, false);
+            var inner = new List<XmlNode>();
+            RenderQuantityBody(quantity, cfg, inner);
+            foreach (XmlNode n in inner)
+            {
+                copy.AppendChild(n);
+            }
+            output.Add(copy);
+            return;
+        }
+
+        RenderQuantityBody(quantity, cfg, output);
+    }
+
+    /// <summary>The named <c>quantity</c> template body (prefix, content, postfix).</summary>
+    private static void RenderQuantityBody(XmlElement quantity, DisplayConfig cfg, List<XmlNode> output)
+    {
+        XmlDocument doc = quantity.OwnerDocument;
+        bool hasSpecifics = quantity.HasAttribute("quantityTypeSpecifics");
+        string specifics = quantity.GetAttribute("quantityTypeSpecifics");
+
+        // The @quantityTypeSpecifics prefix renders nothing: currencies are
+        // commented out in the built-in .uomdisplay configuration.
+
+        // apply-templates select="*|text()[normalize-space(.)!='']"
+        foreach (XmlNode child in quantity.ChildNodes)
+        {
+            if (child is XmlElement el)
+            {
+                switch (el.Name)
+                {
+                    case "quantityGroup":
+                        RenderQuantityGroup(el, cfg, output);
+                        break;
+                    case "quantityValue":
+                        RenderQuantityValue(el, cfg, output);
+                        break;
+                    case "quantityTolerance":
+                        RenderQuantityTolerance(el, cfg, output);
+                        break;
+                    case "wrapInto":
+                        // handled by RenderQuantity; ignore here.
+                        break;
+                    default:
+                        // Identity copy of any other element child.
+                        output.Add(doc.ImportNode(el, true));
+                        break;
+                }
+            }
+            else if (child.NodeType == XmlNodeType.Text || child.NodeType == XmlNodeType.CDATA)
+            {
+                if (!string.IsNullOrWhiteSpace(child.Value))
+                {
+                    output.Add(doc.CreateTextNode(child.Value!));
+                }
+            }
+        }
+
+        // postfix mode for @quantityTypeSpecifics: default config renders
+        // " <quantityTypeSpecifics-value>".
+        if (hasSpecifics)
+        {
+            output.Add(doc.CreateTextNode(" " + specifics));
+        }
+    }
+
+    /// <summary>Render a <c>quantityGroup</c> (group-type prefix, values, unit).</summary>
+    private static void RenderQuantityGroup(XmlElement group, DisplayConfig cfg, List<XmlNode> output)
+    {
+        XmlDocument doc = group.OwnerDocument;
+        string groupType = group.GetAttribute("quantityGroupType");
+
+        string prefix;
+        if (groupType == "minimum")
+        {
+            prefix = HasFollowingSibling(group, "quantityGroup") ? cfg.MinimumRange : cfg.Minimum;
+        }
+        else if (groupType == "maximum")
+        {
+            prefix = HasPrecedingSibling(group, "quantityGroup") ? cfg.MaximumRange : cfg.Maximum;
+        }
+        else
+        {
+            prefix = ""; // groupTypePrefixes/nominal (absent in built-in config)
+        }
+        if (prefix.Length != 0)
+        {
+            output.Add(doc.CreateTextNode(prefix));
+        }
+
+        // for-each quantityValue|quantityTolerance, space-separated.
+        bool first = true;
+        foreach (XmlNode child in group.ChildNodes)
+        {
+            if (child is XmlElement el && (el.Name == "quantityValue" || el.Name == "quantityTolerance"))
+            {
+                if (!first)
+                {
+                    output.Add(doc.CreateTextNode(" "));
+                }
+                first = false;
+                if (el.Name == "quantityValue")
+                {
+                    RenderQuantityValue(el, cfg, output);
+                }
+                else
+                {
+                    RenderQuantityTolerance(el, cfg, output);
+                }
+            }
+        }
+
+        // apply-templates select="@quantityUnitOfMeasure"
+        RenderUom(group, cfg, output);
+    }
+
+    private static void RenderQuantityValue(XmlElement value, DisplayConfig cfg, List<XmlNode> output)
+    {
+        XmlDocument doc = value.OwnerDocument;
+        output.Add(doc.CreateTextNode(FormatQuantityValue(value.InnerText, cfg)));
+        RenderUom(value, cfg, output);
+    }
+
+    private static void RenderQuantityTolerance(XmlElement tolerance, DisplayConfig cfg, List<XmlNode> output)
+    {
+        XmlDocument doc = tolerance.OwnerDocument;
+        string type = tolerance.GetAttribute("quantityToleranceType");
+        string sign = type switch
+        {
+            "plus" => "+",
+            "minus" => "-",
+            _ => "± ", // "± "
+        };
+        output.Add(doc.CreateTextNode(sign));
+        output.Add(doc.CreateTextNode(FormatQuantityValue(tolerance.InnerText, cfg)));
+        RenderUom(tolerance, cfg, output);
+    }
+
+    /// <summary>
+    /// Render the <c>@quantityUnitOfMeasure</c> of <paramref name="el"/>: the
+    /// configured display string (which may contain <c>&lt;superScript&gt;</c>
+    /// markup), or the default <c>" &lt;uom&gt;"</c>.
+    /// </summary>
+    private static void RenderUom(XmlElement el, DisplayConfig cfg, List<XmlNode> output)
+    {
+        if (!el.HasAttribute("quantityUnitOfMeasure"))
+        {
+            return;
+        }
+        string uom = el.GetAttribute("quantityUnitOfMeasure");
+        XmlDocument doc = el.OwnerDocument;
+
+        if (cfg.Uoms.TryGetValue(uom, out XmlElement? display))
+        {
+            foreach (XmlNode node in display.ChildNodes)
+            {
+                output.Add(doc.ImportNode(node, true));
+            }
+        }
+        else
+        {
+            output.Add(doc.CreateTextNode(" " + uom));
+        }
+    }
+
+    /// <summary>
+    /// Reproduce the generated stylesheet's value formatting: build a number
+    /// picture from the value's own digit layout (so no rounding occurs), then
+    /// format the number with grouping (by 3) and the selected separators.
+    /// </summary>
+    private static string FormatQuantityValue(string raw, DisplayConfig cfg)
+    {
+        string value = raw.Trim();
+        if (value.Length == 0)
+        {
+            return value;
+        }
+
+        bool negative = value.StartsWith('-');
+        string abs = negative ? value[1..] : value;
+
+        int dot = abs.IndexOf('.');
+        string intPart = dot < 0 ? abs : abs[..dot];
+        string fracPart = dot < 0 ? "" : abs[(dot + 1)..];
+
+        // Only format when the magnitude is a plain decimal number; otherwise
+        // (e.g. ranges, expressions) leave it untouched, matching format-number
+        // returning NaN handling is avoided by the picture being digit-derived.
+        if (intPart.Length == 0 || !IsAllDigits(intPart) || (fracPart.Length != 0 && !IsAllDigits(fracPart)))
+        {
+            return value;
+        }
+
+        // Strip leading zeros from the integer part for grouping (keep one).
+        string normalizedInt = intPart.TrimStart('0');
+        if (normalizedInt.Length == 0)
+        {
+            normalizedInt = "0";
+        }
+
+        var sb = new StringBuilder();
+        if (negative)
+        {
+            sb.Append('-');
+        }
+        sb.Append(GroupDigits(normalizedInt, cfg.GroupingSeparator));
+        if (fracPart.Length != 0)
+        {
+            sb.Append(cfg.DecimalSeparator);
+            sb.Append(fracPart);
+        }
+        return sb.ToString();
+    }
+
+    private static bool IsAllDigits(string s)
+    {
+        foreach (char c in s)
+        {
+            if (!char.IsAsciiDigit(c))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>Group integer digits in threes from the right with the separator.</summary>
+    private static string GroupDigits(string digits, string separator)
+    {
+        if (separator.Length == 0 || digits.Length <= 3)
+        {
+            return digits;
+        }
+        var sb = new StringBuilder();
+        int firstGroup = digits.Length % 3;
+        if (firstGroup == 0)
+        {
+            firstGroup = 3;
+        }
+        sb.Append(digits, 0, firstGroup);
+        for (int i = firstGroup; i < digits.Length; i += 3)
+        {
+            sb.Append(separator);
+            sb.Append(digits, i, 3);
+        }
+        return sb.ToString();
+    }
+
+    private static XmlElement? FirstChildElement(XmlElement parent, string name)
+    {
+        foreach (XmlNode child in parent.ChildNodes)
+        {
+            if (child is XmlElement el && el.Name == name)
+            {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    private static XmlElement? FirstElementChild(XmlElement parent)
+    {
+        foreach (XmlNode child in parent.ChildNodes)
+        {
+            if (child is XmlElement el)
+            {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    private static bool HasFollowingSibling(XmlElement el, string name)
+    {
+        for (XmlNode? n = el.NextSibling; n != null; n = n.NextSibling)
+        {
+            if (n is XmlElement e && e.Name == name)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool HasPrecedingSibling(XmlElement el, string name)
+    {
+        for (XmlNode? n = el.PreviousSibling; n != null; n = n.PreviousSibling)
+        {
+            if (n is XmlElement e && e.Name == name)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /* ---- helpers --------------------------------------------------------- */
 
