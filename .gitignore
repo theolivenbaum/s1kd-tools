@@ -127,3 +127,6 @@ Thumbs.db
 
 # Claude Code agent worktrees (ephemeral)
 .claude/worktrees/
+
+# Generated output from the sample harnesses (samples/harnesses/*)
+samples/out/

@@ -6,4 +6,12 @@
   <Folder Name="/tests/">
     <Project Path="tests/S1kdTools.Tests/S1kdTools.Tests.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/harnesses/Samples.Common/Samples.Common.csproj" />
+    <Project Path="samples/harnesses/Samples.Fossig/Samples.Fossig.csproj" />
+    <Project Path="samples/harnesses/Samples.S1000DSpec/Samples.S1000DSpec.csproj" />
+    <Project Path="samples/harnesses/Samples.ToolsDoc/Samples.ToolsDoc.csproj" />
+    <Project Path="samples/harnesses/Samples.XslStylesheets/Samples.XslStylesheets.csproj" />
+    <Project Path="samples/harnesses/Samples.S1kd2db/Samples.S1kd2db.csproj" />
+  </Folder>
 </Solution>
