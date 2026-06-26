@@ -9,23 +9,30 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 ## Status (all 32 tools ported)
 
 All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
-the test suite (**632 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
+the test suite (**701 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
 them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
 libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
-too.
+too. The library API also has a parity test suite ported from the C
+`libs1kd/tests/tests.c`.
 
-A depth wave (parallelized) since landed: brexcheck severity-level config (brsl);
-instance containers/alts/auto-naming/update-instances; ls -e/-N; refs hotspot/exec;
-validate -T stats; repcheck -X; uom -p/-P preformatting; upissue bundled short
-flags + libxml2 long-opts; metadata option/exit-code completion; the shared
-`add_cct_depends` CCT dependency-injection helper, wired into appcheck (-~) and
-aspp -x custom XSLT.
+The port is effectively complete. Two parallelized depth waves have landed:
+brexcheck severity-level config (brsl); instance containers/alts/auto-naming/
+update-instances **plus** set-applic/list-properties/comments/acronym+entity
+cleanup/add-required/read-only/list-input/originator/skill/whole-objects/
+print-non-applic and -S/-3 ident control; ls -e/-N; refs hotspot/exec and
+non-chapterized IPD SNS (-b); validate -T stats and source line numbers;
+repcheck -X and line numbers; uom -p/-P preformatting; upissue bundled short
+flags + libxml2 long-opts; metadata option/exit-code completion; appcheck
+in-process -e/-b validators; defaults -i init (drives newdm/fmgen); acronyms
+interactive -i/-I; the shared `add_cct_depends` CCT helper (appcheck -~); aspp
+-x custom XSLT; the shared ICN entity/notation helpers (`Icn.AddIcn`/`AddNotation`);
+NuGet packaging (`dotnet pack`) + single-file CLI publish.
 
-Remaining work is narrow depth — per-tool partial features (each noted inline
-below): interactive prompts (no-op in-process), source line numbers in reports
-(BCL `XmlDocument` has no `IXmlLineInfo`), the few EXSLT-dependent stylesheet
-paths, fmgen XProc pipelines, and byte-exact output parity. See the per-tool
-notes and the "Known risks / decisions" section.
+Genuinely remaining (platform limits / niche, each noted inline): fmgen XProc
+(.xpl) pipelines (no .NET equivalent); brexcheck EXSLT/XPath-2 objectPaths
+(System.Xml is XPath 1.0); instance CCT dependency-test injection in the filter
+loop (-2/-~); repcheck -X custom-stylesheet line numbers; newdm interactive -p
+prompt + byte-exact output. See per-tool notes and "Known risks / decisions".
 
 ## 0. Project setup
 - [x] Move C source into `reference/`
@@ -43,7 +50,10 @@ notes and the "Known risks / decisions" section.
 - [x] `Applicability`: same_annotation (C14N), rem_delete_elems
 - [x] CCT dependency injection (`add_cct_depends`) — used by appcheck/instance
       (`Applicability.AddCctDepends`; wired into appcheck `-~`)
-- [ ] ICN entity / notation helpers (`add_icn`, `add_notation`) — used by addicn
+- [x] ICN entity / notation helpers (`add_icn`, `add_notation`) — used by addicn
+      (`S1kdTools.Icn.AddIcn`/`AddNotation`/`SerializeWithDtd`; AddIcnTool delegates
+      to it. DTD internal subset is round-tripped as text — XmlDocument has no DOM
+      API for NOTATION/ENTITY decls.)
 - [x] XSLT extension shim for EXSLT — `S1kdTools.Xslt.Exslt` (str/math/date/set/
       common extension objects + Transform helper); native exsl:node-set used.
 
@@ -56,8 +66,8 @@ notes and the "Known risks / decisions" section.
 ## 3. Tools (port of `tools/s1kd-*`)
 Generation / `new*` family (share template + .defaults plumbing):
 - [x] s1kd-defaults (777) — text<->XML for .defaults/.dmtypes/.fmtypes, default
-      generation, sort, BREX-driven generation (DOM, no XSLT). TODO: -i init for
-      the non-BREX case shells out to newdm/fmgen (wire up once those exist).
+      generation, sort, BREX-driven generation (DOM, no XSLT); -i init drives
+      newdm/fmgen in-process via the registry (.dmtypes/.fmtypes).
 - [x] s1kd-newdm (2110) — flagship; templates+SNS+dmtypes embedded, downgrade
       via to*.xsl. TODO: interactive -p prompt (no-op), byte-exact output.
 - [x] s1kd-newpm (1002) — incl. dmRef generation and to*.xsl downgrade.
@@ -88,27 +98,30 @@ Authoring:
 Validation:
 - [x] s1kd-validate (633) — well-formedness + faithful IDREF/IDREFS checks +
       XML report; XSD validation when schema is locally resolvable (graceful
-      offline); -T stats.xsl summary (XSLT 1.0). TODO: source line numbers
-      (BCL XmlDocument has no IXmlLineInfo).
+      offline); -T stats.xsl summary (XSLT 1.0); source line numbers via a
+      parallel XmlReader pass (`LineInfo`, matches libxml2 xmlGetLineNo).
 - [x] s1kd-brexcheck (9147) — library API + tool; structure-object & value
       rules; SNS rules (with layered-BREX merge) + notation rules (via DOM
       DocumentType.Notations); severity-level config (brsl, -w/.brseveritylevels)
       now implemented. Remaining: EXSLT/XPath-2 objectPaths → xpathError.
 - [x] s1kd-refs (2794) — reference listing + CSDB matching (all ref types) +
       update/overwrite/tag-unmatched, externalpubs, hotspot matching (-H/-j/-J,
-      $id var + registered NS via a custom XsltContext) and exec (-e). TODO:
-      non-chapterized IPD SNS (-b).
+      $id var + registered NS via a custom XsltContext), exec (-e), and
+      non-chapterized IPD SNS (-b, sscanf-style grammar + inherited components).
 - [x] s1kd-repcheck (965) — CIR reference validation, all 12 ref types + indirect
       (DOM reimpl of the extraction XSLTs); -X custom XSLT (via XslCompiledTransform,
-      strips repcheck attrs). TODO: line numbers (BCL XmlDocument limitation).
+      strips repcheck attrs); source line numbers (`LineInfo`). TODO: line numbers
+      for the -X custom-stylesheet path (result-tree nodes aren't in the source map).
 - [x] s1kd-appcheck (2840) — applicability validation (undefined props, nested,
       redundant, duplicate; standalone/full/products via in-process filter +
-      broken-internalRef detection; CCT deps -~ via Applicability.AddCctDepends).
-      PARTIAL: external -e/-b validators.
+      broken-internalRef detection; CCT deps -~ via Applicability.AddCctDepends;
+      in-process -e/-b validators driving ValidateTool/BrexCheckTool). PARTIAL:
+      parallel threads (-#), -o/-K/-k external-filter options, progress bar.
 
 Publication:
 - [x] s1kd-acronyms (1020) — markup from .acronyms + list/table generation
-      (DOM markup + original XSLTs). TODO: interactive -i/-I prompting (no-op).
+      (DOM markup + original XSLTs); interactive -i/-I prompting (reads from an
+      injectable TextReader / Console.In, mirrors the C chooseAcronym prompt).
 - [x] s1kd-aspp (929) — applicability preprocessing; display-text reimplemented
       in DOM (C path needs EXSLT str:replace). -x custom XSLT done (mux + XSLT
       transform). NOTE: aspp does not use add_cct_depends in the C.
@@ -123,8 +136,12 @@ Publication:
 - [x] s1kd-instance (5126) — applicability filtering core (Default/Reduce/
       Simplify/Prune) + Instance library API; CIR resolution, PCT product
       filtering, containers (-Q), alts flattening (-F/-4), auto-naming
-      (-O/-5/-N), and update-instances (-@/-8/-7) now implemented. Remaining:
-      set-applic, list-properties, comments, acronym/entity cleanup, list input.
+      (-O/-5/-N), update-instances (-@/-8/-7), set-applic (-W/-Y/-y),
+      list-properties (-H), comments (-C/-X), acronym fixing (-M), entity
+      cleanup (-j), add-required (-Z), read-only (-%), list input (-L),
+      originator (-g/-G), skill (-k), whole-objects (-w), print-non-applic (-0),
+      and -S/-3 ident control. Remaining: CCT dependency-test injection in the
+      filter loop (-2/-~).
 - [x] s1kd-neutralize (292) — IETP neutral metadata via embedded XSLT
       (xlink/rdf/namespace/delete; no EXSLT).
 - [x] s1kd-syncrefs (504) — rebuild the References table (refs) from references
@@ -134,13 +151,17 @@ Publication:
       DOM: quantity/group/value/tolerance templates + picture format-number).
 
 ## 4. Cross-cutting
-- [~] Common option handling: `--version`, `-h/--help` done per tool; libxml2
+- [x] Common option handling: `--version`, `-h/--help` done per tool; libxml2
       parse opts (`--huge`, `--net`, `--noent`, `--xinclude`, `--xml-catalog`)
-      accepted-but-ignored (no System.Xml equivalent)
+      accepted-but-ignored (no System.Xml equivalent — this is the correct .NET
+      behaviour, not a gap)
 - [x] Embedded resources: `Resources/**` glob + `EmbeddedResources` loader
 - [x] Multi-call dispatch (`s1kd-<tool>` argv[0] routing) in CLI
-- [ ] Packaging: `dotnet pack` for the library; single-file publish for the CLI
-- [ ] Port/port-equivalent of `libs1kd` tests under `reference/.../tests`
+- [x] Packaging: `dotnet pack` for the library (S1kdTools.Core, GPL-3.0-or-later,
+      v0.1.0) + single-file self-contained CLI publish (resources resolve from the
+      assembly manifest in single-file mode). See README "Packaging".
+- [x] Port/port-equivalent of `libs1kd` tests — `Libs1kdParityTests.cs` ports all
+      six C test functions from `reference/.../libs1kd/tests/tests.c`.
 
 ## Known risks / decisions
 - EXSLT coverage in `XslCompiledTransform` (str:/exsl:/dyn:) — shim per stylesheet.
@@ -150,3 +171,18 @@ Publication:
   otherwise compare via canonical XML (C14N).
 - libxml2 XML-catalog support has no direct BCL equivalent; implement a minimal
   `XmlResolver` if/when `--xml-catalog` is exercised.
+
+## Accepted platform limitations (won't-fix without a new dependency)
+- **fmgen XProc (.xpl) pipelines**: XProc is a full XML pipeline language; .NET
+  has no XProc engine. The 10 plain-XSLT front-matter generators are ported; the
+  handful of `.xpl` pipeline front-matter types are not.
+- **brexcheck EXSLT / XPath-2 objectPaths → xpathError**: `System.Xml` evaluates
+  XPath 1.0 only, so BREX `objectPath`s using XPath 2.0 or EXSLT cannot be
+  evaluated; such rules are skipped rather than mis-evaluated.
+- **Source line numbers for transform-derived nodes** (repcheck `-X`): nodes that
+  come out of an `XslCompiledTransform` result tree have no position in the
+  original source, so they report line 0. The built-in extraction path has real
+  line numbers via `LineInfo`.
+- **newdm interactive `-p` prompt + byte-exact output**: the interactive prompt is
+  a no-op in-process; output is canonical-XML equivalent, not guaranteed byte-for-
+  byte identical to libxml2's serializer.
