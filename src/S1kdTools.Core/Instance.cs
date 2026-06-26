@@ -1134,12 +1134,14 @@ public static class Instance
         TransformInPlace(doc, FlattenAltsXsl, args);
     }
 
+    // ---- general XSL transform (ported from transform_doc) ----
+
     /// <summary>
     /// Transform <paramref name="doc"/> with <paramref name="xslText"/> and replace
     /// the document's root element with the transformed result, in place. Mirrors
     /// the C <c>transform_doc</c> helper.
     /// </summary>
-    private static void TransformInPlace(XmlDocument doc, string xslText, XsltArgumentList? args)
+    private static void TransformInPlace(XmlDocument doc, string xslText, XsltArgumentList? args = null)
     {
         var readerSettings = new XmlReaderSettings
         {
@@ -1179,6 +1181,7 @@ public static class Instance
         XmlNode imported = doc.ImportNode(resultDoc.DocumentElement, true);
         doc.ReplaceChild(imported, doc.DocumentElement);
     }
+
 
     // ---- container resolution (ported from resolve_containers) ----
 
@@ -1754,4 +1757,771 @@ public static class Instance
         XmlNode? n = doc.SelectSingleNode(xpath);
         return n?.Value;
     }
+
+
+    // ---- source ident (ported from add_source) ----
+
+    /// <summary>
+    /// Add metadata linking the data module instance with its source object.
+    /// A <c>sourceDmIdent</c>/<c>sourcePmIdent</c>/<c>srcdmaddres</c> (copied from
+    /// the object's own ident) is inserted before the
+    /// <c>repositorySourceDmIdent</c>/<c>security</c> element, replacing any
+    /// existing source ident. Mirrors <c>add_source</c>.
+    /// </summary>
+    public static void AddSource(XmlDocument source)
+    {
+        XmlNode? ident = source.SelectSingleNode("//dmIdent|//pmIdent|//dmaddres");
+        XmlNode? sourceIdent = source.SelectSingleNode(
+            "//dmStatus/sourceDmIdent|//pmStatus/sourcePmIdent|//status/srcdmaddres");
+        XmlNode? node = source.SelectSingleNode(
+            "(//dmStatus/repositorySourceDmIdent|//dmStatus/security|//pmStatus/security|//status/security)[1]");
+
+        if (node?.ParentNode == null || ident == null)
+        {
+            return;
+        }
+
+        sourceIdent?.ParentNode?.RemoveChild(sourceIdent);
+
+        string newName = ident.LocalName switch
+        {
+            "dmIdent" => "sourceDmIdent",
+            "pmIdent" => "sourcePmIdent",
+            "dmaddres" => "srcdmaddres",
+            _ => string.Empty,
+        };
+        if (newName.Length == 0)
+        {
+            return;
+        }
+
+        XmlElement newSourceIdent = source.CreateElement(newName);
+        node.ParentNode.InsertBefore(newSourceIdent, node);
+        foreach (XmlNode child in ident.ChildNodes)
+        {
+            newSourceIdent.AppendChild(child.CloneNode(true));
+        }
+    }
+
+    // ---- originator (ported from set_orig / find_or_create_orig) ----
+
+    /// <summary>NCAGE code used by <see cref="SetOrig"/> when no spec is supplied.</summary>
+    public const string DefaultOrigCode = "S1KDI";
+
+    /// <summary>Name used by <see cref="SetOrig"/> when no spec is supplied.</summary>
+    public const string DefaultOrigName = "s1kd-instance tool";
+
+    /// <summary>
+    /// Set the originator of the instance. When <paramref name="origSpec"/> is
+    /// null, this tool's default code/name identify the originator; otherwise the
+    /// spec is <c>CODE/NAME</c>. Mirrors <c>set_orig</c>.
+    /// </summary>
+    public static void SetOrig(XmlDocument doc, string? origSpec)
+    {
+        string? code, name;
+        if (origSpec != null)
+        {
+            int slash = origSpec.IndexOf('/');
+            code = slash >= 0 ? origSpec[..slash] : origSpec;
+            name = slash >= 0 ? origSpec[(slash + 1)..] : null;
+        }
+        else
+        {
+            code = DefaultOrigCode;
+            name = DefaultOrigName;
+        }
+
+        XmlElement? originator = FindOrCreateOrig(doc);
+        if (originator == null)
+        {
+            return;
+        }
+        bool iss30 = originator.LocalName == "orig";
+
+        if (!string.IsNullOrEmpty(code) && code != "-")
+        {
+            if (iss30)
+            {
+                originator.InnerText = code;
+            }
+            else
+            {
+                originator.SetAttribute("enterpriseCode", code);
+            }
+        }
+
+        if (name != null)
+        {
+            if (iss30)
+            {
+                originator.SetAttribute("origname", name);
+            }
+            else
+            {
+                if (originator.SelectSingleNode("enterpriseName") is XmlElement en)
+                {
+                    en.InnerText = name;
+                }
+                else
+                {
+                    XmlElement enNew = doc.CreateElement("enterpriseName");
+                    enNew.InnerText = name;
+                    originator.AppendChild(enNew);
+                }
+            }
+        }
+    }
+
+    /// <summary>Find or create the originator element. Mirrors <c>find_or_create_orig</c>.</summary>
+    private static XmlElement? FindOrCreateOrig(XmlDocument doc)
+    {
+        if (doc.SelectSingleNode("//originator|//orig") is XmlElement orig)
+        {
+            return orig;
+        }
+        if (doc.SelectSingleNode("//responsiblePartnerCompany|//rpc") is not XmlElement rpc ||
+            rpc.ParentNode == null)
+        {
+            return null;
+        }
+        XmlElement created = doc.CreateElement(rpc.LocalName == "rpc" ? "orig" : "originator");
+        rpc.ParentNode.InsertAfter(created, rpc);
+        return created;
+    }
+
+    // ---- skill (ported from set_skill) ----
+
+    /// <summary>Set the skill level code of the instance. Mirrors <c>set_skill</c>.</summary>
+    public static void SetSkill(XmlDocument doc, string skill)
+    {
+        if (doc.DocumentElement?.LocalName != "dmodule")
+        {
+            return;
+        }
+
+        if (doc.SelectSingleNode("//skillLevel") is not XmlElement skillLevel)
+        {
+            XmlNode? node = doc.SelectSingleNode(
+                "(//qualityAssurance|//systemBreakdownCode|//functionalItemCode|//dmStatus/functionalItemRef)[last()]");
+            if (node?.ParentNode == null)
+            {
+                return;
+            }
+            skillLevel = doc.CreateElement("skillLevel");
+            node.ParentNode.InsertAfter(skillLevel, node);
+        }
+
+        skillLevel.SetAttribute("skillLevelCode", skill);
+    }
+
+    // ---- whole-object applicability (ported from check_wholedm_applic / create_instance) ----
+
+    /// <summary>The whole-object applic statement. Mirrors <c>get_wholedm_applic</c>.</summary>
+    public static XmlNode? GetWholeDmApplic(XmlDocument dm) =>
+        dm.SelectSingleNode("//dmStatus/applic|//pmStatus/applic");
+
+    /// <summary>Determine if the whole object is applicable. Mirrors <c>check_wholedm_applic</c>.</summary>
+    public static bool CheckWholeDmApplic(XmlDocument dm, XmlNode defs)
+    {
+        XmlNode? applic = GetWholeDmApplic(dm);
+        return applic == null || EvalApplicStmt(defs, applic, true);
+    }
+
+    /// <summary>Whether the object's issue type is "deleted". Mirrors <c>is_deleted</c>.</summary>
+    public static bool IsDeleted(XmlDocument doc)
+    {
+        string? isstype = FirstAttr(doc,
+            "//dmStatus/@issueType|//dmaddres/issno/@type|//pmStatus/@issueType|//pmaddres/issno/@type|" +
+            "//commentStatus/@issueType|//dmlStatus/@issueType|//scormContentPackageStatus/@issueType");
+        return isstype == "deleted";
+    }
+
+    /// <summary>
+    /// Determine whether to create an instance for the object based on its
+    /// applicability, skill level, security classification and issue type.
+    /// Mirrors <c>create_instance</c>.
+    /// </summary>
+    public static bool CreateInstance(XmlDocument doc, XmlNode defs, string? skills, string? securities, bool delete)
+    {
+        if (!CheckWholeDmApplic(doc, defs))
+        {
+            return false;
+        }
+        if (securities != null && !ValidObject(doc, "//dmStatus/security/@securityClassification", securities))
+        {
+            return false;
+        }
+        if (skills != null && !ValidObject(doc, "//dmStatus/skillLevel/@skillLevelCode", skills))
+        {
+            return false;
+        }
+        if (delete && IsDeleted(doc))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>Whether the object's classification code is in the valid set. Mirrors <c>valid_object</c>.</summary>
+    private static bool ValidObject(XmlDocument doc, string path, string codes)
+    {
+        XmlNode? obj = doc.SelectSingleNode(path);
+        if (obj == null)
+        {
+            return true;
+        }
+        string code = obj.Value ?? obj.InnerText;
+        // C uses strstr(codes, code): substring containment.
+        return codes.Contains(code);
+    }
+
+    // ---- whole-object applicability overwrite (ported from set_applic / simpl_whole_applic) ----
+
+    /// <summary>
+    /// Set the applicability of the whole data module instance from the
+    /// user-defined definitions. When <paramref name="combine"/> is true the new
+    /// applicability is ANDed with the existing statement; otherwise it replaces
+    /// it. <paramref name="newText"/> becomes the display text. Mirrors
+    /// <c>set_applic</c>.
+    /// </summary>
+    public static void SetApplic(XmlDocument doc, XmlNode defs, int napplics, string newText, bool combine)
+    {
+        XmlNode? applicNode = doc.SelectSingleNode(
+            "//dmStatus/applic|//pmStatus/applic|//status/applic|//pmstatus/applic");
+        if (applicNode is not XmlElement applic || applic.ParentNode == null)
+        {
+            return;
+        }
+
+        string parent = applic.ParentNode.LocalName;
+        bool iss30;
+        if (parent is "dmStatus" or "pmStatus")
+        {
+            iss30 = false;
+        }
+        else if (parent is "status" or "pmstatus")
+        {
+            iss30 = true;
+        }
+        else
+        {
+            return;
+        }
+
+        XmlElement newApplic = doc.CreateElement("applic");
+        applic.ParentNode.InsertAfter(newApplic, applic);
+
+        if (newText != string.Empty)
+        {
+            XmlElement displayText = doc.CreateElement(iss30 ? "displaytext" : "displayText");
+            newApplic.AppendChild(displayText);
+            XmlElement simplePara = doc.CreateElement(iss30 ? "p" : "simplePara");
+            simplePara.InnerText = newText;
+            displayText.AppendChild(simplePara);
+        }
+
+        XmlElement target = newApplic;
+
+        if (combine && applic.SelectSingleNode("assert|evaluate|expression") != null)
+        {
+            XmlElement combined = doc.CreateElement("evaluate");
+            combined.SetAttribute(iss30 ? "operator" : "andOr", "and");
+            newApplic.AppendChild(combined);
+            foreach (XmlNode cur in applic.ChildNodes)
+            {
+                if (cur.NodeType != XmlNodeType.Element ||
+                    cur.LocalName is "displayText" or "displaytext")
+                {
+                    continue;
+                }
+                combined.AppendChild(cur.CloneNode(true));
+            }
+            target = combined;
+        }
+
+        XmlElement evaluate;
+        if (napplics > 1)
+        {
+            evaluate = doc.CreateElement("evaluate");
+            evaluate.SetAttribute(iss30 ? "operator" : "andOr", "and");
+            target.AppendChild(evaluate);
+        }
+        else
+        {
+            evaluate = target;
+        }
+
+        for (XmlNode? cur = defs.FirstChild; cur != null; cur = cur.NextSibling)
+        {
+            if (cur is not XmlElement el || el.GetAttribute("userDefined") != "true")
+            {
+                continue;
+            }
+            string ident = el.GetAttribute("applicPropertyIdent");
+            string type = el.GetAttribute("applicPropertyType");
+            if (el.HasAttribute("applicPropertyValues"))
+            {
+                evaluate.AppendChild(CreateAssert(doc, ident, type, el.GetAttribute("applicPropertyValues"), iss30));
+            }
+            else
+            {
+                evaluate.AppendChild(CreateOr(doc, ident, type, el, iss30));
+            }
+        }
+
+        applic.ParentNode.RemoveChild(applic);
+    }
+
+    private static XmlElement CreateAssert(XmlDocument doc, string ident, string type, string values, bool iss30)
+    {
+        XmlElement assert = doc.CreateElement("assert");
+        assert.SetAttribute(iss30 ? "actidref" : "applicPropertyIdent", ident);
+        assert.SetAttribute(iss30 ? "actreftype" : "applicPropertyType", type);
+        assert.SetAttribute(iss30 ? "actvalues" : "applicPropertyValues", values);
+        return assert;
+    }
+
+    private static XmlElement CreateOr(XmlDocument doc, string ident, string type, XmlElement values, bool iss30)
+    {
+        XmlElement or = doc.CreateElement("evaluate");
+        or.SetAttribute(iss30 ? "operator" : "andOr", "or");
+        for (XmlNode? cur = values.FirstChild; cur != null; cur = cur.NextSibling)
+        {
+            if (cur.NodeType == XmlNodeType.Element)
+            {
+                or.AppendChild(CreateAssert(doc, ident, type, cur.InnerText, iss30));
+            }
+        }
+        return or;
+    }
+
+    /// <summary>
+    /// Simplify the whole-object applicability prior to merging in user-defined
+    /// applicability, removing duplicate information. Mirrors <c>simpl_whole_applic</c>.
+    /// </summary>
+    public static void SimplWholeApplic(XmlNode defs, XmlDocument doc, bool remTrue)
+    {
+        XmlNode userdefs = RemoveNonUserDefs(defs);
+
+        XmlNode? orig = doc.SelectSingleNode("//dmStatus/applic|//pmStatus/applic");
+        if (orig?.ParentNode == null)
+        {
+            return;
+        }
+
+        XmlNode applic = orig.CloneNode(true);
+
+        if (SimplApplic(userdefs, applic, remTrue))
+        {
+            XmlElement newApplic = doc.CreateElement("applic");
+            XmlElement disptext = doc.CreateElement("displayText");
+            newApplic.AppendChild(disptext);
+            XmlElement sp = doc.CreateElement("simplePara");
+            sp.InnerText = "All";
+            disptext.AppendChild(sp);
+            applic = newApplic;
+        }
+        else
+        {
+            SimplApplicEvals(applic);
+        }
+
+        XmlNode imported = doc.ImportNode(applic, true);
+        orig.ParentNode.InsertAfter(imported, orig);
+        orig.ParentNode.RemoveChild(orig);
+    }
+
+    /// <summary>Copy applic defs without non-user definitions. Mirrors <c>remove_non_user_defs</c>.</summary>
+    private static XmlNode RemoveNonUserDefs(XmlNode defs)
+    {
+        XmlNode userdefs = defs.CloneNode(true);
+        XmlNode? cur = userdefs.FirstChild;
+        while (cur != null)
+        {
+            XmlNode? next = cur.NextSibling;
+            if (cur is XmlElement el && el.GetAttribute("userDefined") == "false")
+            {
+                userdefs.RemoveChild(cur);
+            }
+            cur = next;
+        }
+        return userdefs;
+    }
+
+    // ---- comments (ported from insert_comment) ----
+
+    /// <summary>
+    /// Insert an XML comment with <paramref name="text"/> at the node matched by
+    /// <paramref name="path"/> (before its first child, or as a child if empty).
+    /// Mirrors <c>insert_comment</c>.
+    /// </summary>
+    public static void InsertComment(XmlDocument doc, string text, string path)
+    {
+        XmlNode? pos = doc.SelectSingleNode(path);
+        if (pos == null)
+        {
+            return;
+        }
+        XmlComment comment = doc.CreateComment(text);
+        if (pos.FirstChild != null)
+        {
+            pos.InsertBefore(comment, pos.FirstChild);
+        }
+        else
+        {
+            pos.AppendChild(comment);
+        }
+    }
+
+    // ---- entity cleanup (ported from clean_entities) ----
+
+    /// <summary>
+    /// Remove unused unparsed external entity declarations (such as ICNs) from the
+    /// internal DTD subset after filtering. Mirrors <c>clean_entities</c>.
+    /// </summary>
+    public static void CleanEntities(XmlDocument doc)
+    {
+        XmlDocumentType? dtd = doc.DocumentType;
+        if (dtd?.Entities == null)
+        {
+            return;
+        }
+
+        var remove = new HashSet<string>();
+        foreach (XmlNode n in dtd.Entities)
+        {
+            // Only unparsed external general entities (NDATA).
+            if (n is not XmlEntity e || e.NotationName == null || e.Name == null)
+            {
+                continue;
+            }
+            if (doc.SelectSingleNode($"//@*[.='{e.Name}']") == null)
+            {
+                remove.Add(e.Name);
+            }
+        }
+
+        if (remove.Count == 0)
+        {
+            return;
+        }
+
+        // XmlDocumentType.Entities is read-only via the API; rebuild the DTD's
+        // internal subset without the unused entity declarations.
+        string? subset = dtd.InternalSubset;
+        if (subset == null)
+        {
+            return;
+        }
+        foreach (string name in remove)
+        {
+            var rx = new Regex(@"<!ENTITY\s+" + Regex.Escape(name) + @"\b[^>]*>\s*");
+            subset = rx.Replace(subset, string.Empty);
+        }
+
+        XmlDocumentType newDtd = doc.CreateDocumentType(dtd.Name, dtd.PublicId, dtd.SystemId,
+            string.IsNullOrEmpty(subset) ? null : subset);
+        doc.ReplaceChild(newDtd, dtd);
+    }
+
+    // ---- XSL transforms (ported from fix_acronyms_pre/post, autocomplete, remove_empty_pmentries) ----
+
+    /// <summary>Copy acronym definitions to all acronyms prior to filtering. Mirrors <c>fix_acronyms_pre</c>.</summary>
+    public static void FixAcronymsPre(XmlDocument doc) =>
+        TransformInPlace(doc, EmbeddedResources.ReadText("instance/acronyms-pre.xsl"));
+
+    /// <summary>Reference repeated acronyms after the first via acronymTerm. Mirrors <c>fix_acronyms_post</c>.</summary>
+    public static void FixAcronymsPost(XmlDocument doc) =>
+        TransformInPlace(doc, EmbeddedResources.ReadText("instance/acronyms-post.xsl"));
+
+    /// <summary>Fix certain elements automatically after filtering. Mirrors <c>autocomplete</c>.</summary>
+    public static void Autocomplete(XmlDocument doc) =>
+        TransformInPlace(doc, EmbeddedResources.ReadText("instance/autocomplete.xsl"));
+
+    /// <summary>Remove invalid empty PM entries after filtering. Mirrors <c>remove_empty_pmentries</c>.</summary>
+    public static void RemoveEmptyPmEntries(XmlDocument doc) =>
+        TransformInPlace(doc, EmbeddedResources.ReadText("instance/remove-empty-pmentries.xsl"));
+
+    // ---- list-properties (ported from add_props / add_props_list / sort-props.xsl) ----
+
+    /// <summary>The method used to list applicability properties. Mirrors <c>enum listprops</c>.</summary>
+    public enum ListPropsMethod
+    {
+        /// <summary>Use assertions from the whole object's applicability.</summary>
+        Standalone,
+        /// <summary>Use ACT/CCT values, filtered by whole-object applicability.</summary>
+        Applic,
+        /// <summary>Use all ACT/CCT values.</summary>
+        All,
+    }
+
+    /// <summary>
+    /// Build a properties report listing the applicability properties used in the
+    /// objects at <paramref name="paths"/>. The report is sorted (via the built-in
+    /// sort-props stylesheet) and returned as a document. ACT/CCT/PCT resolution
+    /// uses the supplied resolvers. Mirrors the <c>props_report</c> path of
+    /// <c>main</c> plus <c>add_props</c>.
+    /// </summary>
+    public static XmlDocument BuildPropertiesReport(
+        IEnumerable<string> paths,
+        ListPropsMethod method,
+        Func<string, XmlDocument?> readObject,
+        Func<XmlDocument, XmlDocument?>? findAct = null,
+        Func<XmlDocument, XmlDocument?>? findCct = null,
+        Func<XmlDocument, XmlDocument?>? findPct = null)
+    {
+        var report = new XmlDocument();
+        XmlElement properties = report.CreateElement("properties");
+        report.AppendChild(properties);
+        properties.SetAttribute("method", method switch
+        {
+            ListPropsMethod.All => "all",
+            ListPropsMethod.Applic => "applic",
+            _ => "standalone",
+        });
+
+        foreach (string path in paths)
+        {
+            AddProps(properties, path, method, readObject, findAct, findCct, findPct);
+        }
+
+        // Sort the report (sort-props.xsl is plain XSLT 1.0).
+        TransformInPlace(report, EmbeddedResources.ReadText("instance/sort-props.xsl"));
+        return report;
+    }
+
+    private static void AddProps(XmlElement report, string path, ListPropsMethod method,
+        Func<string, XmlDocument?> readObject,
+        Func<XmlDocument, XmlDocument?>? findAct,
+        Func<XmlDocument, XmlDocument?>? findCct,
+        Func<XmlDocument, XmlDocument?>? findPct)
+    {
+        XmlDocument? doc = readObject(path);
+        if (doc == null)
+        {
+            return;
+        }
+
+        XmlDocument owner = report.OwnerDocument!;
+        XmlElement obj = owner.CreateElement("object");
+        obj.SetAttribute("path", path);
+        report.AppendChild(obj);
+
+        XmlDocument? act = null, cct = null, pct = null;
+        if (method != ListPropsMethod.Standalone)
+        {
+            act = findAct?.Invoke(doc);
+            if (act != null) cct = findCct?.Invoke(act);
+            if (act != null) pct = findPct?.Invoke(act);
+        }
+
+        // Assertions: whole-object applic for standalone, inline annotations otherwise.
+        string assertXpath = method == ListPropsMethod.Standalone
+            ? "//assert"
+            : "(//content|//inlineapplics)//assert";
+        foreach (XmlNode assertNode in doc.SelectNodes(assertXpath)!)
+        {
+            AddProp(obj, assertNode, doc, method, act, cct);
+        }
+
+        // Products from the PCT.
+        if (pct != null)
+        {
+            foreach (XmlNode product in pct.SelectNodes("//product")!)
+            {
+                AddProduct(obj, product, doc, method);
+            }
+        }
+    }
+
+    private static void AddProp(XmlElement obj, XmlNode assertNode, XmlDocument doc, ListPropsMethod method,
+        XmlDocument? act, XmlDocument? cct)
+    {
+        XmlDocument owner = obj.OwnerDocument!;
+        string? ident = FirstValue(assertNode, "@applicPropertyIdent", "@actidref");
+        string? type = FirstValue(assertNode, "@applicPropertyType", "@actreftype");
+
+        XmlElement? p = null;
+        for (XmlNode? cur = obj.FirstChild; cur != null && p == null; cur = cur.NextSibling)
+        {
+            if (cur is XmlElement el && el.GetAttribute("ident") == ident && el.GetAttribute("type") == type)
+            {
+                p = el;
+            }
+        }
+
+        if (p == null)
+        {
+            p = owner.CreateElement("property");
+            p.SetAttribute("ident", ident ?? string.Empty);
+            p.SetAttribute("type", type ?? string.Empty);
+            obj.AppendChild(p);
+
+            if (method != ListPropsMethod.Standalone)
+            {
+                AddCtPropVals(act, cct, ident, type, p, doc, method);
+            }
+        }
+
+        if (method == ListPropsMethod.Standalone)
+        {
+            string vals = FirstValue(assertNode, "@applicPropertyValues", "@actvalues") ?? string.Empty;
+            foreach (string c in vals.Split('|', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!HasValueChild(p, c))
+                {
+                    AppendValue(p, c, null);
+                }
+            }
+        }
+    }
+
+    private static void AddCtPropVals(XmlDocument? act, XmlDocument? cct, string? id, string? type,
+        XmlElement p, XmlDocument doc, ListPropsMethod method)
+    {
+        XmlNode? propDesc = null;
+        XmlNode? propVals = null;
+
+        if (act != null && type == "prodattr")
+        {
+            propDesc = act.SelectSingleNode(
+                $"//productAttribute[@id={XPathLiteral(id ?? string.Empty)}]|//prodattr[@id={XPathLiteral(id ?? string.Empty)}]");
+            propVals = propDesc;
+        }
+        else if (cct != null && type == "condition")
+        {
+            XmlNode? condTypeRef = cct.SelectSingleNode(
+                $"//cond[@id={XPathLiteral(id ?? string.Empty)}]/@condTypeRefId|//condition[@id={XPathLiteral(id ?? string.Empty)}]/@condtyperef");
+            if (condTypeRef == null)
+            {
+                return;
+            }
+            propDesc = (condTypeRef as XmlAttribute)?.OwnerElement;
+            string condType = condTypeRef.Value ?? string.Empty;
+            propVals = cct.SelectSingleNode(
+                $"//condType[@id={XPathLiteral(condType)}]|//conditiontype[@id={XPathLiteral(condType)}]");
+        }
+        else
+        {
+            return;
+        }
+
+        if (propDesc == null || propVals == null)
+        {
+            return;
+        }
+
+        string? pattern = FirstValue(propVals, "@valuePattern", "@pattern");
+        if (pattern != null)
+        {
+            p.SetAttribute("pattern", pattern);
+        }
+        AppendChildText(p, "name", FirstValue(propDesc, "name", "name"));
+        AppendChildText(p, "descr", FirstValue(propDesc, "descr", "description"));
+        AppendChildText(p, "displayName", FirstValue(propDesc, "displayName", "displayname"));
+
+        foreach (XmlNode enumNode in propVals.SelectNodes("enumeration|enum")!)
+        {
+            string vals = FirstValue(enumNode, "@applicPropertyValues", "@actvalues") ?? string.Empty;
+            string? label = FirstValue(enumNode, "@enumerationLabel", "@enumerationLabel");
+            foreach (string c in vals.Split('|', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (HasValueChild(p, c))
+                {
+                    continue;
+                }
+                if (method == ListPropsMethod.Applic)
+                {
+                    var defsDoc = new XmlDocument();
+                    XmlElement defs = defsDoc.CreateElement("applic");
+                    defsDoc.AppendChild(defs);
+                    DefineApplicValue(defs, id ?? string.Empty, type ?? string.Empty, c, perDm: true, userDefined: false);
+                    XmlNode? applic = GetWholeDmApplic(doc);
+                    if (applic != null && !EvalApplicStmt(defs, applic, true))
+                    {
+                        continue;
+                    }
+                }
+                AppendValue(p, c, label);
+            }
+        }
+    }
+
+    private static void AddProduct(XmlElement obj, XmlNode product, XmlDocument doc, ListPropsMethod method)
+    {
+        XmlDocument owner = obj.OwnerDocument!;
+        XmlElement p = owner.CreateElement("product");
+
+        if (method == ListPropsMethod.Applic)
+        {
+            var defsDoc = new XmlDocument();
+            XmlElement defs = defsDoc.CreateElement("applic");
+            defsDoc.AppendChild(defs);
+
+            for (XmlNode? cur = product.FirstChild; cur != null; cur = cur.NextSibling)
+            {
+                if (cur.NodeType != XmlNodeType.Element)
+                {
+                    continue;
+                }
+                string? i = FirstValue(cur, "@applicPropertyIdent", "@actidref");
+                string? t = FirstValue(cur, "@applicPropertyType", "@actreftype");
+                string? v = FirstValue(cur, "@applicPropertyValue", "@actvalue");
+                XmlElement a = owner.CreateElement("assign");
+                a.SetAttribute("applicPropertyIdent", i ?? string.Empty);
+                a.SetAttribute("applicPropertyType", t ?? string.Empty);
+                a.SetAttribute("applicPropertyValue", v ?? string.Empty);
+                p.AppendChild(a);
+                DefineApplicValue(defs, i ?? string.Empty, t ?? string.Empty, v ?? string.Empty, perDm: true, userDefined: false);
+            }
+
+            XmlNode? applic = GetWholeDmApplic(doc);
+            bool isApp = applic == null || EvalApplicStmt(defs, applic, false);
+            if (!isApp)
+            {
+                return;
+            }
+        }
+
+        if (product is XmlElement pe && pe.HasAttribute("id"))
+        {
+            p.SetAttribute("ident", pe.GetAttribute("id"));
+        }
+        obj.AppendChild(p);
+    }
+
+    private static bool HasValueChild(XmlElement p, string value)
+    {
+        for (XmlNode? cur = p.FirstChild; cur != null; cur = cur.NextSibling)
+        {
+            if (cur.InnerText == value)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void AppendValue(XmlElement p, string value, string? label)
+    {
+        XmlElement v = p.OwnerDocument!.CreateElement("value");
+        v.InnerText = value;
+        if (label != null)
+        {
+            v.SetAttribute("label", label);
+        }
+        p.AppendChild(v);
+    }
+
+    private static void AppendChildText(XmlElement p, string name, string? text)
+    {
+        if (text == null)
+        {
+            return;
+        }
+        XmlElement c = p.OwnerDocument!.CreateElement(name);
+        c.InnerText = text;
+        p.AppendChild(c);
+    }
+
 }
