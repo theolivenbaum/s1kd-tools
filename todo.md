@@ -24,8 +24,8 @@ aspp -x custom XSLT.
 Remaining work is narrow depth — per-tool partial features (each noted inline
 below): interactive prompts (no-op in-process), source line numbers in reports
 (BCL `XmlDocument` has no `IXmlLineInfo`), the few EXSLT-dependent stylesheet
-paths, fmgen XProc pipelines, and byte-exact output parity. See the per-tool
-notes and the "Known risks / decisions" section.
+paths, and byte-exact output parity. See the per-tool notes and the
+"Known risks / decisions" section.
 
 ## 0. Project setup
 - [x] Move C source into `reference/`
@@ -115,7 +115,8 @@ Publication:
 - [x] s1kd-flatten (765) — resolve dmRef/pmRef to files and inline; -u dedup
       reimplemented in DOM (C uses EXSLT). 
 - [x] s1kd-fmgen (1021) — front matter via 10 embedded XSLTs (all XSLT 1.0, no
-      EXSLT). TODO: XProc (.xpl) pipelines unsupported.
+      EXSLT). XProc (.xpl) pipelines supported for -x/.fmtypes stylesheets
+      (p:pipeline of p:xslt steps, p:document/p:inline inputs, p:with-param).
 - [x] s1kd-icncatalog (577) — resolve ICN refs via catalog; media groups; regex
       pattern rules (DOM). NOTE: DTD serialized manually like addicn.
 - [x] s1kd-index (400) — keyword flagging from .indexflags; issue-3.0 rename
