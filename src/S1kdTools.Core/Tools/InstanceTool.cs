@@ -24,8 +24,16 @@ namespace S1kdTools.Tools;
 ///   -m/--remarks, -o/--out, -f/--overwrite, -q/--quiet, -v/--verbose,
 ///   -h/--help, --version.
 ///
-/// Partial / not ported (clearly noted): CIR resolution (-R/-x/-D/-d/-r),
-/// PCT/ACT/CCT product filtering (-P/-p/-1/-2/-~), container resolution (-Q),
+/// CIR resolution: -R/--cir (explicit file or * to auto-find), -x/--xsl (custom
+///   stylesheet), -D/--dump (dump built-in XSLT), -d/--dir, -r/--recursive,
+///   -S/--no-repository-ident. All 17 built-in CIR types are resolved via the
+///   ported repository stylesheets (see <see cref="S1kdTools.Instance.ResolveCir"/>).
+/// Product filtering: -P/--pct + -p/--product assign a product's applicability
+///   from a PCT, with -1/--act resolving the PCT per data module when no -P is
+///   given. ACT/CCT primary-key resolution mirrors the C tool.
+///
+/// Partial / not ported (clearly noted): CCT dependency-test injection (-2/-~),
+/// container resolution (-Q),
 /// alts flattening (-F/-4), automatic naming/output-dir (-O/-5/-N),
 /// update-instances (-@), source/repository ident control (-S/-3/-8),
 /// set-applic (-W/-Y/-y), list-properties (-H), comments (-C/-X),
@@ -79,6 +87,18 @@ public sealed class InstanceTool : ITool
         string? security = null;   // -u
         string? remarks = null;    // -m
         string? outFile = null;    // -o
+
+        // CIR resolution + product filtering.
+        var cirs = new List<CirSpec>();    // -R (explicit files)
+        bool findCir = false;              // -R *
+        string searchDir = ".";            // -d
+        bool recursive = false;            // -r
+        string? defCirXslFile = null;      // -x (when no preceding -R)
+        bool addRepIdent = true;           // disabled via -S
+        string? userPct = null;            // -P / --pct
+        string? product = null;            // -p / --product
+        string? userAct = null;            // -1 / --act
+        string? userCct = null;            // -2 / --cct
 
         for (int i = 0; i < args.Count; i++)
         {
@@ -151,6 +171,50 @@ public sealed class InstanceTool : ITool
                 case "-o" or "--out":
                 { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; outFile = v; break; }
 
+                case "-R" or "--cir":
+                {
+                    string? v = RequireArg(a); if (v == null) return ExitMissingArgs;
+                    if (v == "*") { findCir = true; }
+                    else { cirs.Add(new CirSpec(v)); }
+                    break;
+                }
+                case "-x" or "--xsl":
+                {
+                    string? v = RequireArg(a); if (v == null) return ExitMissingArgs;
+                    // Attach to the most recent -R, or set the default CIR XSLT.
+                    if (cirs.Count > 0) { cirs[^1].XslFile = v; }
+                    else { defCirXslFile ??= v; }
+                    break;
+                }
+                case "-D" or "--dump":
+                {
+                    string? v = RequireArg(a); if (v == null) return ExitMissingArgs;
+                    string? xsl = Instance.DumpCirXsl(v);
+                    if (xsl == null)
+                    {
+                        if (!quiet) stderr.WriteLine($"{Name}: WARNING: No built-in XSLT for CIR type: {v}");
+                        return ExitBadArg;
+                    }
+                    stdout.Write(xsl);
+                    if (!xsl.EndsWith('\n')) stdout.Write('\n');
+                    return ExitSuccess;
+                }
+                case "-d" or "--dir":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; searchDir = v; break; }
+                case "-r" or "--recursive":
+                    recursive = true; break;
+                case "-S" or "--no-repository-ident":
+                    addRepIdent = false; break;
+
+                case "-P" or "--pct":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; userPct = v; break; }
+                case "-p" or "--product":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; product = v; break; }
+                case "-1" or "--act":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; userAct = v; break; }
+                case "-2" or "--cct":
+                { string? v = RequireArg(a); if (v == null) return ExitMissingArgs; userCct = v; break; }
+
                 default:
                     if (a.StartsWith('-') && a.Length > 1 && a != "-")
                     {
@@ -170,6 +234,68 @@ public sealed class InstanceTool : ITool
             return errCode;
         }
         _ = napplics;
+
+        // Read a user-supplied PCT (-P) once; it applies to all data modules.
+        XmlDocument? userPctDoc = null;
+        if (userPct != null)
+        {
+            try
+            {
+                userPctDoc = XmlUtils.ReadDoc(userPct);
+            }
+            catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException)
+            {
+                if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read PCT {userPct}");
+                return ExitMissingFile;
+            }
+        }
+
+        // A custom default CIR stylesheet supplied via -x with no preceding -R.
+        string? defCirXslText = null;
+        if (defCirXslFile != null)
+        {
+            try
+            {
+                defCirXslText = File.ReadAllText(defCirXslFile);
+            }
+            catch (IOException)
+            {
+                if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read XSLT {defCirXslFile}");
+                return ExitMissingFile;
+            }
+        }
+
+        // Resolve -R * by searching for CIR data modules under the search dir.
+        if (findCir)
+        {
+            foreach (string cirFile in FindCirs(searchDir, recursive))
+            {
+                cirs.Add(new CirSpec(cirFile));
+            }
+        }
+
+        // Apply a user PCT + product up front (these definitions are global).
+        bool loadPctPerDm = false;
+        if (!string.IsNullOrEmpty(product))
+        {
+            if (userPctDoc != null)
+            {
+                int n = Instance.LoadApplicFromPct(defs, userPctDoc, product, perDm: false);
+                if (n == 0 && !quiet)
+                {
+                    stderr.WriteLine($"{Name}: WARNING: No product matching '{product}' in PCT '{userPct}'.");
+                }
+            }
+            else
+            {
+                // The PCT must be located per data module via its ACT.
+                loadPctPerDm = true;
+            }
+        }
+
+        // CCT dependency-test injection (-2/-~) is not ported yet; the option is
+        // accepted so command lines parse, but produces no extra output.
+        _ = userCct;
 
         FilterMode mode = prune ? FilterMode.Prune
             : simplify ? FilterMode.Simplify
@@ -229,8 +355,64 @@ public sealed class InstanceTool : ITool
                 continue;
             }
 
+            // Load the product applicability per data module (when no -P given):
+            // locate the PCT through the ACT this DM references.
+            bool perDmLoaded = false;
+            if (loadPctPerDm)
+            {
+                perDmLoaded = LoadPctPerDm(doc, defs, product!, userAct, searchDir, recursive, quiet, stderr);
+            }
+
+            // Resolve CIR references before applicability filtering, mirroring
+            // the order in the C main loop.
+            if (cirs.Count > 0)
+            {
+                bool isPm = doc.DocumentElement?.LocalName == "pm";
+                foreach (CirSpec cir in cirs)
+                {
+                    if (!File.Exists(cir.File))
+                    {
+                        if (!quiet) stderr.WriteLine($"{Name}: WARNING: Could not find CIR {cir.File}.");
+                        continue;
+                    }
+
+                    XmlDocument cirDoc;
+                    try
+                    {
+                        cirDoc = XmlUtils.ReadDoc(cir.File);
+                    }
+                    catch (Exception ex) when (ex is IOException or XmlException)
+                    {
+                        if (!quiet) stderr.WriteLine($"{Name}: ERROR: {cir.File} is not a valid CIR data module.");
+                        status = ExitBadXml;
+                        continue;
+                    }
+
+                    string? customXsl = defCirXslText;
+                    if (cir.XslFile != null)
+                    {
+                        try { customXsl = File.ReadAllText(cir.XslFile); }
+                        catch (IOException)
+                        {
+                            if (!quiet) stderr.WriteLine($"{Name}: ERROR: Could not read XSLT {cir.XslFile}");
+                            status = ExitMissingFile;
+                            continue;
+                        }
+                    }
+
+                    // PMs never get a repository source ident.
+                    bool addSrc = addRepIdent && !isPm;
+                    Instance.ResolveCir(doc, defs, cirDoc, addSrc, customXsl);
+                }
+            }
+
             ApplyFilter(doc, defs, napplics, mode, reduce || simplify, prune, simplify,
                 tagNonApplic, cleanDispText, remDupl, remUnused, delete, secClasses, skillCodes);
+
+            if (perDmLoaded)
+            {
+                Instance.ClearPerDmApplic(defs);
+            }
 
             // Metadata setters (subset; order mirrors the C tool).
             if (!string.IsNullOrEmpty(extension)) SetExtension(doc, extension);
@@ -802,6 +984,16 @@ public sealed class InstanceTool : ITool
         stdout.WriteLine("  -z, --issue-type <type>               Issue type.");
         stdout.WriteLine("  -u, --security <sec>                  Security classification.");
         stdout.WriteLine("  -m, --remarks <remarks>               Remarks for the instance.");
+        stdout.WriteLine("  -R, --cir <CIR>                       Resolve externalized items using the given CIR (* to auto-find).");
+        stdout.WriteLine("  -x, --xsl <XSL>                       Custom XSLT to resolve the preceding CIR's references.");
+        stdout.WriteLine("  -D, --dump <CIR type>                 Dump the built-in XSLT for a CIR type and exit.");
+        stdout.WriteLine("  -d, --dir <dir>                       Directory to search for CIRs/ACTs/PCTs.");
+        stdout.WriteLine("  -r, --recursive                       Search for CIRs recursively.");
+        stdout.WriteLine("  -S, --no-repository-ident             Do not add a repositorySourceDmIdent.");
+        stdout.WriteLine("  -P, --pct <PCT>                       PCT file to read products from.");
+        stdout.WriteLine("  -p, --product <product>               ID/primary key of a product in the PCT to filter on.");
+        stdout.WriteLine("  -1, --act <ACT>                       Use the given ACT data module.");
+        stdout.WriteLine("  -2, --cct <CCT>                       Use the given CCT data module.");
         stdout.WriteLine("  -o, --out <file>                      Output to file instead of stdout.");
         stdout.WriteLine("  -f, --overwrite                       Overwrite output files.");
         stdout.WriteLine("  -q, --quiet                           Quiet mode.");
@@ -809,5 +1001,155 @@ public sealed class InstanceTool : ITool
         stdout.WriteLine("  -h, -?, --help                        Show help.");
         stdout.WriteLine("      --version                         Show version.");
         stdout.WriteLine("  <object>...                           Source CSDB object(s).");
+    }
+
+    // ---- CIR / PCT support helpers ----
+
+    /// <summary>A CIR reference (from -R) and an optional custom resolution XSLT (-x).</summary>
+    private sealed class CirSpec
+    {
+        public CirSpec(string file) => File = file;
+        public string File { get; }
+        public string? XslFile { get; set; }
+    }
+
+    /// <summary>
+    /// Find CIR data modules under <paramref name="searchDir"/> (mirrors
+    /// <c>find_cirs</c> + <c>auto_add_cirs</c>), keeping only the latest issue of
+    /// each. Files are matched by the <c>DMC-</c> prefix and verified to contain a
+    /// repository.
+    /// </summary>
+    private static List<string> FindCirs(string searchDir, bool recursive)
+    {
+        var found = new List<string>();
+        if (!Directory.Exists(searchDir))
+        {
+            return found;
+        }
+
+        var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        IEnumerable<string> candidates;
+        try
+        {
+            candidates = Directory.EnumerateFiles(searchDir, "*", option);
+        }
+        catch (IOException)
+        {
+            return found;
+        }
+
+        foreach (string path in candidates)
+        {
+            string name = Path.GetFileName(path);
+            if (Csdb.IsDataModule(name) && Instance.IsCir(path))
+            {
+                found.Add(path);
+            }
+        }
+
+        // Use only the latest issue of each CIR.
+        return Csdb.ExtractLatestObjects(found);
+    }
+
+    /// <summary>
+    /// Locate this data module's PCT (via its ACT) and assign the product's
+    /// applicability into <paramref name="defs"/> on a per-DM basis. The ACT is
+    /// taken from <paramref name="userAct"/> if supplied, otherwise resolved from
+    /// the DM's applicCrossRefTableRef. Returns true if any per-DM definitions
+    /// were added.
+    /// </summary>
+    private static bool LoadPctPerDm(XmlDocument doc, XmlElement defs, string product,
+        string? userAct, string searchDir, bool recursive, bool quiet, TextWriter stderr)
+    {
+        XmlDocument? act = null;
+        if (userAct != null)
+        {
+            try { act = XmlUtils.ReadDoc(userAct); }
+            catch (Exception ex) when (ex is IOException or XmlException or FileNotFoundException) { act = null; }
+        }
+        else
+        {
+            string? actFile = FindRefDmFile(
+                doc.SelectSingleNode("//applicCrossRefTableRef/dmRef/dmRefIdent|//actref/refdm"),
+                searchDir, recursive);
+            if (actFile != null)
+            {
+                try { act = XmlUtils.ReadDoc(actFile); }
+                catch (Exception ex) when (ex is IOException or XmlException) { act = null; }
+            }
+        }
+
+        if (act == null)
+        {
+            return false;
+        }
+
+        string? pctFile = FindRefDmFile(
+            act.SelectSingleNode("//productCrossRefTableRef/dmRef/dmRefIdent|//pctref/refdm"),
+            searchDir, recursive);
+        if (pctFile == null)
+        {
+            return false;
+        }
+
+        XmlDocument pct;
+        try { pct = XmlUtils.ReadDoc(pctFile); }
+        catch (Exception ex) when (ex is IOException or XmlException) { return false; }
+
+        int n = Instance.LoadApplicFromPct(defs, pct, product, perDm: true);
+        if (n == 0 && !quiet)
+        {
+            stderr.WriteLine($"s1kd-instance: WARNING: No product matching '{product}' in PCT '{pctFile}'.");
+        }
+        return n > 0;
+    }
+
+    /// <summary>
+    /// Build the CSDB filename code from a dmRefIdent and locate the matching data
+    /// module under the search directory. A focused port of
+    /// <c>find_dmod_fname</c> + <c>find_csdb_object</c> for ACT/PCT resolution.
+    /// </summary>
+    private static string? FindRefDmFile(XmlNode? dmRefIdent, string searchDir, bool recursive)
+    {
+        if (dmRefIdent == null)
+        {
+            return null;
+        }
+        XmlNode? dmCode = dmRefIdent.SelectSingleNode("dmCode|avee");
+        if (dmCode is not XmlElement c)
+        {
+            return null;
+        }
+
+        string V(string attr) => c.GetAttribute(attr);
+        string code =
+            $"DMC-{V("modelIdentCode")}-{V("systemDiffCode")}-{V("systemCode")}-" +
+            $"{V("subSystemCode")}{V("subSubSystemCode")}-{V("assyCode")}-" +
+            $"{V("disassyCode")}{V("disassyCodeVariant")}-" +
+            $"{V("infoCode")}{V("infoCodeVariant")}-{V("itemLocationCode")}";
+
+        if (!Directory.Exists(searchDir))
+        {
+            return null;
+        }
+
+        var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        IEnumerable<string> candidates;
+        try
+        {
+            candidates = Directory.EnumerateFiles(searchDir, code + "*", option);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+
+        // Prefer the latest matching issue.
+        var matches = candidates.Where(p => Csdb.IsDataModule(Path.GetFileName(p))).ToList();
+        if (matches.Count == 0)
+        {
+            return null;
+        }
+        return Csdb.ExtractLatestObjects(matches).FirstOrDefault() ?? matches[0];
     }
 }

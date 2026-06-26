@@ -37,30 +37,38 @@ public enum BrexCheckOptions
 }
 
 /// <summary>
+/// A single BREX data module in a (possibly layered) BREX chain, paired with the
+/// path/identifier recorded for it in the report's <c>brex/@path</c>.
+/// </summary>
+public readonly struct BrexModule
+{
+    public BrexModule(XmlDocument document, string path)
+    {
+        Document = document;
+        Path = path;
+    }
+
+    /// <summary>The parsed BREX data module.</summary>
+    public XmlDocument Document { get; }
+
+    /// <summary>The path/identifier to record for this BREX in the report.</summary>
+    public string Path { get; }
+}
+
+/// <summary>
 /// Programmatic API for checking CSDB objects against BREX (Business Rules
-/// EXchange) data modules. This mirrors the libs1kd functions
-/// <c>s1kdDocCheckBREX</c> / <c>s1kdDocCheckDefaultBREX</c> and the core of the
-/// <c>s1kd-brexcheck</c> command-line tool.
+/// EXchange) data modules.
 ///
 /// <para>
-/// What is implemented thoroughly: the structure object rules (the
-/// <c>structureObjectRule</c> / <c>objrule</c> elements), namely evaluating each
-/// rule's <c>objectPath</c> against the object, honouring the
-/// <c>allowedObjectFlag</c> (0 = must NOT exist, 1 = must exist, anything else =
-/// only value-checked), and — when <see cref="BrexCheckOptions.Values"/> is set —
-/// checking the matched nodes' string values against the allowed
-/// <c>objectValue</c>/<c>objval</c> set (single value, <c>pattern</c> regex, or
-/// <c>range</c> set). It also builds the XML report (<c>brexCheck</c> →
-/// <c>document</c> → <c>brex</c> → <c>error</c>) compatibly with the C tool.
-/// </para>
-///
-/// <para>
-/// Partial: SNS checks (<see cref="BrexCheckOptions.Sns"/>) are implemented for
-/// data modules. Notation checks (<see cref="BrexCheckOptions.Notations"/>) are a
-/// best-effort port — System.Xml does not expose internal-DTD NOTATION-typed
-/// unparsed-entity declarations the way libxml2 does, so the implementation
-/// records that notation checking was requested but cannot enumerate entities.
-/// See the notes in <c>todo.md</c>.
+/// SNS checks (<see cref="BrexCheckOptions.Sns"/>) are implemented for data
+/// modules in normal/strict/unstrict modes and are merged across a layered BREX
+/// chain (the SNS rules from every BREX in the chain are combined, mirroring the
+/// C <c>check_brex_sns</c>). Notation checks (<see cref="BrexCheckOptions.Notations"/>)
+/// enumerate the NOTATIONs actually referenced by the document's internal-DTD
+/// unparsed-entity (<c>NDATA</c>) declarations and validate each against the
+/// combined <c>notationRuleList</c> of the BREX chain, mirroring
+/// <c>check_brex_notations</c>. Layered BREX is supported by passing the resolved
+/// chain to <see cref="Check(XmlDocument, IReadOnlyList{BrexModule}, BrexCheckOptions, string, bool, out XmlDocument)"/>.
 /// </para>
 /// </summary>
 public static class BrexCheck
@@ -85,19 +93,35 @@ public static class BrexCheck
     public static int Check(XmlDocument doc, XmlDocument brex, BrexCheckOptions opts,
         string docPath, string brexPath, out XmlDocument report)
     {
+        return Check(doc, new[] { new BrexModule(brex, brexPath) }, opts, docPath, layered: false, out report);
+    }
+
+    /// <summary>
+    /// Check <paramref name="doc"/> against a chain of BREX modules. The
+    /// structure object rules of every BREX are evaluated in turn (each producing
+    /// its own <c>brex</c> element), while the SNS rules and notation rules are
+    /// merged across the whole chain before checking (mirroring the C
+    /// <c>check_brex</c> / <c>check_brex_sns</c> / <c>check_brex_notations</c>).
+    /// Returns the total number of errors found.
+    /// </summary>
+    public static int Check(XmlDocument doc, IReadOnlyList<BrexModule> brexChain, BrexCheckOptions opts,
+        string docPath, bool layered, out XmlDocument report)
+    {
         report = XmlUtils.NewDocument();
         XmlElement brexCheck = report.CreateElement("brexCheck");
         report.AppendChild(brexCheck);
-        AddConfigToReport(brexCheck, opts);
+        AddConfigToReport(brexCheck, opts, layered);
 
         XmlElement documentNode = (XmlElement)brexCheck.AppendChild(report.CreateElement("document"))!;
         documentNode.SetAttribute("path", docPath);
 
         int total = 0;
 
+        // SNS and notation rules are checked once, against the combined rules of
+        // all BREX in the chain.
         if (opts.HasFlag(BrexCheckOptions.Sns))
         {
-            if (!CheckSns(brex, doc, documentNode, opts))
+            if (!CheckSns(brexChain, doc, documentNode, opts))
             {
                 ++total;
             }
@@ -105,10 +129,14 @@ public static class BrexCheck
 
         if (opts.HasFlag(BrexCheckOptions.Notations))
         {
-            total += CheckNotations(brex, doc, documentNode);
+            total += CheckNotations(brexChain, doc, documentNode);
         }
 
-        total += CheckStructureRules(brex, doc, brexPath, documentNode, opts);
+        // Structure object rules are checked per-BREX (one <brex> per layer).
+        foreach (BrexModule layer in brexChain)
+        {
+            total += CheckStructureRules(layer.Document, doc, layer.Path, documentNode, opts);
+        }
 
         return total;
     }
@@ -123,6 +151,16 @@ public static class BrexCheck
         XmlDocument brex = LoadDefaultBrex(code)
             ?? throw new InvalidOperationException($"No default BREX found for {code}.");
         return Check(doc, brex, opts, doc.BaseURI, code, out report);
+    }
+
+    /// <summary>
+    /// Check <paramref name="doc"/> against a single explicit BREX module across a
+    /// chain of one (compatibility wrapper for layered callers).
+    /// </summary>
+    public static int Check(XmlDocument doc, IReadOnlyList<BrexModule> brexChain, BrexCheckOptions opts,
+        string docPath, out XmlDocument report)
+    {
+        return Check(doc, brexChain, opts, docPath, brexChain.Count > 1, out report);
     }
 
     // ---- Structure object rules -------------------------------------------------
@@ -447,14 +485,17 @@ public static class BrexCheck
         }
     }
 
-    // ---- SNS rules (partial) ----------------------------------------------------
+    // ---- SNS rules --------------------------------------------------------------
 
     /// <summary>
-    /// Check the SNS rules of a BREX module against a data module. Mirrors
-    /// <c>check_brex_sns_rules</c> for the normal/strict/unstrict modes. Only data
-    /// modules (<c>dmodule</c> root) are checked.
+    /// Check the SNS rules of a chain of BREX modules against a data module. The
+    /// valid SNS is taken as the combination of the <c>snsRules</c> from every
+    /// BREX in the chain (mirrors <c>check_brex_sns</c>), then descends
+    /// systemCode → subSystem → subSubSystem → assy in normal/strict/unstrict
+    /// modes (mirrors <c>check_brex_sns_rules</c>). Only data modules
+    /// (<c>dmodule</c> root) are checked.
     /// </summary>
-    private static bool CheckSns(XmlDocument brex, XmlDocument doc, XmlElement documentNode, BrexCheckOptions opts)
+    private static bool CheckSns(IReadOnlyList<BrexModule> brexChain, XmlDocument doc, XmlElement documentNode, BrexCheckOptions opts)
     {
         XmlDocument report = documentNode.OwnerDocument!;
 
@@ -466,9 +507,21 @@ public static class BrexCheck
             return true;
         }
 
-        XmlNode? snsRules = XmlUtils.XPathFirstNode(brex, null, "//snsRules");
+        // Merge the snsRules from every BREX in the chain into one group document.
+        XmlDocument snsRulesDoc = XmlUtils.NewDocument();
+        XmlElement snsRulesGroup = snsRulesDoc.CreateElement("snsRulesGroup");
+        snsRulesDoc.AppendChild(snsRulesGroup);
+        foreach (BrexModule layer in brexChain)
+        {
+            XmlNode? snsRules = XmlUtils.XPathFirstNode(layer.Document, null, "//snsRules");
+            if (snsRules != null)
+            {
+                snsRulesGroup.AppendChild(snsRulesDoc.ImportNode(snsRules, true));
+            }
+        }
+
         XmlElement? dmcode = XmlUtils.XPathFirstNode(doc, null, "//dmIdent/dmCode") as XmlElement;
-        if (snsRules == null || dmcode == null)
+        if (!snsRulesGroup.HasChildNodes || dmcode == null)
         {
             snsCheck.AppendChild(report.CreateElement("noErrors"));
             return true;
@@ -481,7 +534,7 @@ public static class BrexCheck
 
         XmlElement snsError = report.CreateElement("error");
         bool correct = true;
-        XmlNode ctx = snsRules;
+        XmlNode ctx = snsRulesGroup;
 
         bool strict = opts.HasFlag(BrexCheckOptions.StrictSns);
         bool unstrict = opts.HasFlag(BrexCheckOptions.UnstrictSns);
@@ -588,21 +641,160 @@ public static class BrexCheck
         return ret || ctx.SelectSingleNode(relPath) != null;
     }
 
-    // ---- Notation rules (partial) ----------------------------------------------
+    // ---- Notation rules ---------------------------------------------------------
 
     /// <summary>
-    /// Notation-rule checking. The C tool walks the data module's internal DTD
-    /// subset and validates each NOTATION-typed unparsed-entity declaration
-    /// against the BREX <c>notationRule</c> list. <see cref="XmlDocument"/> does
-    /// not surface internal-subset entity declarations, so this records an empty
-    /// (no-error) notation check and returns 0. Tracked in todo.md.
+    /// Notation-rule checking. Mirrors <c>check_brex_notations</c> /
+    /// <c>check_brex_notation_rules</c> / <c>check_entity</c>: the
+    /// <c>notationRuleList</c> of every BREX in the chain is combined, then each
+    /// NOTATION referenced by the document's internal-DTD unparsed-entity
+    /// (<c>NDATA</c>) declarations is validated against it. A notation is allowed
+    /// only when a <c>notationRule</c> names it with an
+    /// <c>allowedNotationFlag != "0"</c>; otherwise an <c>error</c> is recorded.
+    ///
+    /// <para>
+    /// The C reads each entity's NOTATION name from libxml2's parsed internal
+    /// subset (unparsed entity, <c>etype == 3</c>). The .NET DOM exposes the same
+    /// information via <see cref="XmlDocumentType"/>: declared notations on
+    /// <see cref="XmlDocumentType.Notations"/> and unparsed entities on
+    /// <see cref="XmlDocumentType.Entities"/> (each <see cref="XmlEntity.NotationName"/>
+    /// gives the NDATA notation). Because the BREX rules are keyed on the notation
+    /// name actually *used*, we enumerate the NDATA notations referenced by the
+    /// entity declarations (falling back to parsing the internal-subset text when
+    /// the runtime does not populate the entity map), which is exactly the set the
+    /// C iterates.
+    /// </para>
     /// </summary>
-    private static int CheckNotations(XmlDocument brex, XmlDocument doc, XmlElement documentNode)
+    private static int CheckNotations(IReadOnlyList<BrexModule> brexChain, XmlDocument doc, XmlElement documentNode)
     {
         XmlDocument report = documentNode.OwnerDocument!;
+
+        // No internal DTD subset -> nothing to check, and no <notations> element
+        // is emitted (mirrors the early return when dmod_doc->intSubset is NULL).
+        XmlDocumentType? dtd = doc.DocumentType;
+        if (dtd == null)
+        {
+            return 0;
+        }
+
+        // Merge the notationRuleList from every BREX in the chain.
+        XmlDocument ruleDoc = XmlUtils.NewDocument();
+        XmlElement ruleGroup = ruleDoc.CreateElement("notationRuleGroup");
+        ruleDoc.AppendChild(ruleGroup);
+        foreach (BrexModule layer in brexChain)
+        {
+            XmlNode? list = XmlUtils.XPathFirstNode(layer.Document, null, "//notationRuleList");
+            if (list != null)
+            {
+                ruleGroup.AppendChild(ruleDoc.ImportNode(list, true));
+            }
+        }
+
         XmlElement notations = (XmlElement)documentNode.AppendChild(report.CreateElement("notations"))!;
-        notations.AppendChild(report.CreateElement("noErrors"));
-        return 0;
+
+        int invalid = 0;
+        foreach (string notation in UsedNotations(dtd))
+        {
+            invalid += CheckEntity(notation, ruleGroup, notations);
+        }
+
+        if (!notations.HasChildNodes)
+        {
+            notations.AppendChild(report.CreateElement("noErrors"));
+        }
+
+        return invalid;
+    }
+
+    /// <summary>
+    /// Enumerate the NOTATION names referenced by unparsed (NDATA) entity
+    /// declarations in a document's internal DTD subset, mirroring the C iteration
+    /// over <c>XML_ENTITY_DECL</c> nodes with <c>etype == 3</c>.
+    /// </summary>
+    private static IEnumerable<string> UsedNotations(XmlDocumentType dtd)
+    {
+        var seen = new List<string>();
+
+        // The parsed entity map: each unparsed entity carries the NDATA notation
+        // name in XmlEntity.NotationName. This is the direct DOM analogue of the C
+        // iteration over unparsed entity declarations.
+        XmlNamedNodeMap? entities = dtd.Entities;
+        if (entities != null)
+        {
+            foreach (XmlNode node in entities)
+            {
+                if (node is XmlEntity entity &&
+                    entity.NotationName is { Length: > 0 } name &&
+                    !seen.Contains(name))
+                {
+                    seen.Add(name);
+                }
+            }
+        }
+
+        // Also parse the internal-subset text for <!ENTITY ... NDATA name> decls.
+        // Some runtimes/parse paths do not populate XmlEntity.NotationName on the
+        // entity map even though the declarations are present in InternalSubset,
+        // so this guarantees the used notations are enumerated either way.
+        if (dtd.InternalSubset is { Length: > 0 } subset)
+        {
+            foreach (string name in ParseNdataNotations(subset))
+            {
+                if (!seen.Contains(name))
+                {
+                    seen.Add(name);
+                }
+            }
+        }
+
+        return seen;
+    }
+
+    /// <summary>
+    /// Parse the NDATA notation names from the <c>&lt;!ENTITY ... NDATA name&gt;</c>
+    /// declarations in a raw internal-subset string.
+    /// </summary>
+    private static IEnumerable<string> ParseNdataNotations(string subset)
+    {
+        foreach (Match m in Regex.Matches(subset,
+            @"<!ENTITY\b[^>]*?\bNDATA\s+([\w.\-:]+)", RegexOptions.Singleline))
+        {
+            yield return m.Groups[1].Value;
+        }
+    }
+
+    /// <summary>
+    /// Check a single used NOTATION against the merged notation rules. Mirrors
+    /// <c>check_entity</c>: a notation is allowed when a rule names it with
+    /// <c>allowedNotationFlag != "0"</c>; otherwise an error is recorded with the
+    /// <c>objectUse</c> of the matching (or first) rule.
+    /// </summary>
+    private static int CheckEntity(string notation, XmlElement ruleGroup, XmlElement notations)
+    {
+        XmlDocument report = notations.OwnerDocument!;
+        string q = XPathLiteral(notation);
+
+        XmlNode? allowedRule = ruleGroup.SelectSingleNode(
+            $".//notationRule[notationName = {q} and notationName/@allowedNotationFlag != '0']");
+        if (allowedRule != null)
+        {
+            return 0;
+        }
+
+        XmlNode? rule = ruleGroup.SelectSingleNode(
+            $"(.//notationRule[notationName = {q}]|.//notationRule)[1]");
+
+        XmlElement notationError = (XmlElement)notations.AppendChild(report.CreateElement("error"))!;
+        XmlElement inv = (XmlElement)notationError.AppendChild(report.CreateElement("invalidNotation"))!;
+        inv.InnerText = notation;
+
+        XmlNode? use = rule?.SelectSingleNode("objectUse");
+        if (use != null)
+        {
+            notationError.AppendChild(report.ImportNode(use, true));
+        }
+
+        return 1;
     }
 
     // ---- BREX resolution --------------------------------------------------------
@@ -673,9 +865,9 @@ public static class BrexCheck
     }
 
     /// <summary>Add the run configuration as attributes on the report root (mirrors <c>add_config_to_report</c>).</summary>
-    private static void AddConfigToReport(XmlElement brexCheck, BrexCheckOptions opts)
+    private static void AddConfigToReport(XmlElement brexCheck, BrexCheckOptions opts, bool layered = false)
     {
-        brexCheck.SetAttribute("layered", "no");
+        brexCheck.SetAttribute("layered", layered ? "yes" : "no");
         brexCheck.SetAttribute("checkObjectValues", opts.HasFlag(BrexCheckOptions.Values) ? "yes" : "no");
 
         if (opts.HasFlag(BrexCheckOptions.Sns))

@@ -325,4 +325,29 @@ public class NewcomToolTests
         Assert.Equal(0, hcode);
         Assert.Contains("Usage: s1kd-newcom", hout);
     }
+
+    [Fact]
+    public void Issue41_DownConvertsViaXslt()
+    {
+        string dir = TempDir();
+        try
+        {
+            var (code, _, err) = Run("-#", Code, "-@", dir, "-L", "en", "-C", "ca", "-$", "4.1");
+            Assert.Equal(0, code);
+            Assert.Equal("", err);
+
+            string path = Directory.GetFiles(dir, "*.XML").Single();
+            string text = File.ReadAllText(path);
+            // The down-issue stylesheet rewrites the schema location to the
+            // selected issue's directory.
+            Assert.Contains("S1000D_4-1", text);
+            Assert.DoesNotContain("S1000D_6", text);
+
+            // The comment code must survive down-conversion.
+            var doc = XmlUtils.ReadDoc(path);
+            var cc = (XmlElement)doc.SelectSingleNode("//commentCode")!;
+            Assert.Equal("EX", cc.GetAttribute("modelIdentCode"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

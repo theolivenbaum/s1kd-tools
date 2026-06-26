@@ -1,4 +1,6 @@
+using System.Text.RegularExpressions;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace S1kdTools;
 
@@ -559,6 +561,418 @@ public static class Instance
         }
 
         return referencedApplicGroup;
+    }
+
+    // ---- CIR resolution (ported from undepend_cir / undepend_cir_xsl) ----
+
+    /// <summary>
+    /// The set of CIR (Common Information Repository) types for which a built-in
+    /// resolution stylesheet exists, mapped to the embedded resource that
+    /// resolves references of that type. Mirrors <c>get_cir_xsl</c>.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> CirXslByType =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["accessPointRepository"] = "instance/accessPointRepository.xsl",
+            ["applicRepository"] = "instance/applicRepository.xsl",
+            ["cautionRepository"] = "instance/cautionRepository.xsl",
+            ["circuitBreakerRepository"] = "instance/circuitBreakerRepository.xsl",
+            ["controlIndicatorRepository"] = "instance/controlIndicatorRepository.xsl",
+            ["enterpriseRepository"] = "instance/enterpriseRepository.xsl",
+            ["functionalItemRepository"] = "instance/functionalItemRepository.xsl",
+            ["einlist"] = "instance/einlist.xsl",
+            ["partRepository"] = "instance/partRepository.xsl",
+            ["illustratedPartsCatalog"] = "instance/illustratedPartsCatalog.xsl",
+            ["supplyRepository"] = "instance/supplyRepository.xsl",
+            ["toolRepository"] = "instance/toolRepository.xsl",
+            ["warningRepository"] = "instance/warningRepository.xsl",
+            ["zoneRepository"] = "instance/zoneRepository.xsl",
+            ["hazardRepository"] = "instance/hazardRepository.xsl",
+            ["terminologyRepository"] = "instance/terminologyRepository.xsl",
+        };
+
+    /// <summary>
+    /// Returns the embedded resource path for the built-in CIR resolution
+    /// stylesheet handling <paramref name="cirType"/>, or null if there is no
+    /// built-in XSLT for that type. Mirrors <c>get_cir_xsl</c>.
+    /// </summary>
+    public static string? GetCirXslResource(string cirType) =>
+        CirXslByType.TryGetValue(cirType, out string? res) ? res : null;
+
+    /// <summary>The CIR types that have built-in resolution support.</summary>
+    public static IReadOnlyCollection<string> SupportedCirTypes => (IReadOnlyCollection<string>)CirXslByType.Keys;
+
+    /// <summary>
+    /// Return the built-in CIR resolution stylesheet for <paramref name="cirType"/>
+    /// as XML text, or null if none exists. Mirrors <c>dump_cir_xsl</c>.
+    /// </summary>
+    public static string? DumpCirXsl(string cirType)
+    {
+        string? res = GetCirXslResource(cirType);
+        return res == null ? null : EmbeddedResources.ReadText(res);
+    }
+
+    /// <summary>
+    /// Resolve externalized items in <paramref name="dm"/> against the CIR data
+    /// module <paramref name="cir"/>, in place. The user-defined applicability in
+    /// <paramref name="defs"/> is first applied to the CIR's own content, then the
+    /// appropriate resolution stylesheet inlines the referenced entries.
+    ///
+    /// Mirrors <c>undepend_cir</c>: returns true if a resolution stylesheet was
+    /// applied (or a custom one supplied), false if the CIR type was unsupported
+    /// (in which case <paramref name="dm"/> is left unchanged). When
+    /// <paramref name="addSource"/> is requested and supported, a
+    /// <c>repositorySourceDmIdent</c> is inserted before the instance's security
+    /// element (mirroring the <c>add_src</c> behaviour).
+    /// </summary>
+    /// <param name="dm">The instance document; modified in place on success.</param>
+    /// <param name="defs">User-defined applicability definitions.</param>
+    /// <param name="cir">The CIR data module.</param>
+    /// <param name="addSource">Whether to add a repositorySourceDmIdent.</param>
+    /// <param name="customXslText">Optional custom XSLT (overrides the built-in).</param>
+    /// <returns>True if resolution was attempted, false for an unsupported type.</returns>
+    public static bool ResolveCir(XmlDocument dm, XmlNode defs, XmlDocument cir, bool addSource, string? customXslText = null)
+    {
+        // Apply the user-defined applicability to the CIR content first, and
+        // determine the CIR type node. Mirrors the //content handling.
+        XmlNode? content = cir.SelectSingleNode("//content");
+        XmlNode? cirNode;
+        if (content == null)
+        {
+            cirNode = cir.DocumentElement;
+        }
+        else
+        {
+            XmlNode? rag = cir.SelectSingleNode("//referencedApplicGroup");
+            if (rag != null)
+            {
+                StripApplic(defs, rag, content);
+            }
+
+            cirNode = cir.SelectSingleNode(
+                "//content/commonRepository/*[position()=last()]|" +
+                "//content/techRepository/*[position()=last()]|" +
+                "//content/techrep/*[position()=last()]|" +
+                "//content/illustratedPartsCatalog") ?? cir.DocumentElement;
+        }
+
+        if (cirNode == null)
+        {
+            return false;
+        }
+
+        string cirType = cirNode.LocalName;
+
+        bool supported;
+        string? xslText;
+        if (customXslText != null)
+        {
+            xslText = customXslText;
+            supported = true;
+        }
+        else
+        {
+            string? res = GetCirXslResource(cirType);
+            if (res == null)
+            {
+                // No built-in XSLT: nothing to resolve, and add_src is disabled.
+                return false;
+            }
+            xslText = EmbeddedResources.ReadText(res);
+            supported = true;
+        }
+
+        ApplyCirXsl(dm, cir, xslText);
+
+        // Issue 3.0 objects (idstatus) never get a repository source ident.
+        if (addSource && supported && dm.SelectSingleNode("//idstatus") == null)
+        {
+            AddRepositorySource(dm, cir);
+        }
+
+        return supported;
+    }
+
+    /// <summary>
+    /// Apply a CIR resolution stylesheet to a "mux" document containing the
+    /// instance (child 1) and the CIR (child 2), then replace the instance's
+    /// root element with the first child of the result. Mirrors
+    /// <c>undepend_cir_xsl</c>.
+    /// </summary>
+    private static void ApplyCirXsl(XmlDocument dm, XmlDocument cir, string xslText)
+    {
+        // Build <mux><dm/><cir/></mux>.
+        var mux = new XmlDocument { PreserveWhitespace = true };
+        XmlElement muxRoot = mux.CreateElement("mux");
+        mux.AppendChild(muxRoot);
+        if (dm.DocumentElement != null)
+        {
+            muxRoot.AppendChild(mux.ImportNode(dm.DocumentElement, true));
+        }
+        if (cir.DocumentElement != null)
+        {
+            muxRoot.AppendChild(mux.ImportNode(cir.DocumentElement, true));
+        }
+
+        var xslt = new XslCompiledTransform();
+        var readerSettings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Ignore,
+            XmlResolver = null,
+        };
+
+        using (var sr = new StringReader(xslText))
+        using (XmlReader styleReader = XmlReader.Create(sr, readerSettings))
+        {
+            xslt.Load(styleReader);
+        }
+
+        var resultDoc = new XmlDocument { PreserveWhitespace = true };
+        using (var ms = new MemoryStream())
+        {
+            var writerSettings = new XmlWriterSettings
+            {
+                ConformanceLevel = ConformanceLevel.Auto,
+                OmitXmlDeclaration = true,
+            };
+            using (XmlWriter writer = XmlWriter.Create(ms, writerSettings))
+            {
+                xslt.Transform(mux, writer);
+            }
+            ms.Position = 0;
+            using XmlReader resultReader = XmlReader.Create(ms, readerSettings);
+            resultDoc.Load(resultReader);
+        }
+
+        // The transformed instance is /mux/*[1].
+        XmlNode? newRoot = resultDoc.SelectSingleNode("/mux/*[1]");
+        if (newRoot == null || dm.DocumentElement == null)
+        {
+            return;
+        }
+
+        XmlNode imported = dm.ImportNode(newRoot, true);
+        dm.ReplaceChild(imported, dm.DocumentElement);
+    }
+
+    /// <summary>
+    /// Insert a <c>repositorySourceDmIdent</c> (copied from the CIR's dmIdent)
+    /// before the instance's <c>security</c> element. Mirrors the <c>add_src</c>
+    /// block of <c>undepend_cir</c>.
+    /// </summary>
+    private static void AddRepositorySource(XmlDocument dm, XmlDocument cir)
+    {
+        XmlNode? dmIdent = cir.SelectSingleNode("//dmIdent");
+        if (dmIdent == null)
+        {
+            return;
+        }
+        XmlNode? security = dm.SelectSingleNode("//security");
+        if (security?.ParentNode == null)
+        {
+            return;
+        }
+
+        XmlElement repo = dm.CreateElement("repositorySourceDmIdent");
+        security.ParentNode.InsertBefore(repo, security);
+        foreach (XmlNode child in dmIdent.ChildNodes)
+        {
+            repo.AppendChild(dm.ImportNode(child, true));
+        }
+    }
+
+    /// <summary>
+    /// Whether a file is a CIR/TIR data module (its content contains a
+    /// commonRepository, techRepository or techrep). Mirrors <c>is_cir</c>.
+    /// </summary>
+    public static bool IsCir(string path)
+    {
+        try
+        {
+            XmlDocument doc = XmlUtils.ReadDoc(path);
+            return doc.SelectSingleNode("//commonRepository|//techRepository|//techrep") != null;
+        }
+        catch (Exception ex) when (ex is IOException or XmlException)
+        {
+            return false;
+        }
+    }
+
+    // ---- product (PCT/ACT/CCT) applicability loading ----
+
+    /// <summary>Pattern recognising an <c>ident:type=value</c> primary key.</summary>
+    private static readonly Regex ProductKeyPattern =
+        new(@"^[^:]+:(prodattr|condition)=[^|~]+", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Assign all applicability definitions of the named product from a PCT
+    /// (Product Cross-reference Table) into <paramref name="defs"/>. The
+    /// <paramref name="product"/> may be the XML id of a <c>product</c> element,
+    /// or an <c>ident:type=value</c> primary key matching a <c>product</c> via
+    /// its <c>assign</c> children. Mirrors <c>load_applic_from_pct</c>.
+    /// </summary>
+    /// <returns>The number of values assigned (0 if the product was not found).</returns>
+    public static int LoadApplicFromPct(XmlElement defs, XmlDocument pct, string product, bool perDm = false)
+    {
+        XmlNodeList? assigns;
+        if (ProductKeyPattern.IsMatch(product))
+        {
+            int colon = product.IndexOf(':');
+            int eq = product.IndexOf('=', colon + 1);
+            string ident = product[..colon];
+            string type = product[(colon + 1)..eq];
+            string value = product[(eq + 1)..];
+
+            // XPath 1.0 has no variables here; build a literal-safe predicate.
+            string xpath =
+                $"//product[assign[@applicPropertyIdent={XPathLiteral(ident)} and " +
+                $"@applicPropertyType={XPathLiteral(type)} and " +
+                $"@applicPropertyValue={XPathLiteral(value)}]]/assign";
+            assigns = pct.SelectNodes(xpath);
+        }
+        else
+        {
+            assigns = pct.SelectNodes($"//product[@id={XPathLiteral(product)}]/assign");
+        }
+
+        if (assigns == null || assigns.Count == 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        foreach (XmlNode n in assigns)
+        {
+            if (n is not XmlElement a)
+            {
+                continue;
+            }
+            string ident = a.GetAttribute("applicPropertyIdent");
+            string type = a.GetAttribute("applicPropertyType");
+            string value = a.GetAttribute("applicPropertyValue");
+            if (ident.Length == 0 || type.Length == 0 || value.Length == 0)
+            {
+                continue;
+            }
+            DefineApplicValue(defs, ident, type, value, perDm, userDefined: true);
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Define a value for a product attribute or condition in
+    /// <paramref name="defs"/>, merging with any existing definition for the same
+    /// ident/type. Mirrors the relevant path of <c>define_applic</c>.
+    /// </summary>
+    public static void DefineApplicValue(XmlElement defs, string ident, string type, string value, bool perDm, bool userDefined)
+    {
+        XmlElement? assert = null;
+        for (XmlNode? cur = defs.FirstChild; cur != null; cur = cur.NextSibling)
+        {
+            if (cur is XmlElement el &&
+                el.GetAttribute("applicPropertyIdent") == ident &&
+                el.GetAttribute("applicPropertyType") == type)
+            {
+                assert = el;
+            }
+        }
+
+        if (assert == null)
+        {
+            assert = defs.OwnerDocument!.CreateElement("assert");
+            assert.SetAttribute("applicPropertyIdent", ident);
+            assert.SetAttribute("applicPropertyType", type);
+            assert.SetAttribute("applicPropertyValues", value);
+            assert.SetAttribute("userDefined", userDefined ? "true" : "false");
+            if (perDm)
+            {
+                assert.SetAttribute("perDm", "true");
+            }
+            defs.AppendChild(assert);
+            return;
+        }
+
+        // An existing definition may only be modified if the modification is at
+        // least as authoritative as the existing one (mirrors allow_def_modify:
+        // a user-defined value may not be overwritten by a non-user-defined one).
+        bool existingUserDefined = assert.GetAttribute("userDefined") == "true";
+        bool allowModify = userDefined || !existingUserDefined;
+
+        if (assert.HasAttribute("applicPropertyValues"))
+        {
+            string first = assert.GetAttribute("applicPropertyValues");
+            if (first != value && allowModify)
+            {
+                AddValue(assert, first);
+                AddValue(assert, value);
+                assert.RemoveAttribute("applicPropertyValues");
+            }
+        }
+        else
+        {
+            bool dup = false;
+            for (XmlNode? cur = assert.FirstChild; cur != null && !dup; cur = cur.NextSibling)
+            {
+                if (cur.InnerText == value)
+                {
+                    dup = true;
+                }
+            }
+            if (!dup && allowModify)
+            {
+                AddValue(assert, value);
+            }
+        }
+    }
+
+    private static void AddValue(XmlElement assert, string value)
+    {
+        XmlElement v = assert.OwnerDocument!.CreateElement("value");
+        v.InnerText = value;
+        assert.AppendChild(v);
+    }
+
+    /// <summary>Remove per-DM applicability assignments. Mirrors <c>clear_perdm_applic</c>.</summary>
+    public static void ClearPerDmApplic(XmlElement defs)
+    {
+        XmlNode? cur = defs.FirstChild;
+        while (cur != null)
+        {
+            XmlNode? next = cur.NextSibling;
+            if (cur is XmlElement el && el.HasAttribute("perDm"))
+            {
+                defs.RemoveChild(cur);
+            }
+            cur = next;
+        }
+    }
+
+    /// <summary>Quote a string as an XPath 1.0 string literal (handles embedded quotes).</summary>
+    internal static string XPathLiteral(string value)
+    {
+        if (!value.Contains('\''))
+        {
+            return $"'{value}'";
+        }
+        if (!value.Contains('"'))
+        {
+            return $"\"{value}\"";
+        }
+        // Both quote kinds present: build concat('a',"'",'b',...).
+        var parts = value.Split('\'');
+        var sb = new System.Text.StringBuilder("concat(");
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(", \"'\", ");
+            }
+            sb.Append('\'').Append(parts[i]).Append('\'');
+        }
+        sb.Append(')');
+        return sb.ToString();
     }
 
     // ---- helpers ----

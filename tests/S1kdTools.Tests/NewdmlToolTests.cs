@@ -313,4 +313,30 @@ public class NewdmlToolTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    [Fact]
+    public void Issue50_DownConvertsViaXslt()
+    {
+        string dir = TempDir();
+        try
+        {
+            var (code, _, err) = Run(dir,
+                "-#", "DML-EX-12345-C-2026-00001",
+                "-n", "001", "-w", "02", "-$", "5.0");
+            Assert.Equal(0, code);
+            Assert.Equal("", err);
+
+            string path = Directory.GetFiles(dir, "*.XML").Single();
+            string text = File.ReadAllText(path);
+            // The down-issue stylesheet rewrites the schema location to the
+            // selected issue's directory; the document is no longer issue 6.
+            Assert.Contains("S1000D_5-0", text);
+            Assert.DoesNotContain("S1000D_6", text);
+
+            // The root DML element must survive down-conversion.
+            var doc = XmlUtils.ReadDoc(path);
+            Assert.Equal("dml", doc.DocumentElement!.Name);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

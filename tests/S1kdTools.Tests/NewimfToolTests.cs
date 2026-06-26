@@ -306,4 +306,28 @@ public class NewimfToolTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    [Fact]
+    public void Issue42_DownConvertsViaXslt()
+    {
+        string dir = NewWorkDir();
+        try
+        {
+            var (code, _, err) = Run(dir, "-N", "-$", "4.2", "ICN-TEST-1.PNG");
+            Assert.Equal(0, code);
+            Assert.Equal("", err);
+
+            string path = Directory.GetFiles(dir, "*.XML").Single();
+            string text = File.ReadAllText(path);
+            // The down-issue stylesheet rewrites the schema location to the
+            // selected issue's directory; the document is no longer issue 6.
+            Assert.Contains("S1000D_4-2", text);
+            Assert.DoesNotContain("S1000D_6", text);
+
+            // The root element must survive down-conversion.
+            var doc = Load(path);
+            Assert.Equal("icnMetadataFile", doc.DocumentElement!.Name);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

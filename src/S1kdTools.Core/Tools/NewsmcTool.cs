@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -15,11 +16,12 @@ namespace S1kdTools.Tools;
 /// <remarks>
 /// The skeleton is built from the embedded ISS_6 template
 /// (<c>Resources/newsmc/scormcontentpackage.xml</c>) and populated with the DOM,
-/// mirroring the C code. The C tool can additionally downgrade the result to an
-/// older S1000D issue (4.1/4.2/5.0) via the shared <c>to41/to42/to50</c> XSLT
-/// stylesheets; that downgrade is not ported here (only the issue-specific
-/// default BREX is applied) and is noted in the report/todo. The default issue
-/// (6) is fully supported.
+/// mirroring the C code. Downgrading the result to an older S1000D issue
+/// (4.1/4.2/5.0) reuses the shared <c>to41/to42/to50</c> stylesheets (embedded
+/// under <c>Resources/newdm/common/</c>) via <see cref="XslCompiledTransform"/>,
+/// mirroring <c>toissue</c> (which for newsmc only supports down to issue 4.1):
+/// the issue-specific default BREX is applied and the document is then
+/// down-converted. The default issue (6) is fully supported.
 /// </remarks>
 public sealed class NewsmcTool : ITool
 {
@@ -91,7 +93,6 @@ public sealed class NewsmcTool : ITool
     private int RunCore(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
     {
         string smcode = "";
-        bool skipcode = false;
         string? defaultsFname = null;
         bool customDefaults = false;
         bool noIssue = false;
@@ -129,7 +130,6 @@ public sealed class NewsmcTool : ITool
                     break;
                 case "-#" or "--code":
                     smcode = NextArg(args, ref i, "-#", stderr);
-                    skipcode = true;
                     break;
                 case "-L" or "--language":
                     _languageIsoCode = NextArg(args, ref i, "-L", stderr);
@@ -348,9 +348,10 @@ public sealed class NewsmcTool : ITool
                     break;
             }
 
-            // NOTE: the C tool additionally downgrades the schema/markup to the
-            // selected older issue via the shared to41/to42/to50 XSLT. That
-            // transform is not ported; the document otherwise matches ISS_6.
+            // Down-convert the document to the selected older issue using the
+            // shared common/to41.xsl/to42.xsl/to50.xsl stylesheets (mirror
+            // toissue(); newsmc only supports down to issue 4.1).
+            smcDoc = ToIssue(smcDoc, _issue);
         }
 
         if (@out != null && Directory.Exists(@out))
@@ -408,6 +409,43 @@ public sealed class NewsmcTool : ITool
         }
 
         return EmbeddedResources.LoadXml("newsmc/scormcontentpackage.xml");
+    }
+
+    /// <summary>
+    /// Down-issue the document to an older S1000D issue using the shared
+    /// <c>common/to*.xsl</c> stylesheets (embedded under
+    /// <c>Resources/newdm/common/</c>). Mirrors <c>toissue</c>, which for newsmc
+    /// only supports down to issue 4.1.
+    /// </summary>
+    private static XmlDocument ToIssue(XmlDocument doc, Issue iss)
+    {
+        string? xsl = iss switch
+        {
+            Issue.Iss50 => "newdm/common/to50.xsl",
+            Issue.Iss42 => "newdm/common/to42.xsl",
+            Issue.Iss41 => "newdm/common/to41.xsl",
+            _ => null,
+        };
+        if (xsl == null) return doc;
+
+        var transform = new XslCompiledTransform();
+        using (Stream s = EmbeddedResources.Open(xsl)
+                          ?? throw new FileNotFoundException($"Embedded resource not found: {xsl}"))
+        using (var reader = XmlReader.Create(s))
+        {
+            transform.Load(reader);
+        }
+
+        var result = XmlUtils.NewDocument();
+        using (var sw = new StringWriter())
+        {
+            using (var xw = XmlWriter.Create(sw, transform.OutputSettings ?? new XmlWriterSettings()))
+            {
+                transform.Transform(doc, xw);
+            }
+            result.LoadXml(sw.ToString());
+        }
+        return result;
     }
 
     private void DumpTemplate(string path, TextWriter stderr)

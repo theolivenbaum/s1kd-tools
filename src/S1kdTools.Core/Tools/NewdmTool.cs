@@ -141,7 +141,6 @@ public sealed class NewdmTool : ITool
         bool techNameFlag = false;
         bool noOverwriteError = false;
         string dmcode = "";
-        bool skipDmc = false;
         bool genBrexRules = false;
         string? brexmapFname = null;
 
@@ -211,7 +210,6 @@ public sealed class NewdmTool : ITool
                 {
                     string code = NextArg(args, ref i, a, stderr);
                     dmcode = code.Contains('-') ? code : RandomCode(code);
-                    skipDmc = true;
                     break;
                 }
                 case "-N" or "--omit-issue":
@@ -1039,7 +1037,7 @@ public sealed class NewdmTool : ITool
     private static bool TemplateAvailableForIssue(string dmtype, Issue iss)
     {
         int v = (int)iss;
-        int I20 = (int)Issue.Iss20, I21 = (int)Issue.Iss21, I22 = (int)Issue.Iss22,
+        int I20 = (int)Issue.Iss20, I22 = (int)Issue.Iss22,
             I23 = (int)Issue.Iss23, I30 = (int)Issue.Iss30, I40 = (int)Issue.Iss40,
             I41 = (int)Issue.Iss41, I42 = (int)Issue.Iss42, I50 = (int)Issue.Iss50,
             I6 = (int)Issue.Iss6;

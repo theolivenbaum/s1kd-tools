@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml;
+using System.Xml.Xsl;
 
 namespace S1kdTools.Tools;
 
@@ -16,11 +17,11 @@ namespace S1kdTools.Tools;
 /// <see cref="XmlDocument"/> DOM — no XSLT is needed for the default issue.
 ///
 /// For issues earlier than 6 the C tool applies the shared
-/// <c>common/to&lt;NN&gt;.xsl</c> stylesheets to down-convert the document. Those
-/// stylesheets are not embedded in this port, so the element-renaming conversion
-/// is not performed; the issue-specific default BREX is still applied (matching
-/// the C tool's behaviour for that part). This deviation is documented for the
-/// record — the default and most common path (issue 6) is fully ported.
+/// <c>common/to&lt;NN&gt;.xsl</c> stylesheets to down-convert the document. The
+/// port reuses those stylesheets (embedded under <c>Resources/newdm/common/</c>)
+/// via <see cref="XslCompiledTransform"/>, mirroring <c>toissue</c>: the
+/// issue-specific default BREX is applied and the document is then structurally
+/// down-converted.
 /// </remarks>
 public sealed class NewcomTool : ITool
 {
@@ -327,10 +328,9 @@ public sealed class NewcomTool : ITool
                 {
                     SetBrex(commentDoc, brex, stderr);
                 }
-                // NOTE: the C tool here also down-converts the document with the
-                // common/to<NN>.xsl stylesheet. Those stylesheets are not
-                // embedded in this port, so the element-renaming conversion is
-                // skipped. See the class remarks.
+                // Down-convert the document to the selected older issue using the
+                // shared common/to<NN>.xsl stylesheets (mirror toissue()).
+                commentDoc = ToIssue(commentDoc, _issue);
             }
 
             // Resolve output path / directory.
@@ -407,6 +407,48 @@ public sealed class NewcomTool : ITool
             return XmlUtils.ReadDoc(src);
         }
         return EmbeddedResources.LoadXml("newcom/comment.xml");
+    }
+
+    /// <summary>
+    /// Down-issue the document to an older S1000D issue using the shared
+    /// <c>common/to*.xsl</c> stylesheets (embedded under
+    /// <c>Resources/newdm/common/</c>). Mirrors <c>toissue</c>.
+    /// </summary>
+    private static XmlDocument ToIssue(XmlDocument doc, Issue iss)
+    {
+        string? xsl = iss switch
+        {
+            Issue.Iss50 => "newdm/common/to50.xsl",
+            Issue.Iss42 => "newdm/common/to42.xsl",
+            Issue.Iss41 => "newdm/common/to41.xsl",
+            Issue.Iss40 => "newdm/common/to40.xsl",
+            Issue.Iss30 => "newdm/common/to30.xsl",
+            Issue.Iss23 => "newdm/common/to23.xsl",
+            Issue.Iss22 => "newdm/common/to22.xsl",
+            Issue.Iss21 => "newdm/common/to21.xsl",
+            Issue.Iss20 => "newdm/common/to20.xsl",
+            _ => null,
+        };
+        if (xsl == null) return doc;
+
+        var transform = new XslCompiledTransform();
+        using (Stream s = EmbeddedResources.Open(xsl)
+                          ?? throw new FileNotFoundException($"Embedded resource not found: {xsl}"))
+        using (var reader = XmlReader.Create(s))
+        {
+            transform.Load(reader);
+        }
+
+        var result = XmlUtils.NewDocument();
+        using (var sw = new StringWriter())
+        {
+            using (var xw = XmlWriter.Create(sw, transform.OutputSettings ?? new XmlWriterSettings()))
+            {
+                transform.Transform(doc, xw);
+            }
+            result.LoadXml(sw.ToString());
+        }
+        return result;
     }
 
     private Issue GetIssue(string iss, TextWriter stderr)

@@ -1249,7 +1249,7 @@ internal sealed class DispTextConfig
                 _rules.Add(new MatchRule
                 {
                     Matches = (ident, type, assert) =>
-                        type == "condition" && CondTypeRef(assert.OwnerDocument, ident) == id,
+                        type == "condition" && ident is not null && CondTypeRef(assert.OwnerDocument, ident) == id,
                     Rule = r,
                 });
             }

@@ -267,6 +267,203 @@ public class RefsToolTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // A target data module (the object a reference points at), carrying a title
+    // and issue/date metadata that -U/-I copy into the referencing object.
+    private static string TargetDm(string issueNumber, string inWork) =>
+        $"""
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmIdent>
+                <dmCode modelIdentCode="EX" systemDiffCode="A" systemCode="00"
+                        subSystemCode="0" subSubSystemCode="0" assyCode="01"
+                        disassyCode="00" disassyCodeVariant="A" infoCode="040"
+                        infoCodeVariant="A" itemLocationCode="D"/>
+                <issueInfo issueNumber="{issueNumber}" inWork="{inWork}"/>
+                <language languageIsoCode="en" countryIsoCode="CA"/>
+              </dmIdent>
+              <dmAddressItems>
+                <issueDate year="2026" month="06" day="25"/>
+                <dmTitle>
+                  <techName>Example assembly</techName>
+                  <infoName>Description</infoName>
+                </dmTitle>
+              </dmAddressItems>
+            </dmAddress>
+          </identAndStatusSection>
+          <content/>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void UpdateRefs_InjectsTitleFromMatchedObject()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            string target = "DMC-EX-A-00-00-01-00A-040A-D_001-00_EN-CA.XML";
+            WriteFixture(dir, target, TargetDm("001", "00"));
+
+            // -U updates matched dmRefs in place; output (the modified doc) is
+            // written to stdout because -F was not given.
+            var (code, outText, _) = Run("-U", "-D", "-d", dir, src);
+
+            Assert.Equal(0, code);
+            Assert.Contains("<dmRefAddressItems>", outText);
+            Assert.Contains("<techName>Example assembly</techName>", outText);
+            Assert.Contains("<infoName>Description</infoName>", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void UpdateRefIdent_UpdatesIssueInfoFromLatest()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            // The latest matching object is at issue 003 (the ref says 001).
+            string target = "DMC-EX-A-00-00-01-00A-040A-D_003-00_EN-CA.XML";
+            WriteFixture(dir, target, TargetDm("003", "00"));
+
+            // -I implies -U and -i: rewrite the ref's issueInfo/issueDate.
+            var (code, outText, _) = Run("-I", "-D", "-d", dir, src);
+
+            Assert.Equal(0, code);
+            // The dmRef now points at issue 003 and carries the latest issueDate.
+            Assert.Contains("issueNumber=\"003\"", outText);
+            Assert.Contains("<issueDate", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Overwrite_WritesUpdatedFileInPlace()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            string target = "DMC-EX-A-00-00-01-00A-040A-D_001-00_EN-CA.XML";
+            WriteFixture(dir, target, TargetDm("001", "00"));
+
+            // -F with -U overwrites the source file rather than printing to stdout.
+            var (code, outText, _) = Run("-U", "-F", "-D", "-d", dir, src);
+
+            Assert.Equal(0, code);
+            // Nothing of the document body is echoed to stdout.
+            Assert.DoesNotContain("<dmRefAddressItems>", outText);
+            string updated = File.ReadAllText(src);
+            Assert.Contains("<dmRefAddressItems>", updated);
+            Assert.Contains("Example assembly", updated);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void TagUnmatched_InsertsProcessingInstruction()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            // No target files -> the DM ref is unmatched and gets tagged.
+            var (_, outText, _) = Run("-X", "-D", "-d", dir, src);
+
+            Assert.Contains("<?unmatched?>", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void OutputValidTree_EmitsTreeWhenNoUnmatched()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            string target = "DMC-EX-A-00-00-01-00A-040A-D_001-00_EN-CA.XML";
+            WriteFixture(dir, target, "<dmodule/>");
+
+            // Only DM refs are considered; the one ref matches, so unmatched==0
+            // and the (original) tree is written to stdout.
+            var (code, outText, _) = Run("-o", "-D", "-d", dir, src);
+
+            Assert.Equal(0, code);
+            Assert.Contains("<dmodule>", outText);
+            Assert.Contains("<dmRef>", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void OutputValidTree_SuppressedWhenUnmatched()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            // No target file: the DM ref is unmatched, so no tree is emitted.
+            var (code, outText, _) = Run("-o", "-D", "-d", dir, src);
+
+            Assert.Equal(1, code);
+            Assert.DoesNotContain("<dmodule>", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void ExternalPubs_ResolvesAndReplacesRef()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            string src = WriteFixture(dir, "SRC.XML", ReferencingDm);
+            string extpubs = WriteFixture(dir, "extpubs.xml",
+                """
+                <externalPubs>
+                  <externalPubRef>
+                    <externalPubRefIdent>
+                      <externalPubCode>ABC-12345</externalPubCode>
+                      <externalPubTitle>ABC Manual</externalPubTitle>
+                    </externalPubRefIdent>
+                  </externalPubRef>
+                </externalPubs>
+                """);
+
+            // -U with -E and a custom .externalpubs file: the external pub ref is
+            // replaced with the richer definition (now carrying a title).
+            var (_, outText, _) = Run("-U", "-E", "-3", extpubs, "-M", src);
+
+            Assert.Contains("<externalPubTitle>ABC Manual</externalPubTitle>", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void WhereUsed_FindsReferencingObject()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"s1kd-refs-{Guid.NewGuid():N}");
+        try
+        {
+            // The referencing DM lives in the directory and references the target.
+            string referer = "DMC-EX-A-00-00-00-00A-040A-D_001-00_EN-CA.XML";
+            WriteFixture(dir, referer, ReferencingDm);
+
+            // The target object that is referenced by the referer.
+            string target = WriteFixture(dir, "DMC-EX-A-00-00-01-00A-040A-D_001-00_EN-CA.XML",
+                TargetDm("001", "00"));
+
+            // -w: list objects (in -d) that reference the target object.
+            var (_, outText, _) = Run("-w", "-D", "-d", dir, target);
+
+            Assert.Contains(referer, outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     [Fact]
     public void Version_Prints522()
     {

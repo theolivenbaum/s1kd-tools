@@ -13,10 +13,10 @@ namespace S1kdTools.Tools;
 /// </summary>
 /// <remarks>
 /// Faithful to issue 6 (the default). For older S1000D issues (-$ 2.x..5.0) the
-/// C tool applies a downissue XSLT (<c>common/to*.xsl</c>) which lives outside
-/// this tool's directory and is therefore not bundled here; for those issues the
-/// default BREX DM code is still set (as in the C), but the document is left in
-/// its issue-6 shape. This is the only intentional deviation.
+/// C tool applies a downissue XSLT (<c>common/to*.xsl</c>); the port reuses those
+/// stylesheets (embedded under <c>Resources/newdm/common/</c>) via
+/// <see cref="XslCompiledTransform"/>, mirroring <c>toissue</c>: the default BREX
+/// DM code is set (as in the C) and the document is then down-converted.
 /// </remarks>
 public sealed class NewdmlTool : ITool
 {
@@ -308,15 +308,21 @@ public sealed class NewdmlTool : ITool
 
             SortEntries(dmlDoc);
 
-            // Older issues: set the default BREX if none was given. The downissue
-            // transform itself is not bundled (see remarks).
-            if (_issue != DefaultIssue && _brexDmcode.Length == 0)
+            // Older issues: set the default BREX if none was given, then
+            // down-convert the document with the shared common/to<NN>.xsl
+            // stylesheets (mirror toissue()).
+            if (_issue != DefaultIssue)
             {
-                string? db = DefaultBrex(_issue!);
-                if (db != null)
+                if (_brexDmcode.Length == 0)
                 {
-                    SetBrex(dmlDoc, db, stderr);
+                    string? db = DefaultBrex(_issue!);
+                    if (db != null)
+                    {
+                        SetBrex(dmlDoc, db, stderr);
+                    }
                 }
+
+                dmlDoc = ToIssue(dmlDoc, _issue!);
             }
 
             // Determine output path.
@@ -1002,6 +1008,32 @@ public sealed class NewdmlTool : ITool
             var imported = doc.ImportNode(result.DocumentElement, true);
             doc.ReplaceChild(imported, doc.DocumentElement!);
         }
+    }
+
+    /// <summary>
+    /// Down-issue the document to an older S1000D issue using the shared
+    /// <c>common/to*.xsl</c> stylesheets (embedded under
+    /// <c>Resources/newdm/common/</c>). Mirrors <c>toissue</c>.
+    /// </summary>
+    private static XmlDocument ToIssue(XmlDocument doc, string issue)
+    {
+        string? resource = issue switch
+        {
+            "5.0" => "newdm/common/to50.xsl",
+            "4.2" => "newdm/common/to42.xsl",
+            "4.1" => "newdm/common/to41.xsl",
+            "4.0" => "newdm/common/to40.xsl",
+            "3.0" => "newdm/common/to30.xsl",
+            "2.3" => "newdm/common/to23.xsl",
+            "2.2" => "newdm/common/to22.xsl",
+            "2.1" => "newdm/common/to21.xsl",
+            "2.0" => "newdm/common/to20.xsl",
+            _ => null,
+        };
+        if (resource == null) return doc;
+
+        XslCompiledTransform xslt = LoadStylesheet(resource);
+        return Transform(xslt, doc, null);
     }
 
     private static XslCompiledTransform LoadStylesheet(string resource)

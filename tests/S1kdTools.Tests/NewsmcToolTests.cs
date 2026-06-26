@@ -220,4 +220,28 @@ public class NewsmcToolTests
         Assert.True(File.Exists(templatePath));
         Assert.Contains("scormContentPackage", File.ReadAllText(templatePath));
     }
+
+    [Fact]
+    public void Issue41_DownConvertsViaXslt()
+    {
+        string dir = TempDir();
+        try
+        {
+            var (code, _, err) = Run("-#", "TEST-12345-00001-00", "-@", dir, "-$", "4.1");
+            Assert.Equal(0, code);
+            Assert.Equal("", err);
+
+            string path = Directory.GetFiles(dir, "*.XML").Single();
+            string text = File.ReadAllText(path);
+            // The down-issue stylesheet rewrites the schema location to the
+            // selected issue's directory; the document is no longer issue 6.
+            Assert.Contains("S1000D_4-1", text);
+            Assert.DoesNotContain("S1000D_6", text);
+
+            // The root element must survive down-conversion.
+            var doc = Load(path);
+            Assert.Equal("scormContentPackage", doc.DocumentElement!.Name);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }
