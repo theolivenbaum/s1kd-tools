@@ -277,11 +277,19 @@ public sealed class ValidateTool : ITool
     private int ValidateFile(string fname, Context ctx)
     {
         XmlDocument doc;
+        string? source = null;
         try
         {
-            doc = fname == "-"
-                ? XmlUtils.ReadStream(Console.OpenStandardInput())
-                : XmlUtils.ReadDoc(fname);
+            if (fname == "-")
+            {
+                using var stdin = new StreamReader(Console.OpenStandardInput());
+                source = stdin.ReadToEnd();
+            }
+            else
+            {
+                source = File.ReadAllText(fname);
+            }
+            doc = XmlUtils.ReadMem(source);
         }
         catch (Exception ex) when (ex is XmlException or IOException or UnauthorizedAccessException)
         {
@@ -302,6 +310,14 @@ public sealed class ValidateTool : ITool
         }
 
         // Keep a copy of the original tree before extra processing (for -o).
+        // Build the source line map from the original parse, before any
+        // structural modification (strip-ns / remove-deleted only remove nodes,
+        // so surviving elements keep their mapped line — matching libxml2, which
+        // preserves the line numbers from the original parse).
+        LineInfo lineInfo = source != null
+            ? LineInfo.Build(doc, source)
+            : LineInfo.BuildFromFile(doc, fname);
+
         XmlDocument? validTree = null;
         if (ctx.OutputTree)
         {
@@ -329,7 +345,7 @@ public sealed class ValidateTool : ITool
         int err = 0;
 
         // ID / IDREF / IDREFS checks (libxml2 / System.Xml do not do these).
-        err += CheckIdrefs(doc, fname, ctx, reportNode);
+        err += CheckIdrefs(doc, fname, ctx, reportNode, lineInfo);
 
         // Schema validation.
         XmlElement? root = doc.DocumentElement;
@@ -420,7 +436,7 @@ public sealed class ValidateTool : ITool
     /// Check that xs:IDREF and xs:IDREFS attributes reference an existing @id.
     /// Mirrors <c>check_idrefs</c> in the C source.
     /// </summary>
-    private int CheckIdrefs(XmlDocument doc, string fname, Context ctx, XmlElement? reportNode)
+    private int CheckIdrefs(XmlDocument doc, string fname, Context ctx, XmlElement? reportNode, LineInfo lineInfo)
     {
         int err = 0;
 
@@ -431,7 +447,7 @@ public sealed class ValidateTool : ITool
             foreach (XmlNode node in badIdrefs)
             {
                 string id = node.Value ?? string.Empty;
-                int line = LineOf(node);
+                int line = lineInfo.LineOfNode(node);
                 if (ctx.Verbosity > Verbosity.Silent)
                 {
                     ctx.Stderr.WriteLine($"{Name}: ERROR: {fname} ({line}): No matching ID for '{id}'.");
@@ -456,7 +472,7 @@ public sealed class ValidateTool : ITool
                     XmlNode? match = doc.SelectSingleNode($"//*[@id='{id}']");
                     if (match == null)
                     {
-                        int line = LineOf(node);
+                        int line = lineInfo.LineOfNode(node);
                         if (ctx.Verbosity > Verbosity.Silent)
                         {
                             ctx.Stderr.WriteLine($"{Name}: ERROR: {fname} ({line}): No matching ID for '{id}'.");
@@ -652,13 +668,6 @@ public sealed class ValidateTool : ITool
             obj.AppendChild(imported);
             error.AppendChild(obj);
         }
-    }
-
-    private static int LineOf(XmlNode node)
-    {
-        // System.Xml does not retain line numbers on a loaded DOM; the C uses
-        // the parent element's source line. Without line info, report 0.
-        return 0;
     }
 
     private static int GetLine(Exception ex) => ex is XmlException xe ? xe.LineNumber : 0;

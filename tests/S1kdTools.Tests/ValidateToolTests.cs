@@ -223,4 +223,79 @@ public class ValidateToolTests
         Assert.Equal(1, code);
         Assert.Contains("Unknown option", errText);
     }
+
+    // The dangling internalRefId in BadIdrefDm is on the 5th source line
+    // (1:<dmodule>, 2:<content>, 3:<description>, 4:first <para>, 5:second
+    // <para>). The C reports the source line of the attribute's owner element
+    // (xmlGetLineNo(node->parent)); the port must match.
+    [Fact]
+    public void BadIdref_ErrorReportsOwnerElementSourceLine()
+    {
+        string path = TempFile(BadIdrefDm);
+        try
+        {
+            var (code, _, errText) = Run(path);
+            Assert.Equal(1, code);
+            Assert.Contains($"{path} (5): No matching ID for 'par-9999'.", errText);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void XmlReport_BadIdref_HasCorrectLineAttribute()
+    {
+        string path = TempFile(BadIdrefDm);
+        try
+        {
+            var (code, outText, _) = Run("-x", "-q", path);
+            Assert.Equal(1, code);
+            Assert.Contains("<error line=\"5\">", outText);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void XmlReport_BadIdrefs_HasCorrectLineAttribute()
+    {
+        // The warningRefs (xs:IDREFS) attribute is on the 5th source line:
+        // 1:<dmodule>, 2:<content>, 3:<warning>, 4:<description>, 5:<para ...>.
+        string path = TempFile(BadIdrefsDm);
+        try
+        {
+            var (code, outText, _) = Run("-x", "-q", path);
+            Assert.Equal(1, code);
+            Assert.Contains("<error line=\"5\">", outText);
+            Assert.Contains("No matching ID for 'wrn-0002'.", outText);
+        }
+        finally { File.Delete(path); }
+    }
+
+    // A start tag spanning multiple source lines: libxml2's xmlGetLineNo (and
+    // therefore the port) reports the line on which the start tag terminates.
+    [Fact]
+    public void BadIdref_MultiLineStartTag_ReportsTagEndLine()
+    {
+        const string dm =
+            """
+            <dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://x/descript.xsd">
+              <content>
+                <description>
+                  <para id="par-0001">First.</para>
+                  <para
+                     internalRefId="par-9999"
+                     >Dangling.</para>
+                </description>
+              </content>
+            </dmodule>
+            """;
+        string path = TempFile(dm);
+        try
+        {
+            // The <para ...> start tag opens on line 5 and closes on line 7.
+            var (code, _, errText) = Run(path);
+            Assert.Equal(1, code);
+            Assert.Contains($"{path} (7): No matching ID for 'par-9999'.", errText);
+        }
+        finally { File.Delete(path); }
+    }
 }

@@ -302,4 +302,119 @@ public class RepCheckToolTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    // A multi-line object placing each ref on a known source line. The C reports
+    // xmlGetLineNo(ref) — the line of the ref element's start tag. The -L list
+    // output is "<path>:<line>:<ident>".
+    private const string MultiLineObj =
+        """
+        <dmodule>
+          <content>
+            <description>
+              <para>
+                <functionalItemRef functionalItemNumber="FI001"/>
+              </para>
+              <warningRef warningIdentNumber="W001"/>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void ListRefs_ReportsCorrectSourceLines()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string obj = WriteTemp(dir, "OBJ.XML", MultiLineObj);
+
+            var (code, outText, _) = Run("-L", obj);
+            Assert.Equal(0, code);
+            // functionalItemRef start tag is on line 5; warningRef on line 7.
+            Assert.Contains($"{obj}:5:Functional item FI001", outText);
+            Assert.Contains($"{obj}:7:Warning W001", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void UnresolvedReference_ErrorReportsSourceLine()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string cir = WriteTemp(dir, "CIR.XML", Cir);
+            // functionalItemRef on line 5 references a non-existent item.
+            string obj = WriteTemp(dir, "OBJ.XML",
+                """
+                <dmodule>
+                  <content>
+                    <description>
+                      <para>
+                        <functionalItemRef functionalItemNumber="FI999"/>
+                      </para>
+                    </description>
+                  </content>
+                </dmodule>
+                """);
+
+            var (code, _, err) = Run("-R", cir, obj);
+            Assert.Equal(1, code);
+            Assert.Contains($"{obj} (5): Functional item FI999 not found.", err);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void XmlReport_RefHasCorrectLineAttribute()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string cir = WriteTemp(dir, "CIR.XML", Cir);
+            string obj = WriteTemp(dir, "OBJ.XML", MultiLineObj);
+
+            var (code, outText, _) = Run("-x", "-R", cir, obj);
+            Assert.Equal(0, code);
+
+            var report = new XmlDocument();
+            report.LoadXml(outText.Trim());
+
+            XmlElement? fin = report.SelectSingleNode("/repCheck/object/ref[@type='fin']") as XmlElement;
+            Assert.NotNull(fin);
+            Assert.Equal("5", fin!.GetAttribute("line"));
+
+            XmlElement? warn = report.SelectSingleNode("/repCheck/object/ref[@type='warn']") as XmlElement;
+            Assert.NotNull(warn);
+            Assert.Equal("7", warn!.GetAttribute("line"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    // A start tag spanning multiple lines: the reported line is where the start
+    // tag terminates, mirroring libxml2's xmlGetLineNo.
+    [Fact]
+    public void ListRefs_MultiLineStartTag_ReportsTagEndLine()
+    {
+        string dir = NewTempDir();
+        try
+        {
+            string obj = WriteTemp(dir, "OBJ.XML",
+                """
+                <dmodule>
+                  <content>
+                    <functionalItemRef
+                       functionalItemNumber="FI001"
+                       />
+                  </content>
+                </dmodule>
+                """);
+
+            var (code, outText, _) = Run("-L", obj);
+            Assert.Equal(0, code);
+            // Start tag opens on line 3 and terminates on line 5.
+            Assert.Contains($"{obj}:5:Functional item FI001", outText);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }
