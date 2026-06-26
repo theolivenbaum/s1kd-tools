@@ -384,4 +384,140 @@ public class UpissueToolTests
         Assert.Equal(0, vc);
         Assert.Contains("5.0.1", vOut);
     }
+
+    // ---- option-parsing fidelity -----------------------------------------
+
+    [Fact]
+    public void BundledShortFlags_AreSplit()
+    {
+        // -ife == -i -f -e : official upissue (003-00), overwrite, erase old.
+        string path = TempName(DmName);
+        File.WriteAllText(path, Fixtures.DataModule);
+        try
+        {
+            var (code, _, _) = Run("-ife", path);
+            Assert.Equal(0, code);
+
+            // -e erases the old file; -i bumps issue and resets inwork.
+            Assert.False(File.Exists(path), "old issue erased by bundled -e");
+            string expected = Path.Combine(Path.GetDirectoryName(path)!,
+                "DMC-EX-A-00-00-00-00A-040A-D_003-00_EN-CA.XML");
+            Assert.True(File.Exists(expected));
+
+            var ii = IssueInfo(expected);
+            Assert.Equal("003", ii.GetAttribute("issueNumber"));
+            Assert.Equal("00", ii.GetAttribute("inWork"));
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+
+    [Fact]
+    public void BundledShortFlags_ArgTakingFlagConsumesRestOfToken()
+    {
+        // -fc"Reason" : -f overwrite, then -c takes "Reason" from the rest.
+        const string xml =
+            """
+            <dmodule>
+              <identAndStatusSection>
+                <dmAddress><dmIdent>
+                  <issueInfo issueNumber="001" inWork="01"/>
+                </dmIdent>
+                <dmAddressItems><issueDate year="2020" month="01" day="01"/></dmAddressItems>
+                </dmAddress>
+                <dmStatus issueType="changed">
+                  <qualityAssurance><unverified/></qualityAssurance>
+                </dmStatus>
+              </identAndStatusSection>
+              <content><para>Hi</para></content>
+            </dmodule>
+            """;
+        string path = TempName("DMC-EX-A-00-00-00-00A-040A-D_001-01_EN-CA.XML");
+        File.WriteAllText(path, xml);
+        try
+        {
+            var (code, _, _) = Run("-fcReason", path);
+            Assert.Equal(0, code);
+
+            string expected = Path.Combine(Path.GetDirectoryName(path)!,
+                "DMC-EX-A-00-00-00-00A-040A-D_001-02_EN-CA.XML");
+            var doc = XmlUtils.ReadDoc(expected);
+            Assert.Equal("Reason", doc.SelectSingleNode("//reasonForUpdate/simplePara")!.InnerText);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+
+    [Fact]
+    public void BundledShortFlags_ArgTakingFlagAtEndTakesNextArg()
+    {
+        // -fc Reason : -c at end of bundle pulls the next argument.
+        const string xml =
+            """
+            <dmodule>
+              <identAndStatusSection>
+                <dmAddress><dmIdent>
+                  <issueInfo issueNumber="001" inWork="01"/>
+                </dmIdent>
+                <dmAddressItems><issueDate year="2020" month="01" day="01"/></dmAddressItems>
+                </dmAddress>
+                <dmStatus issueType="changed">
+                  <qualityAssurance><unverified/></qualityAssurance>
+                </dmStatus>
+              </identAndStatusSection>
+              <content><para>Hi</para></content>
+            </dmodule>
+            """;
+        string path = TempName("DMC-EX-A-00-00-00-00A-040A-D_001-01_EN-CA.XML");
+        File.WriteAllText(path, xml);
+        try
+        {
+            var (code, _, _) = Run("-fc", "Next reason", path);
+            Assert.Equal(0, code);
+
+            string expected = Path.Combine(Path.GetDirectoryName(path)!,
+                "DMC-EX-A-00-00-00-00A-040A-D_001-02_EN-CA.XML");
+            var doc = XmlUtils.ReadDoc(expected);
+            Assert.Equal("Next reason", doc.SelectSingleNode("//reasonForUpdate/simplePara")!.InnerText);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+
+    [Fact]
+    public void Libxml2LongOpts_AreAcceptedNotRejected()
+    {
+        // The libxml2 parser long-options must be accepted (getopt_long table),
+        // not treated as unknown options. --xml-catalog takes an argument.
+        string path = TempName(DmName);
+        File.WriteAllText(path, Fixtures.DataModule);
+        try
+        {
+            var (code, _, err) = Run("--huge", "--net", "--noent", "--xinclude",
+                "--parser-errors", "--parser-warnings", "--dtdload",
+                "--xml-catalog", "/tmp/none.xml", "-f", path);
+            Assert.Equal(0, code);
+            Assert.DoesNotContain("Unknown option", err);
+
+            string expected = Path.Combine(Path.GetDirectoryName(path)!,
+                "DMC-EX-A-00-00-00-00A-040A-D_002-02_EN-CA.XML");
+            Assert.True(File.Exists(expected));
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+
+    [Fact]
+    public void Help_ListsXmlParserOptions()
+    {
+        var (code, outText, _) = Run("-h");
+        Assert.Equal(0, code);
+        Assert.Contains("XML parser options:", outText);
+        Assert.Contains("--xml-catalog", outText);
+        Assert.Contains("--huge", outText);
+    }
+
+    [Fact]
+    public void UnknownShortFlag_InBundle_ReturnsExit2()
+    {
+        var (code, _, err) = Run("-fX", "file_001-01_EN.XML");
+        Assert.Equal(2, code);
+        Assert.Contains("Unknown option: -X", err);
+    }
 }
