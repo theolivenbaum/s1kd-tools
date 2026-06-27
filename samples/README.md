@@ -69,8 +69,9 @@ A harness:
 
 1. locates its dataset under `samples/datasets/<name>/`,
 2. runs a sequence of ported tools (`ls`, `validate`, `metadata`, `flatten`,
-   `brexcheck`, `refs`, `syncrefs`) over the real objects — the same in-process
-   `ITool.Run(...)` entry point the unit tests use,
+   `brexcheck`, `refs`, `syncrefs`, and `s1kd2db` DocBook conversion) over the
+   real objects — the same in-process `ITool.Run(...)` entry point the unit
+   tests use,
 3. **clears** `samples/out/<name>/` and writes the produced artifacts
    (flattened publications, metadata listings, validation/BREX XML reports)
    into it, and

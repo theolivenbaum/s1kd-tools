@@ -7,11 +7,11 @@ upstream CSDB objects and writes the resulting artifacts to
 
 | Project | Dataset | Tools exercised |
 |---|---|---|
-| `Samples.Fossig` | `fossig` | ls, validate, metadata, flatten, brexcheck |
+| `Samples.Fossig` | `fossig` | ls, validate, metadata, flatten, brexcheck, s1kd2db (DocBook) |
 | `Samples.S1000DSpec` | `s1000d-spec` | ls, validate, metadata, flatten, brexcheck, refs |
 | `Samples.ToolsDoc` | `s1kd-tools-doc` | ls, validate, metadata, flatten, brexcheck |
 | `Samples.XslStylesheets` | `xsl-stylesheets` | ls, validate, metadata, flatten |
-| `Samples.S1kd2db` | `s1kd2db` | validate, metadata, syncrefs |
+| `Samples.S1kd2db` | `s1kd2db` | validate, metadata, syncrefs, s1kd2db (DocBook, both profiles) |
 | `Samples.Common` | — | shared `SampleHarness` helper (not runnable) |
 
 ## How it works

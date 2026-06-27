@@ -24,4 +24,13 @@ h.Run("extract metadata", new MetadataTool(),
 h.Run("sync references table", new SyncrefsTool(),
     new[] { dm }, saveAs: "syncrefs.xml");
 
+// 4. Convert it to DocBook 5 — the capability this project's stylesheet
+//    inspired, now ported in-process (no xsltproc/Java). Both stylesheet
+//    profiles are exercised: the lean kibook/s1kd2db (default) and the
+//    Smart Avionics s1000dtodb set (-S).
+h.Run("convert to DocBook 5 (s1kd2db profile)", new S1kd2dbTool(),
+    new[] { dm }, saveAs: "docbook-s1kd2db.xml");
+h.Run("convert to DocBook 5 (smart profile)", new S1kd2dbTool(),
+    new[] { "-S", dm }, saveAs: "docbook-smart.xml");
+
 return h.Summarize();

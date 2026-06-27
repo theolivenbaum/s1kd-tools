@@ -163,6 +163,18 @@ Publication:
       assembly manifest in single-file mode). See README "Packaging".
 - [x] Port/port-equivalent of `libs1kd` tests — `Libs1kdParityTests.cs` ports all
       six C test functions from `reference/.../libs1kd/tests/tests.c`.
+- [x] DocBook 5 conversion (companion to the s1kd-tools) — `S1kdTools.DocBook.DocBookConverter`
+      ports the S1000D→DocBook stage of two upstream projects, run in-process on
+      `XslCompiledTransform` (no xsltproc/Java). Two embedded profiles:
+      `S1kd2db` (kibook/s1kd2db, default) and `SmartAvionics`
+      (kibook/S1000D-XSL-Stylesheets `s1000dtodb`, 12-file set with broader
+      coverage). Exposed as `s1kd s1kd2db [-S]`. The only stylesheet change is a
+      one-line shim replacing the unsupported `unparsed-entity-uri()` with the
+      `EntityUriResolver` extension (resolves ICN graphic entities from the DTD/
+      info-entity map); `xsl:include`s load from embedded resources via
+      `EmbeddedXslResolver`. Validated: both profiles convert all 384 sample DMs
+      (Issues 4.2/5.0) to well-formed DocBook 5. NOTE: the DocBook→FO→PDF
+      rendering tail (Apache FOP) is intentionally out of scope.
 - [x] Real-world testing dataset under `samples/` — five curated CSDBs sourced
       from upstream open-source S1000D projects (FOSSIG, the S1000D spec-as-CSDB,
       s1kd-tools-doc, S1000D-XSL-Stylesheets, s1kd2db), spanning schema Issues

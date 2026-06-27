@@ -1,10 +1,16 @@
 # S1000D XSL Stylesheets — sample publication
 
 S1000D source files shipped with Smart Avionics' **S1000D XSL Stylesheets**
-(the rendering pipeline behind `s1kd2pdf`). The XSLT rendering itself is *out of
-scope* for this library port, but the bundled S1000D documents are valuable
-because they come from a **different authoring toolchain** than the kibook
-datasets and mix schema **Issues 4.0 and 4.2**.
+(the rendering pipeline behind `s1kd2pdf`). The bundled S1000D documents are
+valuable because they come from a **different authoring toolchain** than the
+kibook datasets and mix schema **Issues 4.0 and 4.2**.
+
+The project's **S1000D → DocBook** stage (`s1000dtodb`) **is ported**: it is
+embedded in `S1kdTools.Core` and available as the `SmartAvionics` profile of
+`S1kdTools.DocBook.DocBookConverter` (`s1kd s1kd2db -S`). The **DocBook → XSL-FO
+→ PDF** stage (`dbtofo` + Apache FOP) is *not* ported — it needs the external
+DocBook-XSL suite and a Java FO formatter; final rendering is left to downstream
+DocBook tooling.
 
 ## Source
 

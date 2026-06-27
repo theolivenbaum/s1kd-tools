@@ -38,4 +38,11 @@ h.Run("BREX-check content data modules", new BrexCheckTool(),
     contentDms.Prepend(brex).Prepend("-b").Prepend("-x").ToArray(),
     saveAs: "brexcheck-report.xml");
 
+// 6. Convert the descriptive module that embeds a figure to DocBook 5. This
+//    exercises the graphic-entity resolution shim (the ICN unparsed entity
+//    declared in the DM's DTD becomes the DocBook imagedata fileref).
+string figureDm = h.Files("DMC-*-01-01-*-040A-*.XML").Single();
+h.Run("convert a data module to DocBook 5", new S1kd2dbTool(),
+    new[] { figureDm }, saveAs: "docbook.xml");
+
 return h.Summarize();
