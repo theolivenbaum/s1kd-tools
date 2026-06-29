@@ -151,6 +151,18 @@ Publication:
       evaluator); -p/-P display preformatting (uomdisplay.xsl reimplemented in
       DOM: quantity/group/value/tolerance templates + picture format-number).
 
+## 3b. .NET-only additions (no C counterpart)
+- [x] s1kd-render — render CSDB objects to a presentation format via FOP.Sharp
+      (the C# port of Apache FOP, NuGet `FOP.Sharp`). The upstream C tools leave
+      rendering to an external XSL-FO processor; this brings it in-process. A
+      presentation stylesheet (`-s`) transforms the object to XSL-FO, then it is
+      rendered to one of FOP's output targets: PDF (default, plus `-n` native
+      PdfSharp-free renderer), plain text, Markdown or HTML. Also: `-F` XSL-FO
+      input (skip transform), `-t` format / extension inference, `-o` output
+      (auto-named per input otherwise; stdin→stdout), `-p name=value` stylesheet
+      params, `-d` font directories. Programmatic API: `RenderTool.Render(foXml,
+      format, fontDirs, native) -> byte[]`. Tests in `RenderToolTests.cs`.
+
 ## 4. Cross-cutting
 - [x] Common option handling: `--version`, `-h/--help` done per tool; libxml2
       parse opts (`--huge`, `--net`, `--noent`, `--xinclude`, `--xml-catalog`)

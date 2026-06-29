@@ -27,4 +27,11 @@
     <EmbeddedResource Include="Resources/**/*" />
   </ItemGroup>
 
+  <!-- FOP.Sharp: the C# port of Apache FOP. Powers s1kd-render, which renders
+       XSL-FO (produced from a S1000D object via a presentation stylesheet, or
+       supplied directly) to PDF, plain text, Markdown or HTML. -->
+  <ItemGroup>
+    <PackageReference Include="FOP.Sharp" Version="26.6.2308" />
+  </ItemGroup>
+
 </Project>
