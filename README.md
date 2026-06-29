@@ -58,7 +58,17 @@ A set of small, free and open source software tools for manipulating
 >
 > # Pass stylesheet parameters and pick the format explicitly:
 > s1kd render -s style.xsl -p lang=en -t html -o DM.html DMC-….XML
+>
+> # Merge a whole set of data modules into ONE combined PDF:
+> s1kd render -s presentation.xsl -o manual.pdf DMC-*.XML
 > ```
+>
+> **Multiple inputs.** With an explicit `-o`, every input object is transformed
+> to XSL-FO and the results are *merged into a single document* — the page
+> masters are unioned and each object's `fo:page-sequence`s are concatenated, so
+> a set of data modules renders as one continuous PDF (one publication). Without
+> `-o`, each input renders to its own file named after it; a lone object on
+> stdin renders to stdout.
 >
 > Run `s1kd render --help` for the full option list (`-F` for XSL-FO input,
 > `-t` format, `-d` font directories, `-n` native PDF renderer, `-p`

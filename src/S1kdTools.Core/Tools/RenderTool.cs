@@ -197,15 +197,6 @@ public sealed class RenderTool : ITool
             files.Add("-");
         }
 
-        if (outfile != null && files.Count > 1)
-        {
-            if (verbosity >= Verbosity.Normal)
-            {
-                stderr.WriteLine($"{ErrPrefix}-o cannot be used with multiple inputs; outputs are auto-named.");
-            }
-            return ExitBadArgs;
-        }
-
         XslCompiledTransform? style = null;
         if (!foInput)
         {
@@ -223,10 +214,25 @@ public sealed class RenderTool : ITool
             }
         }
 
+        // Output strategy:
+        //  * an explicit -o collects ALL inputs into a single rendered document
+        //    (their XSL-FO is merged, then rendered once — a single PDF, etc.);
+        //  * with no -o, each input renders to its own file (auto-named from the
+        //    input), and a lone stdin object renders to stdout.
+        if (outfile != null)
+        {
+            RenderFormat fmt = format ?? FormatFromExtension(outfile);
+            return RenderToTarget(files, style, xsltParams, outfile, fmt, fontDirs, native, verbosity, stderr)
+                ? ExitSuccess
+                : ExitError;
+        }
+
+        RenderFormat perFileFmt = format ?? RenderFormat.Pdf;
         int exit = ExitSuccess;
         foreach (string file in files)
         {
-            if (!RenderOne(file, style, xsltParams, outfile, format, fontDirs, native, verbosity, stdout, stderr))
+            string? target = file == "-" ? null : DeriveOutputPath(file, perFileFmt);
+            if (!RenderToTarget(new[] { file }, style, xsltParams, target, perFileFmt, fontDirs, native, verbosity, stderr))
             {
                 exit = ExitError;
             }
@@ -235,81 +241,68 @@ public sealed class RenderTool : ITool
         return exit;
     }
 
-    private bool RenderOne(string file, XslCompiledTransform? style, IReadOnlyDictionary<string, string> xsltParams,
-        string? outfile, RenderFormat? format, IReadOnlyList<string> fontDirs, bool native,
-        Verbosity verbosity, TextWriter stdout, TextWriter stderr)
+    /// <summary>
+    /// Produce the XSL-FO for each input, merge it into a single FO document, and
+    /// render that to <paramref name="target"/> (or stdout when <paramref name="target"/>
+    /// is null). Returns false on any failure (already reported).
+    /// </summary>
+    private bool RenderToTarget(IReadOnlyList<string> files, XslCompiledTransform? style,
+        IReadOnlyDictionary<string, string> xsltParams, string? target, RenderFormat fmt,
+        IReadOnlyList<string> fontDirs, bool native, Verbosity verbosity, TextWriter stderr)
     {
-        // Resolve the output target and format. With no -o the output is derived
-        // from the input name (replacing its extension); stdin with no -o goes to
-        // stdout. The format is the explicit -t, else inferred from the output
-        // extension, else PDF.
-        bool toStdout = outfile == null && file == "-";
-        RenderFormat fmt = format ?? (outfile != null ? FormatFromExtension(outfile) : RenderFormat.Pdf);
-        string? target = outfile ?? (toStdout ? null : DeriveOutputPath(file, fmt));
-
-        string foXml;
-        try
+        var foDocs = new List<XmlDocument>(files.Count);
+        foreach (string file in files)
         {
-            foXml = ProduceFo(file, style, xsltParams);
-        }
-        catch (Exception ex) when (ex is IOException or XmlException or XsltException or UnauthorizedAccessException)
-        {
-            if (verbosity >= Verbosity.Normal)
+            try
             {
-                stderr.WriteLine($"{ErrPrefix}Could not process {InputLabel(file)}: {ex.Message}");
+                foDocs.Add(ProduceFo(file, style, xsltParams));
             }
-            return false;
+            catch (Exception ex) when (ex is IOException or XmlException or XsltException or UnauthorizedAccessException)
+            {
+                if (verbosity >= Verbosity.Normal)
+                {
+                    stderr.WriteLine($"{ErrPrefix}Could not process {InputLabel(file)}: {ex.Message}");
+                }
+                return false;
+            }
         }
 
-        byte[] output;
+        XmlDocument fo = MergeFo(foDocs);
+
         try
         {
-            output = Render(foXml, fmt, fontDirs, native);
+            using Stream output = target != null
+                ? File.Create(target)
+                : Console.OpenStandardOutput();
+            using (Stream foStream = SerializeFo(fo))
+            {
+                Render(foStream, output, fmt, fontDirs, native);
+            }
         }
         catch (Exception ex)
         {
             if (verbosity >= Verbosity.Normal)
             {
-                stderr.WriteLine($"{ErrPrefix}Failed to render {InputLabel(file)}: {ex.Message}");
+                stderr.WriteLine($"{ErrPrefix}Failed to render to {target ?? "stdout"}: {ex.Message}");
             }
             return false;
         }
 
         if (verbosity >= Verbosity.Verbose)
         {
-            stderr.WriteLine($"{InfPrefix}Rendered {InputLabel(file)} to {(target ?? "stdout")} ({fmt}).");
-        }
-
-        try
-        {
-            if (target != null)
-            {
-                File.WriteAllBytes(target, output);
-            }
-            else
-            {
-                using Stream os = Console.OpenStandardOutput();
-                os.Write(output, 0, output.Length);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            if (verbosity >= Verbosity.Normal)
-            {
-                stderr.WriteLine($"{ErrPrefix}Could not write {target}: {ex.Message}");
-            }
-            return false;
+            string sources = files.Count == 1 ? InputLabel(files[0]) : $"{files.Count} objects";
+            stderr.WriteLine($"{InfPrefix}Rendered {sources} to {(target ?? "stdout")} ({fmt}).");
         }
 
         return true;
     }
 
     /// <summary>
-    /// Produce the XSL-FO source for an input object: transform it through the
+    /// Produce the XSL-FO document for an input object: transform it through the
     /// presentation <paramref name="style"/> (passing <paramref name="xsltParams"/>),
     /// or, when <paramref name="style"/> is null, take the input verbatim as FO.
     /// </summary>
-    private static string ProduceFo(string file, XslCompiledTransform? style,
+    private static XmlDocument ProduceFo(string file, XslCompiledTransform? style,
         IReadOnlyDictionary<string, string> xsltParams)
     {
         XmlDocument doc = file == "-"
@@ -318,7 +311,7 @@ public sealed class RenderTool : ITool
 
         if (style == null)
         {
-            return XmlUtils.ToXmlString(doc);
+            return doc;
         }
 
         var argList = new XsltArgumentList();
@@ -327,63 +320,215 @@ public sealed class RenderTool : ITool
             argList.AddParam(p.Key, string.Empty, p.Value);
         }
 
+        var result = new XmlDocument { PreserveWhitespace = true };
         using var buffer = new MemoryStream();
-        var writerSettings = new XmlWriterSettings
-        {
-            CloseOutput = false,
-            OmitXmlDeclaration = true,
-        };
-        using (XmlWriter writer = XmlWriter.Create(buffer, writerSettings))
+        using (XmlWriter writer = XmlWriter.Create(buffer, new XmlWriterSettings { CloseOutput = false }))
         {
             style.Transform(doc, argList, writer);
         }
+        buffer.Position = 0;
+        result.Load(buffer);
+        return result;
+    }
 
-        return new UTF8Encoding(false).GetString(buffer.ToArray());
+    private const string FoNs = "http://www.w3.org/1999/XSL/Format";
+
+    /// <summary>
+    /// Merge several XSL-FO documents into one renderable document. The first
+    /// document is the base; every subsequent document contributes its
+    /// <c>fo:page-sequence</c>es (appended in order) and any page masters not
+    /// already present (matched by <c>master-name</c>), plus its bookmark-tree
+    /// entries. A single input is returned unchanged.
+    /// </summary>
+    public static XmlDocument MergeFo(IReadOnlyList<XmlDocument> foDocs)
+    {
+        ArgumentNullException.ThrowIfNull(foDocs);
+        if (foDocs.Count == 0)
+        {
+            throw new ArgumentException("No FO documents to merge.", nameof(foDocs));
+        }
+        if (foDocs.Count == 1)
+        {
+            return foDocs[0];
+        }
+
+        XmlDocument baseDoc = foDocs[0];
+        XmlElement root = baseDoc.DocumentElement
+            ?? throw new XmlException("XSL-FO document has no root element.");
+
+        XmlNode? masterSet = Child(root, "layout-master-set");
+        var seenMasters = new HashSet<string>(StringComparer.Ordinal);
+        if (masterSet != null)
+        {
+            foreach (XmlNode m in masterSet.ChildNodes)
+            {
+                string? name = (m as XmlElement)?.GetAttribute("master-name");
+                if (!string.IsNullOrEmpty(name))
+                {
+                    seenMasters.Add(name);
+                }
+            }
+        }
+
+        XmlNode? bookmarkTree = Child(root, "bookmark-tree");
+
+        for (int i = 1; i < foDocs.Count; i++)
+        {
+            XmlElement? other = foDocs[i].DocumentElement;
+            if (other == null)
+            {
+                continue;
+            }
+
+            // Fold in any page masters this document defines that the base lacks.
+            XmlNode? otherMasters = Child(other, "layout-master-set");
+            if (otherMasters != null && masterSet != null)
+            {
+                foreach (XmlNode m in otherMasters.ChildNodes)
+                {
+                    string? name = (m as XmlElement)?.GetAttribute("master-name");
+                    if (name != null && !seenMasters.Add(name))
+                    {
+                        continue; // a master of this name already exists; assume identical
+                    }
+                    masterSet.AppendChild(baseDoc.ImportNode(m, true));
+                }
+            }
+
+            // Append the document's bookmarks (after the master set, before flows).
+            XmlNode? otherBookmarks = Child(other, "bookmark-tree");
+            if (otherBookmarks != null)
+            {
+                if (bookmarkTree == null)
+                {
+                    bookmarkTree = baseDoc.ImportNode(otherBookmarks, true);
+                    root.InsertAfter(bookmarkTree, masterSet);
+                }
+                else
+                {
+                    foreach (XmlNode bm in otherBookmarks.ChildNodes)
+                    {
+                        bookmarkTree.AppendChild(baseDoc.ImportNode(bm, true));
+                    }
+                }
+            }
+
+            // Append every page-sequence so the documents render back to back.
+            foreach (XmlNode seq in ChildList(other, "page-sequence"))
+            {
+                root.AppendChild(baseDoc.ImportNode(seq, true));
+            }
+        }
+
+        return baseDoc;
+    }
+
+    private static XmlNode? Child(XmlNode parent, string localName)
+    {
+        foreach (XmlNode n in parent.ChildNodes)
+        {
+            if (n.NodeType == XmlNodeType.Element && n.LocalName == localName && n.NamespaceURI == FoNs)
+            {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    private static List<XmlNode> ChildList(XmlNode parent, string localName)
+    {
+        var list = new List<XmlNode>();
+        foreach (XmlNode n in parent.ChildNodes)
+        {
+            if (n.NodeType == XmlNodeType.Element && n.LocalName == localName && n.NamespaceURI == FoNs)
+            {
+                list.Add(n);
+            }
+        }
+        return list;
+    }
+
+    private static MemoryStream SerializeFo(XmlDocument fo)
+    {
+        var ms = new MemoryStream();
+        using (XmlWriter writer = XmlWriter.Create(ms, new XmlWriterSettings
+        {
+            CloseOutput = false,
+            Encoding = new UTF8Encoding(false),
+        }))
+        {
+            fo.Save(writer);
+        }
+        ms.Position = 0;
+        return ms;
     }
 
     /// <summary>
-    /// Render an XSL-FO document to the requested format, returning the encoded
-    /// bytes (UTF-8 for the text formats). This is the programmatic entry point
-    /// used by the CLI and tests.
+    /// Render an XSL-FO document (read from <paramref name="foInput"/>) to the
+    /// requested format, writing the result to <paramref name="output"/>. This is
+    /// the stream-based entry point backed by FOP.Sharp's stream renderers; the
+    /// caller owns both streams. Text formats are written as UTF-8.
+    /// </summary>
+    public static void Render(Stream foInput, Stream output, RenderFormat format,
+        IReadOnlyList<string>? fontDirs = null, bool native = false)
+    {
+        ArgumentNullException.ThrowIfNull(foInput);
+        ArgumentNullException.ThrowIfNull(output);
+
+        switch (format)
+        {
+            case RenderFormat.Text:
+                new PlainTextRenderer().Convert(foInput, output);
+                break;
+            case RenderFormat.Markdown:
+                new MarkdownRenderer().Convert(foInput, output);
+                break;
+            case RenderFormat.Html:
+                new HtmlRenderer().Convert(foInput, output);
+                break;
+            default:
+                FopProcessor processor = CreatePdfProcessor(fontDirs);
+                if (native)
+                {
+                    processor.ConvertNative(foInput, output);
+                }
+                else
+                {
+                    processor.Convert(foInput, output);
+                }
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Render an XSL-FO string to the requested format, returning the encoded
+    /// bytes (UTF-8 for the text formats). Convenience wrapper over the
+    /// stream-based <see cref="Render(Stream, Stream, RenderFormat, IReadOnlyList{string}, bool)"/>.
     /// </summary>
     public static byte[] Render(string foXml, RenderFormat format,
         IReadOnlyList<string>? fontDirs = null, bool native = false)
     {
         ArgumentNullException.ThrowIfNull(foXml);
+        using var input = new MemoryStream(Utf8(foXml));
+        using var output = new MemoryStream();
+        Render(input, output, format, fontDirs, native);
+        return output.ToArray();
+    }
 
-        switch (format)
+    private static FopProcessor CreatePdfProcessor(IReadOnlyList<string>? fontDirs)
+    {
+        var processor = new FopProcessor();
+        if (fontDirs != null)
         {
-            case RenderFormat.Text:
-                return Utf8(new PlainTextRenderer().Convert(foXml));
-            case RenderFormat.Markdown:
-                return Utf8(new MarkdownRenderer().Convert(foXml));
-            case RenderFormat.Html:
-                return Utf8(new HtmlRenderer().Convert(foXml));
-            default:
-                var processor = new FopProcessor();
-                if (fontDirs != null)
+            foreach (string dir in fontDirs)
+            {
+                if (Directory.Exists(dir))
                 {
-                    foreach (string dir in fontDirs)
-                    {
-                        if (Directory.Exists(dir))
-                        {
-                            processor.RegisterFontsDirectory(dir);
-                        }
-                    }
+                    processor.RegisterFontsDirectory(dir);
                 }
-
-                if (native)
-                {
-                    using var ms = new MemoryStream();
-                    using (var fo = new MemoryStream(Utf8(foXml)))
-                    {
-                        processor.ConvertNative(fo, ms);
-                    }
-                    return ms.ToArray();
-                }
-
-                return processor.Convert(foXml);
+            }
         }
+        return processor;
     }
 
     private static byte[] Utf8(string s) => new UTF8Encoding(false).GetBytes(s);
@@ -479,12 +624,17 @@ public sealed class RenderTool : ITool
         stdout.WriteLine("A presentation stylesheet (-s) transforms each object into XSL-FO, which is");
         stdout.WriteLine("then rendered. Use -F when the input is already XSL-FO.");
         stdout.WriteLine();
+        stdout.WriteLine("With several inputs and an explicit -o, the objects are merged into a single");
+        stdout.WriteLine("rendered document (e.g. one combined PDF). Without -o, each input renders to");
+        stdout.WriteLine("its own file (named after the input); a lone stdin object renders to stdout.");
+        stdout.WriteLine();
         stdout.WriteLine("Options:");
         stdout.WriteLine("  -s, --stylesheet <xsl>  XSLT stylesheet that produces XSL-FO from the object.");
         stdout.WriteLine("  -F, --fo                Input is already XSL-FO; skip the transform.");
         stdout.WriteLine("  -t, --format <fmt>      Output format: pdf (default), text, md or html.");
-        stdout.WriteLine("  -o, --out <file>        Output file (single input only). Default: derived");
-        stdout.WriteLine("                          from the input name, or stdout when reading stdin.");
+        stdout.WriteLine("  -o, --out <file>        Output file. With multiple inputs they are merged");
+        stdout.WriteLine("                          into this one file. Default: derived from each input");
+        stdout.WriteLine("                          name, or stdout when reading stdin.");
         stdout.WriteLine("  -p, --param <n=v>       Pass a parameter to the stylesheet (repeatable).");
         stdout.WriteLine("  -d, --fontdir <dir>     Register TTF/OTF fonts from <dir> (repeatable, PDF).");
         stdout.WriteLine("  -n, --native            Use the native (PdfSharp-free) PDF renderer.");

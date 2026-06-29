@@ -17,6 +17,18 @@ public class RenderToolTests
         "<fo:block>Rendered via FOP.Sharp.</fo:block>" +
         "</fo:flow></fo:page-sequence></fo:root>";
 
+    // A second FO document, reusing the same master name ("p") so the merge can
+    // be checked for master de-duplication.
+    private const string Fo2 =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+        "<fo:root xmlns:fo=\"http://www.w3.org/1999/XSL/Format\">" +
+        "<fo:layout-master-set>" +
+        "<fo:simple-page-master master-name=\"p\" page-width=\"210mm\" page-height=\"297mm\" margin=\"20mm\">" +
+        "<fo:region-body/></fo:simple-page-master></fo:layout-master-set>" +
+        "<fo:page-sequence master-reference=\"p\"><fo:flow flow-name=\"xsl-region-body\">" +
+        "<fo:block font-size=\"18pt\" font-weight=\"bold\">Second document</fo:block>" +
+        "</fo:flow></fo:page-sequence></fo:root>";
+
     // A tiny S1000D-ish source document plus a presentation stylesheet that
     // turns it into XSL-FO, exercising the transform path and a parameter.
     private const string Source =
@@ -189,12 +201,83 @@ public class RenderToolTests
     }
 
     [Fact]
-    public void Cli_MultipleInputsWithExplicitOutput_IsAnError()
+    public void Cli_MultipleInputsWithExplicitOutput_MergeIntoOneDocument()
     {
-        var (code, _, err) = Run("-F", "-o", "out.pdf", "a.fo", "b.fo");
+        string a = TempFile(".fo", Fo);
+        string b = TempFile(".fo", Fo2);
+        string outPath = TempFile(".txt");
+        try
+        {
+            var (code, _, err) = Run("-F", "-o", outPath, a, b);
 
-        Assert.Equal(2, code);
-        Assert.Contains("multiple inputs", err);
+            Assert.Equal(0, code);
+            Assert.Equal(string.Empty, err);
+            // Both objects' content ends up in the single merged output.
+            string text = File.ReadAllText(outPath);
+            Assert.Contains("Hello S1000D", text);
+            Assert.Contains("Second document", text);
+        }
+        finally
+        {
+            File.Delete(a);
+            File.Delete(b);
+            File.Delete(outPath);
+        }
+    }
+
+    [Fact]
+    public void Cli_MultipleInputsWithExplicitOutput_ProduceOnePdf()
+    {
+        string a = TempFile(".fo", Fo);
+        string b = TempFile(".fo", Fo2);
+        string outPath = TempFile(".pdf");
+        try
+        {
+            var (code, _, _) = Run("-F", "-o", outPath, a, b);
+
+            Assert.Equal(0, code);
+            byte[] bytes = File.ReadAllBytes(outPath);
+            Assert.Equal("%PDF-", Encoding.ASCII.GetString(bytes, 0, 5));
+        }
+        finally
+        {
+            File.Delete(a);
+            File.Delete(b);
+            File.Delete(outPath);
+        }
+    }
+
+    [Fact]
+    public void MergeFo_ConcatenatesPageSequencesAndDedupesMasters()
+    {
+        var d1 = new System.Xml.XmlDocument { PreserveWhitespace = true };
+        d1.LoadXml(Fo);
+        var d2 = new System.Xml.XmlDocument { PreserveWhitespace = true };
+        d2.LoadXml(Fo2);
+
+        System.Xml.XmlDocument merged = RenderTool.MergeFo(new[] { d1, d2 });
+        var ns = new System.Xml.XmlNamespaceManager(merged.NameTable);
+        ns.AddNamespace("fo", "http://www.w3.org/1999/XSL/Format");
+
+        // Both page-sequences are present...
+        Assert.Equal(2, merged.SelectNodes("/fo:root/fo:page-sequence", ns)!.Count);
+        // ...under a single layout-master-set whose identically-named masters
+        // (both fixtures use master "p") are deduped to one.
+        Assert.Equal(1, merged.SelectNodes("/fo:root/fo:layout-master-set", ns)!.Count);
+        Assert.Equal(1, merged.SelectNodes(
+            "/fo:root/fo:layout-master-set/fo:simple-page-master", ns)!.Count);
+    }
+
+    [Fact]
+    public void Render_StreamToStream_WritesOutput()
+    {
+        using var input = new MemoryStream(Encoding.UTF8.GetBytes(Fo));
+        using var output = new MemoryStream();
+
+        RenderTool.Render(input, output, RenderTool.RenderFormat.Text);
+
+        string text = Encoding.UTF8.GetString(output.ToArray());
+        Assert.Contains("Hello S1000D", text);
     }
 
     [Fact]

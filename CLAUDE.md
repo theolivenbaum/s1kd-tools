@@ -83,9 +83,14 @@ NuGet package (a C# port of Apache FOP), referenced from `S1kdTools.Core`. A
 presentation stylesheet (`-s`) transforms a CSDB object into XSL-FO, which
 FOP.Sharp renders to one of its supported targets: **PDF** (`FopProcessor` /
 the native PdfSharp-free renderer), plain **text**, **Markdown** or **HTML**
-(`Fop.Render.Text.*`). The pure entry point is
-`RenderTool.Render(foXml, format, fontDirs, native) → byte[]`; the CLI handles
-IO, format inference and per-input output naming around it.
+(`Fop.Render.Text.*`). Rendering is stream-based: the core entry point is
+`RenderTool.Render(Stream foInput, Stream output, format, fontDirs, native)`
+(backed by FOP.Sharp's `Convert(Stream, Stream)` methods), with a
+`Render(string foXml, …) → byte[]` convenience wrapper. The CLI writes straight
+to the destination stream (a file or stdout) and handles format inference and
+output naming around it. Multiple inputs given with an explicit `-o` are merged
+into one FO document (`RenderTool.MergeFo`: unioned `layout-master-set`,
+concatenated `page-sequence`s) and rendered once — a single combined PDF.
 
 ## CLI conventions
 

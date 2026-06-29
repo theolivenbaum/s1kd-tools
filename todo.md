@@ -158,10 +158,15 @@ Publication:
       presentation stylesheet (`-s`) transforms the object to XSL-FO, then it is
       rendered to one of FOP's output targets: PDF (default, plus `-n` native
       PdfSharp-free renderer), plain text, Markdown or HTML. Also: `-F` XSL-FO
-      input (skip transform), `-t` format / extension inference, `-o` output
-      (auto-named per input otherwise; stdin→stdout), `-p name=value` stylesheet
-      params, `-d` font directories. Programmatic API: `RenderTool.Render(foXml,
-      format, fontDirs, native) -> byte[]`. Tests in `RenderToolTests.cs`.
+      input (skip transform), `-t` format / extension inference, `-o` output,
+      `-p name=value` stylesheet params, `-d` font directories. Multiple inputs
+      with an explicit `-o` are merged into ONE rendered document (`MergeFo`:
+      unioned layout-master-set + concatenated page-sequences) — e.g. a set of
+      data modules → a single PDF; without `-o` each input renders to its own
+      auto-named file (stdin→stdout). Stream-based API: `RenderTool.Render(Stream
+      foInput, Stream output, format, fontDirs, native)` over FOP.Sharp's
+      `Convert(Stream, Stream)`, plus a `Render(string) -> byte[]` wrapper.
+      Package `FOP.Sharp` 26.6.2312. Tests in `RenderToolTests.cs`.
 
 ## 4. Cross-cutting
 - [x] Common option handling: `--version`, `-h/--help` done per tool; libxml2
