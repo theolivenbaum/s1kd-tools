@@ -19,7 +19,13 @@
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/theolivenbaum/s1kd-tools</PackageProjectUrl>
     <PackageTags>s1000d;csdb;technical-publications;xml;brex;metadata</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ship the repository README at the package root. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <!-- Embed every file under Resources/ (templates, XSLT, data files) so tools
        can load them via EmbeddedResources without per-tool csproj edits. -->

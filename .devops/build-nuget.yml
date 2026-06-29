@@ -1,0 +1,71 @@
+variables:
+  solution: './S1kdTools.slnx'
+  buildConfiguration: 'Release'
+  targetVersion: yy.M.$(build.buildId)
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: NuGetToolInstaller@0
+
+
+- task: PowerShell@2
+  displayName: 'Create CalVer Version'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $dottedDate = (Get-Date).ToString("yy.M")
+      $buildID = $($env:BUILD_BUILDID)
+      $modBuildID = [int]$buildID % 65536  # ensure fits in int16
+      $newTargetVersion = "$dottedDate.$modBuildID"
+      Write-Host "##vso[task.setvariable variable=targetVersion;]$newTargetVersion"
+      Write-Host "Updated targetVersion to '$newTargetVersion'"
+
+
+- task: UseDotNet@2
+  displayName: 'Use .NET 10.0 SDK'
+  inputs:
+    packageType: sdk
+    version: 10.x
+    includePreviewVersions: false
+    installationPath: $(Agent.ToolsDirectory)\dotnet
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'restore'
+    projects: '$(solution)'
+  displayName: 'restore nuget'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'build'
+    projects: '$(solution)'
+    arguments: '-c $(buildConfiguration) /p:Version=$(targetVersion) /p:LangVersion=latest'
+  displayName: 'build solution'
+
+# Only the 'S1kdTools.Core' library and the 'S1kdTools.Cli' .NET tool are
+# packable; every other project in the solution (tests + samples) sets
+# <IsPackable>false</IsPackable>, so packing the whole solution produces exactly
+# those two packages: S1kdTools.Core and S1kdTools.Cli (the `s1kd` dotnet tool).
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'pack'
+    packagesToPack: '$(solution)'
+    versioningScheme: 'off'
+    configuration: '$(buildConfiguration)'
+    buildProperties: 'Version="$(targetVersion)";LangVersion="latest"'
+  displayName: 'pack nuget packages'
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'push'
+    # The pack task above writes packages to $(Build.ArtifactStagingDirectory)
+    # (its default packDirectory), so search there rather than the working dir.
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
+    nuGetFeedType: 'external'
+    publishFeedCredentials: 'nuget-curiosity-org'
+  displayName: 'push nuget'

@@ -11,15 +11,48 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
+
+  <!-- NuGet package metadata. Shipped as a global .NET tool:
+       `dotnet tool install -g S1kdTools.Cli`, then run `s1kd <tool> [args]`.
+       Produced via `dotnet pack -c Release`; the pipeline supplies the version. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>s1kd</ToolCommandName>
+    <PackageId>S1kdTools.Cli</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>s1kd-tools contributors</Authors>
+    <Company>s1kd-tools contributors</Company>
+    <Title>s1kd-tools — command-line interface</Title>
+    <Description>C#/.NET port of the s1kd-tools command-line suite for creating and manipulating S1000D (technical publications) CSDB objects. A single `s1kd` executable with sub-commands (s1kd metadata, s1kd render, …); also supports multi-call dispatch via argv[0] (e.g. s1kd-metadata).</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/theolivenbaum/s1kd-tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/theolivenbaum/s1kd-tools</PackageProjectUrl>
+    <PackageTags>s1000d;csdb;technical-publications;xml;brex;metadata;dotnet-tool;cli</PackageTags>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Ship the repository README at the package root. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <!-- Single-file publish support. These RIDs let
        `dotnet publish -c Release -r <RID> -p:PublishSingleFile=true` work
        without affecting a plain `dotnet build`. Embedded resources are read
        from the assembly (Assembly.GetManifestResourceStream), so they resolve
-       correctly when bundled into the single-file host. -->
-  <PropertyGroup>
+       correctly when bundled into the single-file host.
+
+       Scoped to PublishSingleFile so they do NOT leak into `dotnet pack`:
+       a PackAsTool project that declares RuntimeIdentifiers emits a
+       RID-specific tool package per RID, which would publish a fistful of
+       redundant packages. Pack (PublishSingleFile unset) therefore produces a
+       single portable .NET tool package; `dotnet publish -r <RID>
+       -p:PublishSingleFile=true` sets the property and re-enables the RIDs. -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
     <RuntimeIdentifiers>linux-x64;linux-arm64;win-x64;win-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
