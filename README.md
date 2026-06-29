@@ -39,6 +39,40 @@ A set of small, free and open source software tools for manipulating
 > in `src/S1kdTools.Cli/bin/Release/net10.0/<RID>/publish/`. The embedded XSLT,
 > templates and data resources are read from the assembly's manifest, so they
 > resolve correctly when bundled into the single-file host.
+>
+> ### Rendering (`s1kd-render`)
+>
+> Beyond the ported C tools, the .NET edition adds an `s1kd-render` tool that
+> renders CSDB objects to a presentation format in-process, using the
+> [FOP.Sharp](https://www.nuget.org/packages/FOP.Sharp) engine (the C# port of
+> Apache FOP). A presentation stylesheet transforms the object into XSL-FO,
+> which is then rendered to one of FOP's output targets: **PDF**, plain
+> **text**, **Markdown** or **HTML**.
+>
+> ```
+> # Transform a data module with a presentation stylesheet, then render to PDF:
+> s1kd render -s presentation.xsl -o DM.pdf DMC-EXAMPLE-….XML
+>
+> # Render an existing XSL-FO document to Markdown (format inferred from -o):
+> s1kd render -F -o out.md document.fo
+>
+> # Pass stylesheet parameters and pick the format explicitly:
+> s1kd render -s style.xsl -p lang=en -t html -o DM.html DMC-….XML
+>
+> # Merge a whole set of data modules into ONE combined PDF:
+> s1kd render -s presentation.xsl -o manual.pdf DMC-*.XML
+> ```
+>
+> **Multiple inputs.** With an explicit `-o`, every input object is transformed
+> to XSL-FO and the results are *merged into a single document* — the page
+> masters are unioned and each object's `fo:page-sequence`s are concatenated, so
+> a set of data modules renders as one continuous PDF (one publication). Without
+> `-o`, each input renders to its own file named after it; a lone object on
+> stdin renders to stdout.
+>
+> Run `s1kd render --help` for the full option list (`-F` for XSL-FO input,
+> `-t` format, `-d` font directories, `-n` native PDF renderer, `-p`
+> stylesheet parameters).
 
   - [Introduction](INTRO.md)
 

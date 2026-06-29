@@ -73,6 +73,25 @@ Notes / gotchas:
   `XmlWriterSettings` to match (no BOM, `\n` line endings, 2-space indent off by
   default — match the C output for that tool).
 
+### Rendering (FOP.Sharp)
+
+The .NET port adds one tool with **no C counterpart**: `s1kd-render`
+(`Tools/RenderTool.cs`). Upstream s1kd-tools leave rendering to an external
+XSL-FO processor (Apache FOP, run as a separate Java process); the port brings
+that in-process via the [`FOP.Sharp`](https://www.nuget.org/packages/FOP.Sharp)
+NuGet package (a C# port of Apache FOP), referenced from `S1kdTools.Core`. A
+presentation stylesheet (`-s`) transforms a CSDB object into XSL-FO, which
+FOP.Sharp renders to one of its supported targets: **PDF** (`FopProcessor` /
+the native PdfSharp-free renderer), plain **text**, **Markdown** or **HTML**
+(`Fop.Render.Text.*`). Rendering is stream-based: the core entry point is
+`RenderTool.Render(Stream foInput, Stream output, format, fontDirs, native)`
+(backed by FOP.Sharp's `Convert(Stream, Stream)` methods), with a
+`Render(string foXml, …) → byte[]` convenience wrapper. The CLI writes straight
+to the destination stream (a file or stdout) and handles format inference and
+output naming around it. Multiple inputs given with an explicit `-o` are merged
+into one FO document (`RenderTool.MergeFo`: unioned `layout-master-set`,
+concatenated `page-sequence`s) and rendered once — a single combined PDF.
+
 ## CLI conventions
 
 The C project ships one executable per tool (`s1kd-newdm`, `s1kd-metadata`, …).
