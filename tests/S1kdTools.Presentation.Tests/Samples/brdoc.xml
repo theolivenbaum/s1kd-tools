@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/brdoc.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="024" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="003" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="01" day="12"/>
+        <dmTitle>
+          <techName>A350X technical publications</techName>
+          <infoName>Business rules</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Data Management</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>All A350X technical data</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <brDoc>
+      <brLevelledPara>
+        <title>Scope</title>
+        <para>This data module records the business rule decisions taken for the A350X technical
+          publications. It is the human-readable companion of the business rules exchange data
+          module, which holds the same decisions in a form a validator can apply.</para>
+        <para>A decision recorded here is binding on every author, supplier and partner that
+          delivers data for the programme. A request to change a decision is raised as a comment
+          against this data module.</para>
+      </brLevelledPara>
+      <brLevelledPara>
+        <title>Authoring decisions</title>
+        <brLevelledPara>
+          <title>Language and spelling</title>
+          <brDecision brDecisionIdentNumber="BRD-A350X-0014">
+            <para>All source data modules are authored in British English (en-GB) using Simplified
+              Technical English, ASD-STE100 Issue 8. Translations are held as separate data modules
+              with the same data module code and a different language code.</para>
+          </brDecision>
+        </brLevelledPara>
+        <brLevelledPara>
+          <title>Applicability</title>
+          <brDecision brDecisionIdentNumber="BRD-A350X-0021">
+            <para>Applicability is expressed against the product attributes declared in the
+              applicability cross-reference table. A data module must not state effectivity as
+              free text in a paragraph when a computable statement is possible.</para>
+          </brDecision>
+          <brDecision brDecisionIdentNumber="BRD-A350X-0022">
+            <para>A display text is mandatory on every applicability statement, so that the printed
+              publication reads correctly when the computable statement cannot be evaluated.</para>
+          </brDecision>
+        </brLevelledPara>
+        <brLevelledPara>
+          <title>Illustrations</title>
+          <brDecision brDecisionIdentNumber="BRD-A350X-0035">
+            <para>An illustration is referenced by its information control number only. The file
+              name is never written into a data module, and an illustration is never embedded.</para>
+          </brDecision>
+        </brLevelledPara>
+      </brLevelledPara>
+      <brLevelledPara>
+        <title>Delivery decisions</title>
+        <para>Data is delivered as a data dispatch note with the data modules, the publication
+          modules and the illustrations it references. A delivery that does not resolve completely
+          is rejected in full; partial acceptance is not used on this programme.</para>
+      </brLevelledPara>
+    </brDoc>
+  </content>
+</dmodule>

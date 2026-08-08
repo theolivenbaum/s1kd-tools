@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/proced.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="002" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="05" day="04"/>
+        <dmTitle>
+          <techName>Slat actuation power control unit</techName>
+          <infoName>Installation</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+      </originator>
+      <applic>
+        <displayText>
+          <simplePara>A350X-900 and A350X-1000, all aircraft</simplePara>
+        </displayText>
+      </applic>
+      <brexDmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/>
+          </dmRefIdent>
+        </dmRef>
+      </brexDmRef>
+      <qualityAssurance>
+        <secondVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <referencedApplicGroup>
+      <applic id="app-1000">
+        <displayText>
+          <simplePara>A350X-1000 only</simplePara>
+        </displayText>
+      </applic>
+    </referencedApplicGroup>
+    <procedure>
+      <commonInfo>
+        <para>This data module gives the procedure to install the slat actuation power control unit
+          (PCU) in the belly fairing. Do the procedure after the removal procedure
+          <dmRef>
+            <dmRefIdent>
+              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="520" infoCodeVariant="A" itemLocationCode="A"/>
+            </dmRefIdent>
+            <dmRefAddressItems>
+              <dmTitle>
+                <techName>Slat actuation power control unit</techName>
+                <infoName>Removal</infoName>
+              </dmTitle>
+            </dmRefAddressItems>
+          </dmRef>, or after a PCU has been replaced under modification 27-8117.</para>
+      </commonInfo>
+      <preliminaryRqmts>
+        <reqCondGroup>
+          <reqCondDm>
+            <reqCond>The aircraft is safe for maintenance and the landing gear ground locks are installed.</reqCond>
+            <dmRef>
+              <dmRefIdent>
+                <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="2" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
+              </dmRefIdent>
+              <dmRefAddressItems>
+                <dmTitle>
+                  <techName>Aircraft</techName>
+                  <infoName>Safety precautions for maintenance</infoName>
+                </dmTitle>
+              </dmRefAddressItems>
+            </dmRef>
+          </reqCondDm>
+          <reqCondDm>
+            <reqCond>The green and the yellow hydraulic systems are depressurized.</reqCond>
+            <dmRef>
+              <dmRefIdent>
+                <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="29" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="861" infoCodeVariant="A" itemLocationCode="A"/>
+              </dmRefIdent>
+              <dmRefAddressItems>
+                <dmTitle>
+                  <techName>Hydraulic power</techName>
+                  <infoName>Depressurization</infoName>
+                </dmTitle>
+              </dmRefAddressItems>
+            </dmRef>
+          </reqCondDm>
+          <reqCondNoRef>
+            <reqCond>The fwd belly fairing access panel 196AB is open.</reqCond>
+          </reqCondNoRef>
+        </reqCondGroup>
+        <reqSupportEquips>
+          <supportEquipDescrGroup>
+            <supportEquipDescr>
+              <name>Sling, PCU handling</name>
+              <identNumber>
+                <manufacturerCode>U8025</manufacturerCode>
+                <partAndSerialNumber>
+                  <partNumber>98D27814500000</partNumber>
+                </partAndSerialNumber>
+              </identNumber>
+              <reqQuantity>1</reqQuantity>
+            </supportEquipDescr>
+            <supportEquipDescr>
+              <name>Torque wrench, 10 to 70 Nm</name>
+              <identNumber>
+                <manufacturerCode>96906</manufacturerCode>
+                <partAndSerialNumber>
+                  <partNumber>TW-70-DR</partNumber>
+                </partAndSerialNumber>
+              </identNumber>
+              <reqQuantity>1</reqQuantity>
+            </supportEquipDescr>
+            <supportEquipDescr>
+              <name>Platform, adjustable, 2 m to 4 m</name>
+              <identNumber>
+                <manufacturerCode>U8025</manufacturerCode>
+                <partAndSerialNumber>
+                  <partNumber>98D00000100000</partNumber>
+                </partAndSerialNumber>
+              </identNumber>
+              <reqQuantity>1</reqQuantity>
+            </supportEquipDescr>
+          </supportEquipDescrGroup>
+        </reqSupportEquips>
+        <reqSupplies>
+          <supplyDescrGroup>
+            <supplyDescr>
+              <name>Hydraulic fluid, phosphate ester, type IV</name>
+              <shortName>Material No. 02-004</shortName>
+              <identNumber>
+                <manufacturerCode>81349</manufacturerCode>
+                <partAndSerialNumber>
+                  <partNumber>NSA307110</partNumber>
+                </partAndSerialNumber>
+              </identNumber>
+              <reqQuantity>2 l</reqQuantity>
+            </supplyDescr>
+            <supplyDescr>
+              <name>Lockwire, corrosion resistant steel, 0.8 mm</name>
+              <shortName>Material No. 19-003</shortName>
+              <identNumber>
+                <manufacturerCode>81349</manufacturerCode>
+                <partAndSerialNumber>
+                  <partNumber>NSA935403-08</partNumber>
+                </partAndSerialNumber>
+              </identNumber>
+              <reqQuantity>1 m</reqQuantity>
+            </supplyDescr>
+          </supplyDescrGroup>
+        </reqSupplies>
+        <reqSpares>
+          <spareDescrGroup>
+            <spareDescr>
+              <name>Packing, PCU mounting flange</name>
+              <identNumber>
+                <manufacturerCode>U8025</manufacturerCode>
+                <partAndSerialNumber>
+                  <partNumber>NSA8102-118</partNumber>
+                </partAndSerialNumber>
+              </identNumber>
+              <reqQuantity>2</reqQuantity>
+            </spareDescr>
+          </spareDescrGroup>
+        </reqSpares>
+        <reqSafety>
+          <safetyRqmts>
+            <warning>
+              <warningAndCautionPara>Make sure that the green and the yellow hydraulic systems are
+                depressurized before you disconnect or connect a hydraulic line. Hydraulic fluid at
+                206 bar (2988 psi) can cause injury to persons and damage to equipment.</warningAndCautionPara>
+            </warning>
+            <caution>
+              <warningAndCautionPara>Do not let the PCU hang on the hydraulic lines. Damage to the
+                pipe couplings and to the manifold face can occur.</warningAndCautionPara>
+            </caution>
+          </safetyRqmts>
+        </reqSafety>
+      </preliminaryRqmts>
+      <mainProcedure>
+        <proceduralStep id="stp-prepare">
+          <title>Prepare for the installation</title>
+          <proceduralStep>
+            <para>Make sure that the mounting flange of the PCU support structure is clean and that no
+              damage is found on the sealing face.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Install a new packing NSA8102-118 on each of the two hydraulic manifold ports.</para>
+            <note>
+              <notePara>Discard the packings that were removed with the unit. Packings are not
+                re-used.</notePara>
+            </note>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Attach the handling sling to the two lifting points on the PCU housing.</para>
+          </proceduralStep>
+        </proceduralStep>
+        <proceduralStep id="stp-install">
+          <title>Install the power control unit</title>
+          <warning>
+            <warningAndCautionPara>Make sure that no person is below the unit while it is lifted into
+              the belly fairing. The unit has a mass of 34 kg.</warningAndCautionPara>
+          </warning>
+          <proceduralStep>
+            <para>Lift the PCU into position and engage the two locating dowels on the support
+              structure.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Install the four attachment bolts and the washers. Tighten the bolts to a torque of
+              48 Nm to 52 Nm in the sequence shown in <internalRef internalRefId="fig-torque"/>.</para>
+            <figure id="fig-torque">
+              <title>Power control unit — bolt tightening sequence</title>
+              <graphic infoEntityIdent="ICN-A350X-A-278100-A-U8025-00002-A-001-01"/>
+            </figure>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Install the lockwire on the four attachment bolts.</para>
+          </proceduralStep>
+          <proceduralStep applicRefId="app-1000">
+            <para>Install the thermal blanket on the aft face of the unit and attach it with the six
+              quick-release fasteners.</para>
+          </proceduralStep>
+        </proceduralStep>
+        <proceduralStep id="stp-connect">
+          <title>Connect the unit</title>
+          <proceduralStep>
+            <para>Connect the green system supply and return lines to ports A and B. Tighten the
+              couplings to 34 Nm to 38 Nm.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Connect the yellow system supply and return lines to ports C and D. Tighten the
+              couplings to 34 Nm to 38 Nm.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Connect the electrical connectors 2027VC and 2028VC. Make sure that the coupling
+              rings are fully engaged.</para>
+          </proceduralStep>
+        </proceduralStep>
+        <proceduralStep id="stp-test">
+          <title>Do the installation test</title>
+          <proceduralStep>
+            <para>Pressurize the green hydraulic system and examine the couplings on ports A and B for
+              leakage. The permitted leakage is zero.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Do the slat system operational test and make sure that no fault message is shown on
+              the maintenance terminal.</para>
+          </proceduralStep>
+        </proceduralStep>
+      </mainProcedure>
+      <closeRqmts>
+        <reqCondGroup>
+          <reqCondNoRef>
+            <reqCond>Remove the handling sling and the platform from the work area.</reqCond>
+          </reqCondNoRef>
+          <reqCondNoRef>
+            <reqCond>Close the fwd belly fairing access panel 196AB.</reqCond>
+          </reqCondNoRef>
+          <reqCondNoRef>
+            <reqCond>Make an entry in the aircraft technical log.</reqCond>
+          </reqCondNoRef>
+        </reqCondGroup>
+      </closeRqmts>
+    </procedure>
+  </content>
+</dmodule>

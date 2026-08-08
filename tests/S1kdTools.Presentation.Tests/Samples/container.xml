@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/container.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="C" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="002" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="03" day="16"/>
+        <dmTitle>
+          <techName>Slat control and monitoring system</techName>
+          <infoName>Description of function — container</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>A350X-900 and A350X-1000, all aircraft</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <container>
+      <refs>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+            <language languageIsoCode="en" countryIsoCode="GB"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat control and monitoring system</techName>
+              <infoName>Description of function</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+            <language languageIsoCode="fr" countryIsoCode="FR"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Système de commande et de surveillance des becs</techName>
+              <infoName>Description du fonctionnement</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+            <language languageIsoCode="de" countryIsoCode="DE"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Vorflügel-Steuer- und Überwachungssystem</techName>
+              <infoName>Funktionsbeschreibung</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="B" itemLocationCode="A"/>
+            <language languageIsoCode="en" countryIsoCode="GB"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat control and monitoring system</techName>
+              <infoName>Description of function — post modification 27-8104</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </refs>
+    </container>
+  </content>
+</dmodule>

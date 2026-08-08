@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ddn>
+<ddn xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/ddn.xsd">
+  <identAndStatusSection>
+    <ddnAddress>
+      <ddnIdent>
+        <ddnCode modelIdentCode="A350X" senderIdent="U8025" receiverIdent="KLM01" yearOfDataIssue="2026" seqNumber="00007"/>
+      </ddnIdent>
+      <ddnAddressItems>
+        <issueDate year="2026" month="07" day="03"/>
+        <dispatchTo>
+          <dispatchAddress>
+            <enterprise enterpriseCode="KLM01">
+              <enterpriseName>Northern Star Airlines — Engineering and Maintenance</enterpriseName>
+            </enterprise>
+            <address>
+              <street>Hangar 4, Runway East</street>
+              <city>Amsterdam</city>
+              <postalCode>1117 CE</postalCode>
+              <country>Netherlands</country>
+            </address>
+          </dispatchAddress>
+        </dispatchTo>
+        <dispatchFrom>
+          <dispatchAddress>
+            <enterprise enterpriseCode="U8025">
+              <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+            </enterprise>
+            <address>
+              <street>1 Rond-Point Maurice Bellonte</street>
+              <city>Blagnac</city>
+              <postalCode>31700</postalCode>
+              <country>France</country>
+            </address>
+          </dispatchAddress>
+        </dispatchFrom>
+      </ddnAddressItems>
+    </ddnAddress>
+    <ddnStatus>
+      <security securityClassification="02"/>
+      <authorization>Released by Technical Data Toulouse under delivery agreement TDA-2026-114.</authorization>
+      <remarks>
+        <simplePara>Revision 007 of the ATA 27 flight controls publication. The illustrations listed
+          below replace the illustrations of the same information control number delivered with
+          revision 006.</simplePara>
+      </remarks>
+    </ddnStatus>
+  </identAndStatusSection>
+  <ddnContent>
+    <deliveryList>
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="003" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat control and monitoring system</techName>
+            <infoName>Description of function</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="002" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat actuation power control unit</techName>
+            <infoName>Installation</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="004" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat actuation power control unit</techName>
+            <infoName>Illustrated parts data</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <pmRef>
+        <pmRefIdent>
+          <pmCode modelIdentCode="A350X" pmIssuer="U8025" pmNumber="00027" pmVolume="00"/>
+          <issueInfo issueNumber="007" inWork="00"/>
+        </pmRefIdent>
+        <pmRefAddressItems>
+          <pmTitle>A350X Aircraft Maintenance Manual — ATA 27 Flight Controls</pmTitle>
+        </pmRefAddressItems>
+      </pmRef>
+      <infoEntityRef infoEntityRefIdent="ICN-A350X-A-278100-A-U8025-00001-A-001-01"/>
+      <infoEntityRef infoEntityRefIdent="ICN-A350X-A-278100-A-U8025-00002-A-001-01"/>
+    </deliveryList>
+  </ddnContent>
+</ddn>

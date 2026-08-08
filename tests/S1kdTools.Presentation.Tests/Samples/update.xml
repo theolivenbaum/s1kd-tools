@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dataUpdateFile>
+<dataUpdateFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/update.xsd">
+  <updateIdentAndStatusSection>
+    <updateAddress>
+      <updateIdent>
+        <updateCode modelIdentCode="A350X" senderIdent="U8025" yearOfDataIssue="2026" seqNumber="00003"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </updateIdent>
+      <updateAddressItems>
+        <issueDate year="2026" month="07" day="20"/>
+      </updateAddressItems>
+    </updateAddress>
+    <updateStatus>
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <remarks>
+        <simplePara>Bulk update of the responsible partner company name after the reorganization of
+          the technical data department. Apply to the whole A350X common source database.</simplePara>
+      </remarks>
+    </updateStatus>
+  </updateIdentAndStatusSection>
+  <content>
+    <update updateType="replace">
+      <objectPath>//dmodule/identAndStatusSection/dmStatus/originator/enterpriseName[. = 'AIRBUS S.A.S. — Technical Data Toulouse']</objectPath>
+      <updateInstructions>
+        <para>Replace the element text with "AIRBUS S.A.S. — Technical Data and Services". Apply to
+          every data module of the A350X model identification code, all issues in work and all
+          released issues that are re-issued after this date.</para>
+      </updateInstructions>
+    </update>
+    <update updateType="add">
+      <objectPath>//dmodule/identAndStatusSection/dmStatus[not(qualityAssurance)]</objectPath>
+      <updateInstructions>
+        <para>Add a quality assurance element with an unverified child to every data module status
+          that has none. A data module without a quality assurance statement fails the delivery
+          check of the receiving system.</para>
+      </updateInstructions>
+    </update>
+    <update updateType="delete">
+      <objectPath>//dmodule/content//para/@changeType[. = 'delete']</objectPath>
+      <updateInstructions>
+        <para>Remove the attribute. The delete change type is no longer permitted by the business
+          rules; deleted content is removed at issue instead of being marked.</para>
+      </updateInstructions>
+    </update>
+  </content>
+</dataUpdateFile>
