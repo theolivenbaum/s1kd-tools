@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/techrep.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="030" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="002" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="05" day="19"/>
+        <dmTitle>
+          <techName>A350X flight controls</techName>
+          <infoName>Technical repository — part specifications</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Spares Data Hamburg</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>A350X-900 and A350X-1000, all aircraft</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <techRepository>
+      <partRepository>
+        <partSpec>
+          <partIdent manufacturerCodeValue="U8025" partNumberValue="27DA1000000000"/>
+          <itemIdentData>
+            <descrForPart>POWER CONTROL UNIT, SLAT ACTUATION</descrForPart>
+            <shortName>PCU slat</shortName>
+            <mass>34 kg</mass>
+            <shelfLife>Not limited</shelfLife>
+            <repairability>Shop repairable, level 3</repairability>
+            <sourceMaintRecoverability>PAOZZ</sourceMaintRecoverability>
+          </itemIdentData>
+        </partSpec>
+        <partSpec>
+          <partIdent manufacturerCodeValue="U8025" partNumberValue="27DA1310000000"/>
+          <itemIdentData>
+            <descrForPart>PICK-OFF UNIT, FEEDBACK POSITION, SEALED</descrForPart>
+            <shortName>FPPU sealed</shortName>
+            <mass>0.9 kg</mass>
+            <shelfLife>Not limited</shelfLife>
+            <repairability>Not repairable, discard on removal</repairability>
+            <sourceMaintRecoverability>PAOZZ</sourceMaintRecoverability>
+          </itemIdentData>
+        </partSpec>
+        <partSpec>
+          <partIdent manufacturerCodeValue="81349" partNumberValue="NSA8102-118"/>
+          <itemIdentData>
+            <descrForPart>PACKING, PREFORMED</descrForPart>
+            <mass>0.01 kg</mass>
+            <shelfLife>60 months from cure date</shelfLife>
+            <repairability>Consumable</repairability>
+            <sourceMaintRecoverability>XBOZZ</sourceMaintRecoverability>
+          </itemIdentData>
+        </partSpec>
+      </partRepository>
+      <zoneRepository>
+        <zoneSpec>
+          <zoneIdent zoneNumber="192"/>
+          <name>Belly fairing, forward compartment</name>
+          <descr>Between frame C38 and frame C46, below the centre wing box.</descr>
+        </zoneSpec>
+        <zoneSpec>
+          <zoneIdent zoneNumber="571"/>
+          <name>Left wing leading edge</name>
+          <descr>From rib 1 to rib 14, slat transmission and support bearings.</descr>
+        </zoneSpec>
+      </zoneRepository>
+    </techRepository>
+  </content>
+</dmodule>

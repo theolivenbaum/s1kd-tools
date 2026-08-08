@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/wrngflds.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="029" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="03" day="03"/>
+        <dmTitle>
+          <techName>A350X wiring data</techName>
+          <infoName>Field definitions</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Electrical Design Toulouse</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>All A350X wiring data</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <wiringFields>
+      <para>These are the fields the A350X wiring data uses. A wiring data module must populate every
+        field marked mandatory; a field marked optional may be left out when the value is not known
+        at the time of delivery.</para>
+      <wiringField fieldIdent="WIRE-ID" fieldFormat="AAAAAA-ANN" fieldUse="Mandatory">
+        <fieldName>Wire identification, unique in the aircraft</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="GAUGE" fieldFormat="NN" fieldUse="Mandatory">
+        <fieldName>Wire gauge, American wire gauge</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="WIRE-TYPE" fieldFormat="AAAAA" fieldUse="Mandatory">
+        <fieldName>Insulation and construction standard</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="FROM" fieldFormat="AAAANN-ANN" fieldUse="Mandatory">
+        <fieldName>Connector and contact at the origin end</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="TO" fieldFormat="AAAANN-ANN" fieldUse="Mandatory">
+        <fieldName>Connector and contact at the destination end</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="LENGTH" fieldFormat="N.NN m" fieldUse="Optional">
+        <fieldName>Cut length, including the service loop</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="HARNESS" fieldFormat="NNANNN" fieldUse="Mandatory">
+        <fieldName>Harness the wire is routed in</fieldName>
+      </wiringField>
+      <wiringField fieldIdent="SHIELD" fieldFormat="A" fieldUse="Optional">
+        <fieldName>Shield termination end, F for from, T for to, B for both</fieldName>
+      </wiringField>
+    </wiringFields>
+  </content>
+</dmodule>

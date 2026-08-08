@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/learning.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="A10" infoCodeVariant="A" itemLocationCode="A" learnCode="T7A" learnEventCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="02" day="05"/>
+        <dmTitle>
+          <techName>Slat control and monitoring system</techName>
+          <infoName>Training — line maintenance familiarization</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Training Centre Toulouse</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>A350X-900 and A350X-1000, all aircraft</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <learning>
+      <learningPlan>
+        <title>Lesson plan</title>
+        <para>Target audience: B1 licensed engineers converting to the A350X. Duration: 45 minutes,
+          classroom, followed by 30 minutes on the maintenance trainer.</para>
+        <learningObjective>
+          <para>State the function of the two slat flap control computers and describe how control
+            passes from the master to the standby computer.</para>
+        </learningObjective>
+        <learningObjective>
+          <para>Identify the power control unit, the feedback position pick-off units and the wing
+            tip brakes on the aircraft, and state the access panel for each.</para>
+        </learningObjective>
+        <learningObjective>
+          <para>Interpret the fault message SLAT SYS 1 FAULT and select the correct fault isolation
+            data module.</para>
+        </learningObjective>
+      </learningPlan>
+      <learningOverview>
+        <title>Overview</title>
+        <para>The slat system moves the leading edge surfaces between five positions. It is a
+          two-channel system: each channel has its own computer, its own hydraulic motor and its own
+          position feedback. A failure of one channel reduces the rate of movement but does not
+          remove the function.</para>
+        <para>The part of the system that most often causes a line maintenance event is the position
+          feedback. Moisture in the bearing housing of a feedback position pick-off unit causes the
+          signal to drift, which the monitoring function detects before the surface position is
+          affected.</para>
+      </learningOverview>
+      <learningContent>
+        <title>Content</title>
+        <levelledPara>
+          <title>Control path</title>
+          <para>The lever position is read by two independent sensors. The master computer calculates
+            the commanded position, compares it with the feedback and drives the valve block of the
+            power control unit until the difference is inside the tolerance band.</para>
+        </levelledPara>
+        <levelledPara>
+          <title>Monitoring</title>
+          <para>The asymmetry position pick-off units at the outboard end of each transmission are
+            compared continuously. A difference of more than 3.6 degrees engages the wing tip brakes
+            and latches the system until it is reset on the ground.</para>
+          <note>
+            <notePara>A latched system cannot be reset in flight. The flight crew drill for a jammed
+              slat applies for the rest of the flight.</notePara>
+          </note>
+        </levelledPara>
+      </learningContent>
+      <learningAssessment>
+        <title>Assessment</title>
+        <interactivity>
+          <para>Which condition engages the wing tip brakes?</para>
+          <option>
+            <para>A difference of more than 1.0 degree between the commanded and the actual
+              position.</para>
+          </option>
+          <option correct="true">
+            <para>A difference of more than 3.6 degrees between the left and the right asymmetry
+              position pick-off units.</para>
+          </option>
+          <option>
+            <para>Loss of one hydraulic system.</para>
+          </option>
+        </interactivity>
+        <interactivity>
+          <para>The fault message SLAT SYS 1 FAULT is shown with the correlated message SFCC1. What is
+            the first action of the fault isolation procedure?</para>
+          <option correct="true">
+            <para>Do the SFCC 1 built-in test on the maintenance terminal.</para>
+          </option>
+          <option>
+            <para>Replace the SFCC 1.</para>
+          </option>
+          <option>
+            <para>Replace both feedback position pick-off units.</para>
+          </option>
+        </interactivity>
+      </learningAssessment>
+      <learningSummary>
+        <title>Summary</title>
+        <para>The slat system is tolerant of a single channel failure but not of an undetected
+          asymmetry. Confirm the fault with the built-in test before any unit is removed.</para>
+      </learningSummary>
+    </learning>
+  </content>
+</dmodule>

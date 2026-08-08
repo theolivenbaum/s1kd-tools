@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<icnMetadataFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/icnmetadata.xsd">
+  <imfIdentAndStatusSection>
+    <imfAddress>
+      <imfIdent>
+        <imfCode imfIdentIcn="ICN-A350X-A-278100-A-U8025-00001-A-001-01"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </imfIdent>
+      <imfAddressItems>
+        <icnTitle>Slat control and monitoring system — component location</icnTitle>
+        <issueDate year="2026" month="03" day="10"/>
+      </imfAddressItems>
+    </imfAddress>
+    <imfStatus>
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Illustration Services Toulouse</enterpriseName>
+      </originator>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+      <remarks>
+        <simplePara>Illustrations delivered with revision 007 of the ATA 27 flight controls
+          publication.</simplePara>
+      </remarks>
+    </imfStatus>
+  </imfIdentAndStatusSection>
+  <icn infoEntityIdent="ICN-A350X-A-278100-A-U8025-00001-A-001-01" notation="png" resolution="300" colourDepth="8" securityClassification="02">
+    <icnTitle>Slat control and monitoring system — component location, left wing</icnTitle>
+    <icnCaption>Schematic view of the slat transmission with the power control unit, the two slat
+      flap control computers, the asymmetry position pick-off unit and the wing tip brake.</icnCaption>
+    <icnDerivativeOf>DRW-A350X-278100-0001</icnDerivativeOf>
+  </icn>
+  <icn infoEntityIdent="ICN-A350X-A-278100-A-U8025-00002-A-001-01" notation="png" resolution="300" colourDepth="8" securityClassification="01">
+    <icnTitle>Power control unit mounting flange — bolt tightening sequence</icnTitle>
+    <icnCaption>Aft face of the power control unit with the four attachment bolts numbered in the
+      order in which they are tightened.</icnCaption>
+    <icnDerivativeOf>DRW-A350X-278100-0002</icnDerivativeOf>
+  </icn>
+</icnMetadataFile>

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pm>
+<pm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/pm.xsd">
+  <identAndStatusSection>
+    <pmAddress>
+      <pmIdent>
+        <pmCode modelIdentCode="A350X" pmIssuer="U8025" pmNumber="00027" pmVolume="00"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="007" inWork="00"/>
+      </pmIdent>
+      <pmAddressItems>
+        <issueDate year="2026" month="07" day="01"/>
+        <pmTitle>A350X Aircraft Maintenance Manual — ATA 27 Flight Controls</pmTitle>
+      </pmAddressItems>
+    </pmAddress>
+    <pmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <applic>
+        <displayText>
+          <simplePara>A350X-900 and A350X-1000, all aircraft</simplePara>
+        </displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </pmStatus>
+  </identAndStatusSection>
+  <content>
+    <pmEntry>
+      <pmEntryTitle>Slat control and monitoring system</pmEntryTitle>
+      <pmEntry>
+        <pmEntryTitle>Description and operation</pmEntryTitle>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat control and monitoring system</techName>
+              <infoName>Description of function</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="040" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>High lift system</techName>
+              <infoName>Description</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </pmEntry>
+      <pmEntry>
+        <pmEntryTitle>Fault isolation</pmEntryTitle>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="420" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat control and monitoring system</techName>
+              <infoName>Fault isolation — SLAT SYS 1 FAULT</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </pmEntry>
+      <pmEntry>
+        <pmEntryTitle>Removal and installation</pmEntryTitle>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="520" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat actuation power control unit</techName>
+              <infoName>Removal</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat actuation power control unit</techName>
+              <infoName>Installation</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </pmEntry>
+      <pmEntry>
+        <pmEntryTitle>Illustrated parts data</pmEntryTitle>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Slat actuation power control unit</techName>
+              <infoName>Illustrated parts data</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </pmEntry>
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Flap control and monitoring system</pmEntryTitle>
+      <pmEntry>
+        <pmEntryTitle>Description and operation</pmEntryTitle>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="5" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Flap control and monitoring system</techName>
+              <infoName>Description of function</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </pmEntry>
+      <pmEntry>
+        <pmEntryTitle>Scheduled maintenance</pmEntryTitle>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="5" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="310" infoCodeVariant="A" itemLocationCode="A"/>
+          </dmRefIdent>
+          <dmRefAddressItems>
+            <dmTitle>
+              <techName>Flap transmission</techName>
+              <infoName>Scheduled maintenance</infoName>
+            </dmTitle>
+          </dmRefAddressItems>
+        </dmRef>
+      </pmEntry>
+    </pmEntry>
+    <pmEntry>
+      <pmEntryTitle>Referenced publications</pmEntryTitle>
+      <pmRef>
+        <pmRefIdent>
+          <pmCode modelIdentCode="A350X" pmIssuer="U8025" pmNumber="00029" pmVolume="00"/>
+        </pmRefIdent>
+        <pmRefAddressItems>
+          <pmTitle>A350X Aircraft Wiring Manual — ATA 27</pmTitle>
+        </pmRefAddressItems>
+      </pmRef>
+      <externalPubRef>
+        <externalPubRefIdent>
+          <externalPubCode>SAE AS1290</externalPubCode>
+        </externalPubRefIdent>
+        <externalPubRefAddressItems>
+          <externalPubTitle>Graphic symbols for aircraft hydraulic and pneumatic systems</externalPubTitle>
+        </externalPubRefAddressItems>
+      </externalPubRef>
+    </pmEntry>
+  </content>
+</pm>

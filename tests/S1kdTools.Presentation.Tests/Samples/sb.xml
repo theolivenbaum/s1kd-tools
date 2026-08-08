@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/sb.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="00S" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="002" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="04" day="27"/>
+        <dmTitle>
+          <techName>Flight controls — slat actuation</techName>
+          <infoName>Service bulletin A350X-27-1042</infoName>
+          <infoNameVariant>Replacement of the slat feedback position pick-off units</infoNameVariant>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Customer Services Toulouse</enterpriseName>
+      </originator>
+      <applic>
+        <displayText>
+          <simplePara>A350X-900, MSN 0021 to 0184; A350X-1000, MSN 0201 to 0233</simplePara>
+        </displayText>
+      </applic>
+      <qualityAssurance>
+        <secondVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <sb>
+      <sbManagementInfo>
+        <sbNumber>A350X-27-1042</sbNumber>
+        <sbAta>27-81-00</sbAta>
+        <sbCompliance sbComplianceCategory="sbcc02"/>
+        <sbTaskType sbTaskCategory="sbtc03"/>
+        <sbOriginalIssueDate>
+          <issueDate year="2025" month="11" day="14"/>
+        </sbOriginalIssueDate>
+      </sbManagementInfo>
+      <sbRevisionInfo>
+        <sbRevisionSummary>
+          <para>Revision 2 adds the A350X-1000 aircraft to the effectivity and corrects the man-hour
+            estimate of the accomplishment instructions from 6.0 to 7.5 man-hours. The material
+            information is unchanged.</para>
+        </sbRevisionSummary>
+      </sbRevisionInfo>
+      <sbSummary>
+        <para>This service bulletin gives the instructions to replace the two feedback position
+          pick-off units (FPPU) of the slat actuation power control unit with an improved standard.
+          The improved units have a sealed bearing housing that prevents the ingress of moisture
+          which, on the units in service, has caused an increased drift of the position signal and
+          the fault message <verbatimText>SLAT SYS 1 FAULT</verbatimText> in service.</para>
+      </sbSummary>
+      <sbPlanningInfo>
+        <sbEffectivity>
+          <para>This service bulletin applies to the aircraft listed below that do not have
+            modification 27-8117 embodied in production.</para>
+          <sbAircraftEffectivity>
+            <sbAircraftModel>A350X-900</sbAircraftModel>
+            <sbSerialNumbers>0021 to 0184, except 0102, 0117 and 0140</sbSerialNumbers>
+          </sbAircraftEffectivity>
+          <sbAircraftEffectivity>
+            <sbAircraftModel>A350X-1000</sbAircraftModel>
+            <sbSerialNumbers>0201 to 0233</sbSerialNumbers>
+          </sbAircraftEffectivity>
+        </sbEffectivity>
+        <sbReason>
+          <para>Nineteen occurrences of slat position signal drift have been reported in service
+            between January 2024 and September 2025. In each case the moisture that entered the
+            bearing housing of the feedback position pick-off unit caused a slow degradation of the
+            resolver output. The condition is detected by the monitoring function before it affects
+            the surface position, but it causes an unscheduled removal and, in seven of the reported
+            cases, a departure delay.</para>
+        </sbReason>
+        <sbDescription>
+          <para>The two feedback position pick-off units are removed from the power control unit and
+            replaced by units of part number 27DA1310000000. The new units are dimensionally and
+            electrically interchangeable with the units they replace. The wiring, the software
+            standard of the slat flap control computers and the rigging of the transmission are not
+            affected.</para>
+          <para>The accomplishment of this service bulletin embodies modification 27-8117 on the
+            aircraft.</para>
+        </sbDescription>
+        <sbCompliance>
+          <para>Recommended. Airbus recommends that this service bulletin is accomplished at the next
+            scheduled maintenance check that gives access to the belly fairing, and in any case
+            within 24 months of the date of this revision.</para>
+        </sbCompliance>
+        <sbApproval>
+          <para>The technical content of this service bulletin is approved under the authority of
+            EASA design organization approval EASA.21J.0000.</para>
+        </sbApproval>
+        <sbManpower>
+          <para>The estimated man-hours are 7.5 man-hours for one aircraft, which does not include the
+            time to gain access to and close the belly fairing. The estimate is based on two
+            technicians working at the same time.</para>
+        </sbManpower>
+        <sbWeightBalance>
+          <para>The change of mass is negligible. The moment change is inside the tolerance of the
+            weight and balance manual and no revision of the aircraft weighing record is required.</para>
+        </sbWeightBalance>
+        <sbElectricalLoad>
+          <para>Not affected.</para>
+        </sbElectricalLoad>
+        <sbInterchangeability>
+          <para>The units are two-way interchangeable at aircraft level. A power control unit that has
+            one unit of each standard installed is not permitted.</para>
+        </sbInterchangeability>
+        <sbPublicationsAffected>
+          <para>The aircraft maintenance manual, the illustrated parts catalogue and the trouble
+            shooting manual are revised at the next scheduled revision.</para>
+        </sbPublicationsAffected>
+      </sbPlanningInfo>
+      <sbMaterialInfo>
+        <sbMaterialPrice>
+          <para>The material is supplied as kit 27-1042-01 at no charge for the aircraft in the
+            effectivity of this service bulletin, on receipt of an order placed before 31 December
+            2026.</para>
+        </sbMaterialPrice>
+        <sbMaterialKit>
+          <table>
+            <title>Kit 27-1042-01 contents, one kit per aircraft</title>
+            <tgroup cols="4">
+              <colspec colname="c1" colwidth="1.2*"/>
+              <colspec colname="c2" colwidth="2.4*"/>
+              <colspec colname="c3" colwidth="0.6*"/>
+              <colspec colname="c4" colwidth="1*"/>
+              <thead>
+                <row>
+                  <entry>Part number</entry>
+                  <entry>Designation</entry>
+                  <entry>Qty</entry>
+                  <entry>Replaces</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>27DA1310000000</entry>
+                  <entry>Pick-off unit, feedback position, sealed</entry>
+                  <entry align="center">2</entry>
+                  <entry>27DA1300000000</entry>
+                </row>
+                <row>
+                  <entry>NSA8102-118</entry>
+                  <entry>Packing, preformed</entry>
+                  <entry align="center">4</entry>
+                  <entry>—</entry>
+                </row>
+                <row>
+                  <entry>NSA935403-08</entry>
+                  <entry>Lockwire, 0.8 mm, 1 m coil</entry>
+                  <entry align="center">1</entry>
+                  <entry>—</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+        </sbMaterialKit>
+        <sbMaterialAvailability>
+          <para>The kit is available from the Airbus spares centre with a lead time of six weeks. The
+            units that are removed are to be returned within 60 days.</para>
+        </sbMaterialAvailability>
+      </sbMaterialInfo>
+      <sbAccomplishmentInstructions>
+        <sbGeneral>
+          <warning>
+            <warningAndCautionPara>Make sure that the green and the yellow hydraulic systems are
+              depressurized and that the slat travel area is clear before you start this
+              procedure.</warningAndCautionPara>
+          </warning>
+          <para>Do the removal and installation with the power control unit installed on the
+            aircraft. It is not necessary to remove the power control unit.</para>
+        </sbGeneral>
+        <sbProcedure>
+          <proceduralStep>
+            <para>Open, safety and tag the circuit breakers 4027GA and 4027GB on panel 121VU.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Open the fwd belly fairing access panel 196AB.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Disconnect the electrical connector of the first feedback position pick-off unit,
+              remove the four attachment screws and remove the unit.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Install a new packing and the new unit 27DA1310000000. Tighten the four screws to
+              6 Nm to 8 Nm and install the lockwire.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Do steps 3 and 4 again for the second unit.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Remove the safety tags, close the circuit breakers and do the slat system
+              operational test.</para>
+          </proceduralStep>
+          <proceduralStep>
+            <para>Record the embodiment of modification 27-8117 in the aircraft technical log and in
+              the modification status record.</para>
+          </proceduralStep>
+        </sbProcedure>
+      </sbAccomplishmentInstructions>
+      <sbAdditionalInfo>
+        <para>Report the accomplishment of this service bulletin through the customer services portal
+          within 30 days. Quote the aircraft serial number, the date of accomplishment and the serial
+          numbers of the units that were removed.</para>
+      </sbAdditionalInfo>
+    </sb>
+  </content>
+</dmodule>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dml>
+<dml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/dml.xsd">
+  <identAndStatusSection>
+    <dmlAddress>
+      <dmlIdent>
+        <dmlCode modelIdentCode="A350X" senderIdent="U8025" dmlType="C" yearOfDataIssue="2026" seqNumber="00014"/>
+        <issueInfo issueNumber="003" inWork="00"/>
+      </dmlIdent>
+      <dmlAddressItems>
+        <issueDate year="2026" month="07" day="02"/>
+      </dmlAddressItems>
+    </dmlAddress>
+    <dmlStatus issueType="revised">
+      <security securityClassification="02"/>
+      <remarks>
+        <simplePara>Content data management list for the ATA 27 flight controls publication,
+          revision 007.</simplePara>
+      </remarks>
+    </dmlStatus>
+  </identAndStatusSection>
+  <dmlContent>
+    <dmlEntry issueType="revised">
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="003" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat control and monitoring system</techName>
+            <infoName>Description of function</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <security securityClassification="02"/>
+      <remarks>
+        <simplePara>Alternate operation added after modification 27-8104.</simplePara>
+      </remarks>
+    </dmlEntry>
+    <dmlEntry issueType="new">
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="420" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="001" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat control and monitoring system</techName>
+            <infoName>Fault isolation — SLAT SYS 1 FAULT</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <security securityClassification="01"/>
+    </dmlEntry>
+    <dmlEntry issueType="revised">
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="002" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat actuation power control unit</techName>
+            <infoName>Installation</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <security securityClassification="01"/>
+      <remarks>
+        <simplePara>Thermal blanket step added for the A350X-1000.</simplePara>
+      </remarks>
+    </dmlEntry>
+    <dmlEntry issueType="revised">
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
+          <issueInfo issueNumber="004" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat actuation power control unit</techName>
+            <infoName>Illustrated parts data</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <security securityClassification="01"/>
+    </dmlEntry>
+    <dmlEntry issueType="deleted">
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="B" itemLocationCode="A"/>
+          <issueInfo issueNumber="002" inWork="00"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat control and monitoring system</techName>
+            <infoName>Description of function — pre modification 27-8104</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <security securityClassification="02"/>
+      <remarks>
+        <simplePara>Withdrawn: no aircraft in service remain pre-modification.</simplePara>
+      </remarks>
+    </dmlEntry>
+    <dmlEntry issueType="revised">
+      <pmRef>
+        <pmRefIdent>
+          <pmCode modelIdentCode="A350X" pmIssuer="U8025" pmNumber="00027" pmVolume="00"/>
+          <issueInfo issueNumber="007" inWork="00"/>
+        </pmRefIdent>
+        <pmRefAddressItems>
+          <pmTitle>A350X Aircraft Maintenance Manual — ATA 27 Flight Controls</pmTitle>
+        </pmRefAddressItems>
+      </pmRef>
+      <security securityClassification="02"/>
+    </dmlEntry>
+  </dmlContent>
+</dml>

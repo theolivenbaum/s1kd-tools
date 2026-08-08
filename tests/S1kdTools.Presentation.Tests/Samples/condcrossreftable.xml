@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/condcrossreftable.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="00Y" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="008" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="07" day="06"/>
+        <dmTitle>
+          <techName>A350X</techName>
+          <infoName>Conditions cross-reference table</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Data Management</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>All A350X aircraft</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <condCrossRefTable>
+      <condTypeList>
+        <condType id="ct-mod">
+          <name>Modification</name>
+          <descr>An engineering modification embodied in production or in service.</descr>
+          <enumeration applicPropertyValues="embodied"/>
+          <enumeration applicPropertyValues="notEmbodied"/>
+        </condType>
+        <condType id="ct-sb">
+          <name>Service bulletin</name>
+          <descr>A service bulletin accomplished in service.</descr>
+          <enumeration applicPropertyValues="accomplished"/>
+          <enumeration applicPropertyValues="notAccomplished"/>
+        </condType>
+        <condType id="ct-state">
+          <name>Operational state</name>
+          <descr>A state of the aircraft while the task is done.</descr>
+          <enumeration applicPropertyValues="onGround"/>
+          <enumeration applicPropertyValues="inFlight"/>
+        </condType>
+      </condTypeList>
+      <condList>
+        <cond id="mod27-8104" condTypeRefId="ct-mod">
+          <name>Modification 27-8104</name>
+          <descr>Slat runaway isolation logic changed to isolate one motor only.</descr>
+        </cond>
+        <cond id="mod27-8117" condTypeRefId="ct-mod">
+          <name>Modification 27-8117</name>
+          <descr>Sealed feedback position pick-off units installed on the power control unit.</descr>
+        </cond>
+        <cond id="sb27-1042" condTypeRefId="ct-sb">
+          <name>Service bulletin A350X-27-1042</name>
+          <descr>In-service replacement of the feedback position pick-off units, which embodies
+            modification 27-8117.</descr>
+        </cond>
+        <cond id="st-ground" condTypeRefId="ct-state">
+          <name>Aircraft on the ground</name>
+          <descr>The aircraft is on the ground with the parking brake set.</descr>
+        </cond>
+      </condList>
+    </condCrossRefTable>
+  </content>
+</dmodule>

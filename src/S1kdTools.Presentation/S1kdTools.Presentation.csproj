@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>S1kdTools.Presentation</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata. Produced via `dotnet pack -c Release`. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>S1kdTools.Presentation</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>s1kd-tools contributors</Authors>
+    <Company>s1kd-tools contributors</Company>
+    <Title>s1kd-tools — presentation stylesheets and PDF generation</Title>
+    <Description>Ready-made XSL-FO presentation stylesheets for every S1000D CSDB object type (data modules, publication modules, DMLs, DDNs, comments, ICN metadata, SCORM content packages and data update files), plus a simple API that turns a CSDB object into a page-oriented PDF via S1kdTools.Core and FOP.Sharp.</Description>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/theolivenbaum/s1kd-tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/theolivenbaum/s1kd-tools</PackageProjectUrl>
+    <PackageTags>s1000d;csdb;technical-publications;xml;pdf;xsl-fo;fop</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- The presentation stylesheets ship inside the assembly; every one of them
+       is reachable by name through S1000DPresentation.GetStylesheet so callers
+       can copy, extend or replace them. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Xsl/**/*.xsl" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="S1kdTools.Core" Version="26.6.2329" />
+  </ItemGroup>
+
+</Project>
