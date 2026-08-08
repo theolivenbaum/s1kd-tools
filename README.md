@@ -73,29 +73,6 @@ A set of small, free and open source software tools for manipulating
 > Run `s1kd render --help` for the full option list (`-F` for XSL-FO input,
 > `-t` format, `-d` font directories, `-n` native PDF renderer, `-p`
 > stylesheet parameters).
->
-> ### Presentation stylesheets (`S1kdTools.Presentation`)
->
-> `s1kd render` needs a presentation stylesheet, and writing one per schema is
-> the bulk of the work in getting a CSDB onto paper.
-> [`src/S1kdTools.Presentation`](src/S1kdTools.Presentation) ships one for
-> **every S1000D object type** — the 22 data module schemas plus publication
-> modules, data management lists, data dispatch notes, comments, ICN metadata
-> files, SCORM content packages and data update files — laid out like a civil
-> aircraft technical publication, and an API that goes straight from an object
-> to a PDF:
->
-> ```csharp
-> var dm = S1000DPresentation.Load("DMC-A350X-A-27-81-00-00A-720A-A_002-00_EN-GB.XML");
-> using Stream pdf = S1000DPresentation.RenderToPdf(dm);   // type detected from the object
-> ```
->
-> The stylesheets are embedded in the assembly and readable by name
-> (`S1000DPresentation.GetStylesheet(type)`), so a house style starts as a copy
-> of one and is then used with `s1kd render -s`. See the
-> [package README](src/S1kdTools.Presentation/README.md) for the options, and
-> [`samples/out/presentation/`](samples/out/presentation) for a rendered sample
-> of every object type.
 
   - [Introduction](INTRO.md)
 

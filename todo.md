@@ -167,30 +167,6 @@ Publication:
       foInput, Stream output, format, fontDirs, native)` over FOP.Sharp's
       `Convert(Stream, Stream)`, plus a `Render(string) -> byte[]` wrapper.
       Package `FOP.Sharp` 26.6.2312. Tests in `RenderToolTests.cs`.
-- [x] S1kdTools.Presentation — presentation stylesheets for every S1000D object
-      type, plus a CSDB-object-to-PDF API over `RenderTool`. Separate project and
-      NuGet package (`src/S1kdTools.Presentation`) that consumes `S1kdTools.Core`
-      from NuGet, so the stylesheet set versions independently of the tools.
-      One embedded XSL per schema (22 data module schemas + pm, dml, ddn,
-      comment, icnmetadata, scormcontentpackage, update), all importing
-      `common.xsl` — page masters, running header/footer, identification title
-      block, and the shared S1000D constructs (para, levelledPara, lists, CALS
-      tables, figures, warning/caution/note, dmRef/pmRef/internalRef,
-      applicability annotations, change bars, proceduralStep numbering,
-      preliminary/close requirements). API: `DetectObjectType`, `GetStylesheet`,
-      `TransformToFo`, `RenderToPdf` (single object, stream/file, or a set merged
-      into one document) and `Render` for the text formats;
-      `PresentationOptions` maps page size, margins, fonts, publisher,
-      publication title, watermark and ICN directories onto XSLT parameters.
-      Sample object + rendered PDF per type in
-      `tests/S1kdTools.Presentation.Tests/Samples` and
-      `samples/out/presentation`.
-      Renderer behaviours worked around, and documented in the package README:
-      FOP.Sharp opens a word boundary at every `fo:inline` edge (so reference
-      constructs emit plain text), never breaks a long unbroken token (so XPaths
-      are set one location step per line), needs a plain path rather than a
-      `file://` URI in `fo:external-graphic`, and resolves
-      `proportional-column-width` only when the table has an explicit width.
 
 ## 4. Cross-cutting
 - [x] Common option handling: `--version`, `-h/--help` done per tool; libxml2
