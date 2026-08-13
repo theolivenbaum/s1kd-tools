@@ -73,6 +73,43 @@ A set of small, free and open source software tools for manipulating
 > Run `s1kd render --help` for the full option list (`-F` for XSL-FO input,
 > `-t` format, `-d` font directories, `-n` native PDF renderer, `-p`
 > stylesheet parameters).
+>
+> ### Comparing renderings (`s1kd-pdfdiff`, `s1kd-pdfdump`)
+>
+> Two more tools with no C counterpart, for the job of **reverse engineering a
+> presentation stylesheet**: you have a PDF built by a toolchain you do not have,
+> the S1000D source it was built from, and a stylesheet of your own that does not
+> yet produce the same thing.
+>
+> ```
+> # Describe the target: paper, margins, body font, leading, indents, running heads.
+> s1kd pdfdump -s reference.pdf
+>
+> # Compare your rendering against it and write a report plus diff images.
+> s1kd pdfdiff -o report.md -I diff-images mine.pdf reference.pdf
+>
+> # One line for a build log or a progress table.
+> s1kd pdfdiff -f summary mine.pdf reference.pdf
+> # parity=81.5 pages=3/3 words=638/644 text=0.991 ink=0.872 place=0.438 firstdiff=1
+> ```
+>
+> `pdfdiff` measures the whole document — page count, words per page, ink per
+> page, and how much of the ink lands in the same place — into a single parity
+> score out of 100 built to be tracked across iterations, then takes the **first
+> divergent page** apart: clustered regions of differing ink with a guess at what
+> each one is, a line-by-line diff with displacements and style changes, a
+> structure dump of both sides, and the document-wide style differences stated as
+> the XSL-FO properties that set them. Detail stops at the first divergent page
+> by default because differences cascade; `-a` details them all.
+>
+> Both tools are pure C# — [PdfPig](https://github.com/UglyToad/PdfPig) parses
+> the PDF, and the rasterisation, clustering and PNG output are in
+> `S1kdTools.Core/Pdf/`. No native rasteriser, no external process.
+>
+> See **[doc/PDFDIFF.md](doc/PDFDIFF.md)** for what each metric means and how to
+> read a report, and
+> [`samples/datasets/pdfdiff-demo/`](samples/datasets/pdfdiff-demo/README.md) for
+> a worked example.
 
   - [Introduction](INTRO.md)
 

@@ -20,6 +20,7 @@ samples/
     s1kd-tools-doc/             ← the s1kd-tools documentation as a CSDB (Issue 5.0)
     xsl-stylesheets/            ← Smart Avionics sample publication (Issues 4.0/4.2)
     s1kd2db/                    ← a single documentation DM (Issue 4.2)
+    pdfdiff-demo/               ← purpose-built: one DM + three stylesheets (Issue 4.2)
   harnesses/                    ← tiny CLI projects that consume the library
     Samples.Common/             ← shared SampleHarness helper (locate data, run a tool, save output)
     Samples.Fossig/             ← one console app per dataset …
@@ -27,6 +28,7 @@ samples/
     Samples.ToolsDoc/
     Samples.XslStylesheets/
     Samples.S1kd2db/
+    Samples.PdfDiff/
   out/                          ← generated artifacts (checked in; cleared & rebuilt each run)
 ```
 
@@ -46,6 +48,7 @@ rendering-only assets were dropped, build files kept for reference are suffixed
 | `s1kd-tools-doc` | <https://github.com/kibook/s1kd-tools-doc> | Issue 5.0 | No explicit license in upstream repo — see folder README |
 | `xsl-stylesheets` | <https://github.com/kibook/S1000D-XSL-Stylesheets> | Issues 4.0 / 4.2 | MIT-style (© 2010–2011 Smart Avionics Ltd.) — see `xsl-stylesheets/COPYING` |
 | `s1kd2db` | <https://github.com/kibook/s1kd2db> | Issue 4.2 | No explicit license in upstream repo — see folder README |
+| `pdfdiff-demo` | Written for this repository — no upstream | Issue 4.2 | Same as the repository (GPL-3.0-or-later) |
 
 These samples are included **solely for testing and evaluation** of the port.
 Where an upstream repository declares no license, it is reproduced here on a
@@ -63,6 +66,7 @@ dotnet run --project samples/harnesses/Samples.S1000DSpec
 dotnet run --project samples/harnesses/Samples.ToolsDoc
 dotnet run --project samples/harnesses/Samples.XslStylesheets
 dotnet run --project samples/harnesses/Samples.S1kd2db
+dotnet run --project samples/harnesses/Samples.PdfDiff
 ```
 
 A harness:
@@ -89,6 +93,15 @@ A snapshot of these artifacts is checked in under [`out/`](out/) so the expected
 results can be browsed and diffed without running anything. Each harness deletes
 its own `out/<name>/` folder at startup and regenerates it, so re-running keeps
 the snapshot in sync.
+
+`Samples.PdfDiff` is the odd one out: its dataset was written here rather than
+taken from upstream, and it drives the rendering and comparison tools
+(`render`, `pdfdump`, `pdfdiff`) rather than the CSDB tools. It renders one data
+module through three stylesheets and compares two of them against the third,
+demonstrating the stylesheet reverse-engineering loop end to end. It fails if
+the "improved" stylesheet does not score higher than the placeholder one — the
+one property a progress metric has to have. See
+[`datasets/pdfdiff-demo/README.md`](datasets/pdfdiff-demo/README.md).
 
 All harness projects are part of `S1kdTools.slnx`, so `dotnet build` builds them
 and verifies they compile against the current library API.

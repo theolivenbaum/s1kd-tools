@@ -92,6 +92,48 @@ output naming around it. Multiple inputs given with an explicit `-o` are merged
 into one FO document (`RenderTool.MergeFo`: unioned `layout-master-set`,
 concatenated `page-sequence`s) and rendered once — a single combined PDF.
 
+### Comparing renderings (PdfPig)
+
+Two further tools with no C counterpart — `s1kd-pdfdiff` (`Tools/PdfDiffTool.cs`)
+and `s1kd-pdfdump` (`Tools/PdfDumpTool.cs`) — read a *rendered* PDF back and
+compare two of them, for reverse-engineering a presentation stylesheet from a
+PDF produced by some other toolchain. Parsing is
+[PdfPig](https://github.com/UglyToad/PdfPig) (`PackageReference` on
+`S1kdTools.Core`, Apache-2.0, pure managed); everything else lives in
+`S1kdTools.Core/Pdf/`:
+
+| file | responsibility |
+|---|---|
+| `PdfPageModel.cs` | the model: pages, text lines/words, graphic marks, `Rect` |
+| `PdfExtractor.cs` | PdfPig → model, converting to **top-left points** |
+| `PageStyleFacts.cs` | derived layout: margins, body font, leading, indents, running heads |
+| `InkRaster.cs` | model → greyscale ink grid (144 dpi default) |
+| `InkDiff.cs` | pixel diff, dilation, connected-component clustering, region classification |
+| `StructureDiff.cs` | LCS line alignment → missing/extra/moved/restyled/retexted |
+| `StyleDelta.cs` | style facts diff → findings with XSL-FO hints |
+| `PdfComparison.cs` | orchestration, document metrics, the parity score |
+| `MarkdownReport.cs`, `JsonReport.cs` | report writers |
+| `PngWriter.cs` | greyscale/RGB PNG via `ZLibStream` |
+
+Conventions worth preserving when working here:
+
+- **Coordinates are top-left points**, converted once in `PdfExtractor`. PDF's
+  bottom-left origin never escapes that file.
+- **The raster is synthetic** — measured ink boxes, not a font rasteriser — so
+  that two toolchains' different font programs do not produce a difference on
+  every glyph edge. `InkDiffOptions.Threshold` is low (20) for the same reason:
+  there is no antialiasing noise to reject.
+- **Metrics are measured unaligned; regions are clustered shift-compensated.**
+  The score must cost a displaced page what it should, while the region list
+  must not restate the displacement once per line.
+- **Detail stops at the first divergent page** by default (`DetailPages = 1`).
+  Metrics always cover every page.
+- The parity score's weights live in `PdfComparer`; changing them changes an
+  interface people track across iterations, so change them deliberately.
+
+See `doc/PDFDIFF.md` for the user-facing explanation and
+`samples/datasets/pdfdiff-demo/` for the end-to-end example.
+
 ## CLI conventions
 
 The C project ships one executable per tool (`s1kd-newdm`, `s1kd-metadata`, …).

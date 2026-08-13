@@ -1,0 +1,210 @@
+# /home/user/s1kd-tools/samples/out/pdfdiff-demo/reference.pdf
+
+pages          3
+words          644
+paper          A4 (595.3x841.9pt)
+margins        left   70.9pt (25.0mm)  right   51.0pt (18.0mm)  top   36.2pt (12.8mm)  bottom   54.3pt (19.2mm)
+body style     Liberation Serif 10.0pt
+leading        12.5pt  (1.25x the body size)
+graphics       61 rule(s), 5 fill(s), 0 image(s)
+running head   AIRCRAFT MAINTENANCE MANUAL | DMC-S#KDPDF-A-#-#-#-#A-#AD
+running foot   Issue # — #-#-# | Page #
+
+## Text styles (most glyphs first)
+
+     2421 glyphs    32 lines  Liberation Serif 10.0pt
+                             e.g. "The hydraulic power system supplies pressurized fluid to th…"
+      576 glyphs    21 lines  Liberation Serif 9.0pt
+                             e.g. "Running the pump dry for more than fifteen seconds will dam…"
+      243 glyphs    12 lines  Liberation Serif 8.0pt
+                             e.g. "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+       71 glyphs     7 lines  Liberation Serif,Bold 9.0pt bold
+                             e.g. "Table 1 System leading particulars"
+       51 glyphs     3 lines  Liberation Serif,Bold 14.0pt bold
+                             e.g. "2. Component description"
+       49 glyphs     3 lines  Liberation Serif,Bold 11.5pt bold
+                             e.g. "2.2. Engine-driven pump"
+       20 glyphs     1 lines  Liberation Serif,Bold 18.0pt bold
+                             e.g. "Hydraulic power system"
+       18 glyphs     1 lines  Liberation Serif,Italic 12.0pt italic
+                             e.g. "General description"
+       11 glyphs     1 lines  Liberation Serif,Bold 10.0pt bold
+                             e.g. "REFILL , FULL"
+
+## Indent stops (line-start x, and how many lines use it)
+
+  x=   71.0pt (  25.0mm)  43 line(s)
+  x=   88.0pt (  31.0mm)  4 line(s)
+  x=   91.0pt (  32.1mm)  6 line(s)
+  x=   94.0pt (  33.2mm)  6 line(s)
+  x=  111.0pt (  39.2mm)  3 line(s)
+  x=  247.0pt (  87.1mm)  6 line(s)
+  x=  346.0pt ( 122.1mm)  6 line(s)
+  x=  396.0pt ( 139.7mm)  3 line(s)
+
+## Page 1 — 595.3x841.9pt, 23 line(s), 9 graphic mark(s), 235 words
+
+   content box  (70.9,36.2) 473.4x751.4pt
+   margins      left   70.9pt (25.0mm)  right   51.0pt (18.0mm)  top   36.2pt (12.8mm)  bottom   54.3pt (19.2mm)
+
+   y=   41.5 x=  70.9 w= 143.9    8.0pt Liberation Serif  "AIRCRAFT MAINTENANCE MANUAL"
+   y=   41.5 x= 396.3 w= 148.0    8.0pt Liberation Serif  "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+   y=   46.6 x=  70.9 w= 473.4  rule h=0.7pt #000000
+   y=   90.6 x=  70.9 w= 186.8   18.0pt Liberation Serif,Bold bold  "Hydraulic power system"
+   y=   99.3 x=  70.9 w= 473.4  rule h=1.2pt #000000
+   y=  115.7 x=  70.9 w=  96.2   12.0pt Liberation Serif,Italic italic  "General description"
+   y=  146.0 x=  70.9 w=  62.1   14.0pt Liberation Serif,Bold bold  "1. General"
+   y=  165.3 x=  70.9 w= 472.2   10.0pt Liberation Serif  "The hydraulic power system supplies pressurized fluid to the flight control actuators, the landing gear retraction jacks,"
+   y=  177.8 x=  70.9 w= 453.9   10.0pt Liberation Serif  "the wheel brakes and the nose wheel steering unit. The system is arranged as two independent circuits, referred to"
+   y=  190.3 x=  70.9 w= 464.2   10.0pt Liberation Serif  "throughout this publication as the green circuit and the yellow circuit, so that the loss of one circuit does not remove"
+   y=  202.8 x=  70.9 w= 197.5   10.0pt Liberation Serif  "hydraulic power from any flight-critical function."
+   y=  221.3 x=  70.9 w= 461.9   10.0pt Liberation Serif  "Each circuit has its own reservoir, engine-driven pump, filter assembly and accumulator. The circuits share no fluid"
+   y=  233.8 x=  70.9 w= 462.0   10.0pt Liberation Serif  "path in normal operation. A power transfer unit couples the two circuits mechanically, without transferring fluid, so"
+   y=  246.3 x=  70.9 w= 332.1   10.0pt Liberation Serif  "that a circuit whose pump has failed can still be pressurized from the opposite side."
+   y=  263.2 x=  70.9 w= 473.4  fill h=47.4pt #e8e8e8
+   y=  263.2 x=  70.9 w= 473.4  rule h=0.8pt #000000
+   y=  263.2 x=  70.9 w=   0.8  rule h=47.4pt #000000
+   y=  263.2 x= 543.5 w=   0.8  rule h=47.4pt #000000
+   y=  277.4 x=  93.7 w=  49.1    9.0pt Liberation Serif,Bold bold  "WARNING"
+   y=  291.3 x=  93.7 w= 433.5    9.0pt Liberation Serif  "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged."
+   y=  302.3 x=  93.7 w= 249.4    9.0pt Liberation Serif  "Residual pressure in an accumulator can be sufficient to cause injury."
+   y=  309.8 x=  70.9 w= 473.4  rule h=0.8pt #000000
+   y=  328.2 x=  70.9 w= 441.7   10.0pt Liberation Serif  "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi."
+   y=  340.7 x=  70.9 w= 470.0   10.0pt Liberation Serif  "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines"
+   y=  353.2 x=  70.9 w= 353.0   10.0pt Liberation Serif  "shut down, the reservoirs are pressurized by the hand pump on the ground service panel."
+   y=  368.1 x=  70.9 w=   2.0  rule h=32.8pt #000000
+   y=  376.5 x= 110.9 w=  25.5    9.0pt Liberation Serif,Bold bold  "NOTE"
+   y=  387.4 x= 110.9 w= 429.3    9.0pt Liberation Serif  "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another"
+   y=  398.4 x= 110.9 w=  62.7    9.0pt Liberation Serif  "location is stated."
+   y=  776.7 x=  70.9 w= 473.4  rule h=0.4pt #000000
+   y=  787.6 x=  70.9 w=  79.8    8.0pt Liberation Serif  "Issue 001 — 2026-03-17"
+   y=  787.6 x= 522.7 w=  21.5    8.0pt Liberation Serif  "Page 1"
+
+## Page 2 — 595.3x841.9pt, 29 line(s), 7 graphic mark(s), 279 words
+
+   content box  (70.9,36.2) 473.4x751.4pt
+   margins      left   70.9pt (25.0mm)  right   51.0pt (18.0mm)  top   36.2pt (12.8mm)  bottom   54.3pt (19.2mm)
+
+   y=   41.5 x=  70.9 w= 143.9    8.0pt Liberation Serif  "AIRCRAFT MAINTENANCE MANUAL"
+   y=   41.5 x= 396.3 w= 148.0    8.0pt Liberation Serif  "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+   y=   46.6 x=  70.9 w= 473.4  rule h=0.7pt #000000
+   y=   86.8 x=  70.9 w= 154.3   14.0pt Liberation Serif,Bold bold  "2. Component description"
+   y=  106.1 x=  70.9 w= 466.6   10.0pt Liberation Serif  "The main components of each circuit are listed below. Part numbers are given in the illustrated parts data module for"
+   y=  118.6 x=  70.9 w=  44.9   10.0pt Liberation Serif  "the system."
+   y=  148.3 x=  70.9 w=  68.0   11.5pt Liberation Serif,Bold bold  "2.1. Reservoir"
+   y=  166.9 x=  70.9 w= 466.1   10.0pt Liberation Serif  "The reservoir is a welded aluminium cylinder of 12 litre usable capacity with a bootstrap piston. The piston is driven"
+   y=  179.4 x=  70.9 w= 453.1   10.0pt Liberation Serif  "by system pressure so that the return side of the circuit is held above the cavitation threshold of the engine-driven"
+   y=  191.9 x=  70.9 w= 264.6   10.0pt Liberation Serif  "pump at all attitudes and at all altitudes within the flight envelope."
+   y=  210.4 x=  70.9 w= 364.0   10.0pt Liberation Serif  "A sight glass on the forward face of the reservoir shows the fluid level against three marks:"
+   y=  210.4 x= 469.2 w=  75.1   10.0pt Liberation Serif,Bold bold  "REFILL , FULL"
+   y=  222.9 x=  70.9 w= 452.3   10.0pt Liberation Serif  "and MAX . The level must be read with the aircraft on the ground, the circuit depressurized and the landing gear"
+   y=  235.4 x=  70.9 w=  38.6   10.0pt Liberation Serif  "extended."
+   y=  265.1 x=  70.9 w= 122.0   11.5pt Liberation Serif,Bold bold  "2.2. Engine-driven pump"
+   y=  283.7 x=  70.9 w= 472.2   10.0pt Liberation Serif  "The engine-driven pump is a variable displacement axial piston unit mounted on the accessory gearbox. Displacement"
+   y=  296.2 x=  70.9 w= 465.8   10.0pt Liberation Serif  "is controlled by a compensator that maintains delivery pressure at the nominal value across the whole flow range. At"
+   y=  308.7 x=  70.9 w= 350.2   10.0pt Liberation Serif  "zero demand the pump destrokes and the delivery flow falls to the case drain flow only."
+   y=  325.6 x=  70.9 w= 473.4  fill h=47.4pt #e8e8e8
+   y=  325.6 x=  70.9 w= 473.4  rule h=0.8pt #000000
+   y=  325.6 x=  70.9 w=   0.8  rule h=47.4pt #000000
+   y=  325.6 x= 543.5 w=   0.8  rule h=47.4pt #000000
+   y=  339.8 x=  93.7 w=  46.1    9.0pt Liberation Serif,Bold bold  "CAUTION"
+   y=  353.7 x=  93.7 w= 440.8    9.0pt Liberation Serif  "Running the pump dry for more than fifteen seconds will damage the piston shoes. Prime the circuit before the first engine"
+   y=  364.7 x=  93.7 w= 121.6    9.0pt Liberation Serif  "start after any component change."
+   y=  372.2 x=  70.9 w= 473.4  rule h=0.8pt #000000
+   y=  401.8 x=  70.9 w=  84.6   11.5pt Liberation Serif,Bold bold  "2.3. Accumulator"
+   y=  420.4 x=  70.9 w= 445.8   10.0pt Liberation Serif  "Each circuit has a piston accumulator precharged with dry nitrogen. The accumulator damps pressure transients"
+   y=  432.9 x=  70.9 w= 472.0   10.0pt Liberation Serif  "caused by rapid actuator movement and provides a reserve of stored energy for brake application after the loss of both"
+   y=  445.4 x=  70.9 w=  29.2   10.0pt Liberation Serif  "pumps."
+   y=  467.9 x=  87.9 w= 264.7   10.0pt Liberation Serif  "(a) Green circuit accumulator, 1.5 litre, precharged to 1800 psi."
+   y=  483.4 x=  87.9 w= 269.7   10.0pt Liberation Serif  "(b) Yellow circuit accumulator, 1.0 litre, precharged to 1800 psi."
+   y=  498.9 x=  87.9 w= 236.1   10.0pt Liberation Serif  "(c) Brake accumulator, 0.5 litre, precharged to 1200 psi."
+   y=  776.7 x=  70.9 w= 473.4  rule h=0.4pt #000000
+   y=  787.6 x=  70.9 w=  79.8    8.0pt Liberation Serif  "Issue 001 — 2026-03-17"
+   y=  787.6 x= 522.7 w=  21.5    8.0pt Liberation Serif  "Page 2"
+
+## Page 3 — 595.3x841.9pt, 29 line(s), 50 graphic mark(s), 130 words
+
+   content box  (70.9,36.2) 473.4x751.4pt
+   margins      left   70.9pt (25.0mm)  right   51.0pt (18.0mm)  top   36.2pt (12.8mm)  bottom   54.3pt (19.2mm)
+
+   y=   41.5 x=  70.9 w= 143.9    8.0pt Liberation Serif  "AIRCRAFT MAINTENANCE MANUAL"
+   y=   41.5 x= 396.3 w= 148.0    8.0pt Liberation Serif  "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+   y=   46.6 x=  70.9 w= 473.4  rule h=0.7pt #000000
+   y=   86.8 x=  70.9 w= 132.5   14.0pt Liberation Serif,Bold bold  "3. Leading particulars"
+   y=  106.1 x=  70.9 w= 443.9   10.0pt Liberation Serif  "The table that follows gives the values used when the system is set up after installation. Values marked with an"
+   y=  118.6 x=  70.9 w= 203.3   10.0pt Liberation Serif  "asterisk are checked at every scheduled inspection."
+   y=  143.9 x=  87.9 w= 133.4    9.0pt Liberation Serif,Bold bold  "Table 1 System leading particulars"
+   y=  150.3 x=  87.9 w= 155.9  rule h=0.5pt #000000
+   y=  150.3 x= 243.8 w=  99.2  rule h=0.5pt #000000
+   y=  150.3 x= 343.0 w=  85.0  rule h=0.5pt #000000
+   y=  150.3 x=  87.9 w= 155.9  fill h=17.8pt #d9d9d9
+   y=  150.3 x=  87.9 w=   0.5  rule h=17.8pt #000000
+   y=  150.3 x= 243.8 w=  99.2  fill h=17.8pt #d9d9d9
+   y=  150.3 x= 243.8 w=   0.5  rule h=17.8pt #000000
+   y=  150.3 x= 343.0 w=  85.0  fill h=17.8pt #d9d9d9
+   y=  150.3 x= 343.0 w=   0.5  rule h=17.8pt #000000
+   y=  150.3 x= 427.5 w=   0.5  rule h=17.8pt #000000
+   y=  162.2 x=  91.4 w=  40.9    9.0pt Liberation Serif,Bold bold  "Parameter"
+   y=  162.2 x= 247.3 w=  22.5    9.0pt Liberation Serif,Bold bold  "Value"
+   y=  162.2 x= 346.5 w=  38.4    9.0pt Liberation Serif,Bold bold  "Tolerance"
+   y=  168.1 x=  87.9 w= 155.9  rule h=0.4pt #000000
+   y=  168.1 x=  87.9 w=   0.4  rule h=17.6pt #000000
+   y=  168.1 x= 243.8 w=  99.2  rule h=0.4pt #000000
+   y=  168.1 x= 243.8 w=   0.4  rule h=17.6pt #000000
+   y=  168.1 x= 343.0 w=  85.0  rule h=0.4pt #000000
+   y=  168.1 x= 343.0 w=   0.4  rule h=17.6pt #000000
+   y=  168.1 x= 427.6 w=   0.4  rule h=17.6pt #000000
+   y=  179.9 x=  91.3 w=  65.4    9.0pt Liberation Serif  "System pressure *"
+   y=  179.9 x= 247.2 w=  30.7    9.0pt Liberation Serif  "3000 psi"
+   y=  179.9 x= 346.4 w=  34.6    9.0pt Liberation Serif  "+/- 50 psi"
+   y=  185.7 x=  87.9 w=   0.4  rule h=17.6pt #000000
+   y=  185.7 x= 243.8 w=   0.4  rule h=17.6pt #000000
+   y=  185.7 x= 343.0 w=   0.4  rule h=17.6pt #000000
+   y=  185.7 x= 427.6 w=   0.4  rule h=17.6pt #000000
+   y=  185.7 x=  87.9 w= 155.9  rule h=0.4pt #000000
+   y=  185.7 x= 243.8 w=  99.2  rule h=0.4pt #000000
+   y=  185.7 x= 343.0 w=  85.0  rule h=0.4pt #000000
+   y=  197.5 x=  91.3 w= 109.1    9.0pt Liberation Serif  "Relief valve cracking pressure"
+   y=  197.5 x= 247.2 w=  30.7    9.0pt Liberation Serif  "3500 psi"
+   y=  197.5 x= 346.4 w=  34.6    9.0pt Liberation Serif  "+/- 75 psi"
+   y=  203.3 x=  87.9 w=   0.4  rule h=17.6pt #000000
+   y=  203.3 x= 243.8 w=   0.4  rule h=17.6pt #000000
+   y=  203.3 x= 343.0 w=   0.4  rule h=17.6pt #000000
+   y=  203.3 x= 427.6 w=   0.4  rule h=17.6pt #000000
+   y=  203.3 x=  87.9 w= 155.9  rule h=0.4pt #000000
+   y=  203.3 x= 243.8 w=  99.2  rule h=0.4pt #000000
+   y=  203.3 x= 343.0 w=  85.0  rule h=0.4pt #000000
+   y=  215.1 x=  91.3 w=  67.1    9.0pt Liberation Serif  "Reservoir capacity"
+   y=  215.1 x= 247.2 w=  16.7    9.0pt Liberation Serif  "12 L"
+   y=  215.1 x= 346.4 w=  31.8    9.0pt Liberation Serif  "+/- 0.2 L"
+   y=  220.9 x=  87.9 w= 155.9  rule h=0.4pt #000000
+   y=  220.9 x=  87.9 w=   0.4  rule h=17.6pt #000000
+   y=  220.9 x= 243.8 w=  99.2  rule h=0.4pt #000000
+   y=  220.9 x= 243.8 w=   0.4  rule h=17.6pt #000000
+   y=  220.9 x= 343.0 w=  85.0  rule h=0.4pt #000000
+   y=  220.9 x= 343.0 w=   0.4  rule h=17.6pt #000000
+   y=  220.9 x= 427.6 w=   0.4  rule h=17.6pt #000000
+   y=  232.7 x=  91.3 w=  91.4    9.0pt Liberation Serif  "Accumulator precharge *"
+   y=  232.7 x= 247.2 w=  30.7    9.0pt Liberation Serif  "1800 psi"
+   y=  232.7 x= 346.4 w=  34.6    9.0pt Liberation Serif  "+/- 25 psi"
+   y=  238.5 x=  87.9 w= 155.9  rule h=0.4pt #000000
+   y=  238.5 x=  87.9 w=   0.4  rule h=17.6pt #000000
+   y=  238.5 x= 243.8 w=  99.2  rule h=0.4pt #000000
+   y=  238.5 x= 243.8 w=   0.4  rule h=17.6pt #000000
+   y=  238.5 x= 343.0 w=  85.0  rule h=0.4pt #000000
+   y=  238.5 x= 343.0 w=   0.4  rule h=17.6pt #000000
+   y=  238.5 x= 427.6 w=   0.4  rule h=17.6pt #000000
+   y=  250.3 x=  91.3 w=  81.4    9.0pt Liberation Serif  "Case drain flow at idle"
+   y=  250.3 x= 247.2 w=  35.5    9.0pt Liberation Serif  "1.2 L/min"
+   y=  250.3 x= 346.4 w=  15.5    9.0pt Liberation Serif  "max"
+   y=  255.7 x=  87.9 w= 155.9  rule h=0.4pt #000000
+   y=  255.7 x= 243.8 w=  99.2  rule h=0.4pt #000000
+   y=  255.7 x= 343.0 w=  85.0  rule h=0.4pt #000000
+   y=  275.7 x=  70.9 w= 451.0   10.0pt Liberation Serif  "Fluid conforming to the specification quoted in the consumables data module must be used throughout. Fluids of"
+   y=  288.2 x=  70.9 w= 451.4   10.0pt Liberation Serif  "different specifications must not be mixed, and a circuit that has been contaminated must be drained, flushed and"
+   y=  300.7 x=  70.9 w= 153.4   10.0pt Liberation Serif  "refilled before it is returned to service."
+   y=  776.7 x=  70.9 w= 473.4  rule h=0.4pt #000000
+   y=  787.6 x=  70.9 w=  79.8    8.0pt Liberation Serif  "Issue 001 — 2026-03-17"
+   y=  787.6 x= 522.7 w=  21.5    8.0pt Liberation Serif  "Page 3"
+
+

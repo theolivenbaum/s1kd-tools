@@ -13,5 +13,6 @@
     <Project Path="samples/harnesses/Samples.ToolsDoc/Samples.ToolsDoc.csproj" />
     <Project Path="samples/harnesses/Samples.XslStylesheets/Samples.XslStylesheets.csproj" />
     <Project Path="samples/harnesses/Samples.S1kd2db/Samples.S1kd2db.csproj" />
+    <Project Path="samples/harnesses/Samples.PdfDiff/Samples.PdfDiff.csproj" />
   </Folder>
 </Solution>

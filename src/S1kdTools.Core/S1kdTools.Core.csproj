@@ -40,4 +40,13 @@
     <PackageReference Include="FOP.Sharp" Version="26.6.2312" />
   </ItemGroup>
 
+  <!-- PdfPig: a pure-managed PDF reader (Apache-2.0). Powers s1kd-pdfdiff and
+       s1kd-pdfdump, which read back a *rendered* PDF — its text runs, glyph
+       boxes, fonts, colours and vector marks — to compare one rendering against
+       another. Managed-only matters: no native rasteriser and no external
+       process, so the comparison runs anywhere the rest of the suite does. -->
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.15" />
+  </ItemGroup>
+
 </Project>

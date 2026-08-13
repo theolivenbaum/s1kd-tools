@@ -1,0 +1,1976 @@
+{
+  "schema": "s1kd-pdfdiff/1",
+  "actual": {
+    "path": "/home/user/s1kd-tools/samples/out/pdfdiff-demo/improved.pdf",
+    "pages": 3,
+    "words": 638,
+    "paper": "A4",
+    "pageWidthPt": 595.28,
+    "pageHeightPt": 841.89,
+    "marginsPt": {
+      "left": 70.87,
+      "right": 51.02,
+      "top": 36.19,
+      "bottom": 54.3
+    },
+    "bodyStyle": "Liberation Serif 10.0pt",
+    "leadingPt": 12.5,
+    "lineHeightRatio": 1.25,
+    "fonts": [
+      {
+        "font": "Liberation Serif",
+        "sizePt": 10,
+        "bold": false,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 2412,
+        "lines": 32,
+        "sample": "The hydraulic power system supplies pressurized fluid to th\u2026"
+      },
+      {
+        "font": "Liberation Serif",
+        "sizePt": 9,
+        "bold": false,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 599,
+        "lines": 12,
+        "sample": "Running the pump dry for more than fifteen seconds will dam\u2026"
+      },
+      {
+        "font": "Liberation Serif",
+        "sizePt": 8,
+        "bold": false,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 243,
+        "lines": 12,
+        "sample": "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 14,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 51,
+        "lines": 3,
+        "sample": "2. Component description"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 11.5,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 49,
+        "lines": 3,
+        "sample": "2.2. Engine-driven pump"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 9,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 30,
+        "lines": 1,
+        "sample": "Table 1 System leading particulars"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 18,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 20,
+        "lines": 1,
+        "sample": "Hydraulic power system"
+      },
+      {
+        "font": "Liberation Serif,Italic",
+        "sizePt": 12,
+        "bold": false,
+        "italic": true,
+        "color": "#000000",
+        "glyphs": 18,
+        "lines": 1,
+        "sample": "General description"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 10,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 11,
+        "lines": 1,
+        "sample": "REFILL , FULL"
+      }
+    ],
+    "runningHeader": [
+      "AIRCRAFT MAINTENANCE MANUAL",
+      "DMC-S#KDPDF-A-#-#-#-#A-#AD"
+    ],
+    "runningFooter": [
+      "Issue # \u2014 #-#-#",
+      "Page #"
+    ],
+    "rules": 6,
+    "fills": 0,
+    "images": 0
+  },
+  "reference": {
+    "path": "/home/user/s1kd-tools/samples/out/pdfdiff-demo/reference.pdf",
+    "pages": 3,
+    "words": 644,
+    "paper": "A4",
+    "pageWidthPt": 595.28,
+    "pageHeightPt": 841.89,
+    "marginsPt": {
+      "left": 70.87,
+      "right": 51.02,
+      "top": 36.19,
+      "bottom": 54.3
+    },
+    "bodyStyle": "Liberation Serif 10.0pt",
+    "leadingPt": 12.5,
+    "lineHeightRatio": 1.25,
+    "fonts": [
+      {
+        "font": "Liberation Serif",
+        "sizePt": 10,
+        "bold": false,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 2421,
+        "lines": 32,
+        "sample": "The hydraulic power system supplies pressurized fluid to th\u2026"
+      },
+      {
+        "font": "Liberation Serif",
+        "sizePt": 9,
+        "bold": false,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 576,
+        "lines": 21,
+        "sample": "Running the pump dry for more than fifteen seconds will dam\u2026"
+      },
+      {
+        "font": "Liberation Serif",
+        "sizePt": 8,
+        "bold": false,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 243,
+        "lines": 12,
+        "sample": "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 9,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 71,
+        "lines": 7,
+        "sample": "Table 1 System leading particulars"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 14,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 51,
+        "lines": 3,
+        "sample": "2. Component description"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 11.5,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 49,
+        "lines": 3,
+        "sample": "2.2. Engine-driven pump"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 18,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 20,
+        "lines": 1,
+        "sample": "Hydraulic power system"
+      },
+      {
+        "font": "Liberation Serif,Italic",
+        "sizePt": 12,
+        "bold": false,
+        "italic": true,
+        "color": "#000000",
+        "glyphs": 18,
+        "lines": 1,
+        "sample": "General description"
+      },
+      {
+        "font": "Liberation Serif,Bold",
+        "sizePt": 10,
+        "bold": true,
+        "italic": false,
+        "color": "#000000",
+        "glyphs": 11,
+        "lines": 1,
+        "sample": "REFILL , FULL"
+      }
+    ],
+    "runningHeader": [
+      "AIRCRAFT MAINTENANCE MANUAL",
+      "DMC-S#KDPDF-A-#-#-#-#A-#AD"
+    ],
+    "runningFooter": [
+      "Issue # \u2014 #-#-#",
+      "Page #"
+    ],
+    "rules": 61,
+    "fills": 5,
+    "images": 0
+  },
+  "score": {
+    "parity": 81.49,
+    "pageCountAgreement": 1,
+    "textAgreement": 0.9907,
+    "pageTextAgreement": 0.9924,
+    "inkAmountAgreement": 0.8716,
+    "inkPlacementAgreement": 0.4375
+  },
+  "firstDivergentPage": 1,
+  "identical": false,
+  "progressLine": "parity=81.5 pages=3/3 words=638/644 text=0.991 pagetext=0.992 ink=0.872 place=0.438 firstdiff=1",
+  "styleFindings": [
+    {
+      "property": "graphics.fills",
+      "actual": "0",
+      "reference": "5",
+      "delta": "-5",
+      "foHint": "@background-color on fo:block / fo:table-cell",
+      "severity": "significant"
+    },
+    {
+      "property": "graphics.rules",
+      "actual": "6",
+      "reference": "61",
+      "delta": "-55",
+      "foHint": "fo:block/@border-*, fo:leader, or table borders",
+      "severity": "significant"
+    },
+    {
+      "property": "text.indent-stops",
+      "actual": "71pt, 88pt, 406pt, 523pt",
+      "reference": "71pt, 88pt, 91pt, 94pt, 111pt, 247pt, 346pt, 396pt",
+      "delta": "absent here: 91pt, 94pt, 111pt, 247pt, 346pt, 396pt; only here: 406pt, 523pt",
+      "foHint": "fo:block/@start-indent, @text-indent, or list-block label separation",
+      "severity": "minor"
+    }
+  ],
+  "pages": [
+    {
+      "number": 1,
+      "inActual": true,
+      "inReference": true,
+      "actualWords": 233,
+      "referenceWords": 235,
+      "score": 0.6945,
+      "hasDifference": true,
+      "detailed": true,
+      "verdict": "REFLOW CASCADE \u2014 the content is present but the whole page sits 1.2pt higher. One upstream measurement (a margin, a leading, a space-before) moved everything.",
+      "ink": {
+        "geometryMatches": true,
+        "actualCoverage": 0.07798,
+        "referenceCoverage": 0.08358,
+        "ratio": 0.933,
+        "iou": 0.4208,
+        "differingFraction": 0.09153,
+        "meanAbsError": 0.03179,
+        "verticalShiftPt": -1,
+        "totalRegions": 34,
+        "regions": [
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              332,
+              473.5,
+              27.5
+            ],
+            "pageFraction": 0.02017,
+            "actualInk": 0.0911,
+            "referenceInk": 0.1673,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines",
+              "shut down, the reservoirs are pressurized by the hand pump on the ground service panel."
+            ],
+            "actualText": [
+              "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another",
+              "location is stated."
+            ]
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              109,
+              379.5,
+              433,
+              9.5
+            ],
+            "pageFraction": 0.0076,
+            "actualInk": 0,
+            "referenceInk": 0.2354,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another"
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "MissingRule",
+            "where": "top-centre",
+            "boundsPt": [
+              69,
+              97.5,
+              477,
+              4.5
+            ],
+            "pageFraction": 0.00428,
+            "actualInk": 0,
+            "referenceInk": 0.2647,
+            "summary": "a rule or border the reference draws and we do not",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-left",
+            "boundsPt": [
+              109,
+              390.5,
+              66,
+              9.5
+            ],
+            "pageFraction": 0.00124,
+            "actualInk": 0,
+            "referenceInk": 0.2598,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "location is stated."
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "top-left",
+            "boundsPt": [
+              69,
+              76.5,
+              81.5,
+              4
+            ],
+            "pageFraction": 0.00065,
+            "actualInk": 0.1523,
+            "referenceInk": 0.2601,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "ExtraInk",
+            "where": "top-left",
+            "boundsPt": [
+              69,
+              89,
+              81.5,
+              4
+            ],
+            "pageFraction": 0.00065,
+            "actualInk": 0.2775,
+            "referenceInk": 0.1697,
+            "summary": "ink we draw that the reference does not",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-left",
+            "boundsPt": [
+              109,
+              369,
+              29,
+              9
+            ],
+            "pageFraction": 0.00052,
+            "actualInk": 0,
+            "referenceInk": 0.2624,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "NOTE"
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "top-centre",
+            "boundsPt": [
+              204,
+              79,
+              55.5,
+              4
+            ],
+            "pageFraction": 0.00044,
+            "actualInk": 0.1648,
+            "referenceInk": 0.2703,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "ExtraInk",
+            "where": "top-centre",
+            "boundsPt": [
+              204,
+              89,
+              55.5,
+              4
+            ],
+            "pageFraction": 0.00044,
+            "actualInk": 0.2717,
+            "referenceInk": 0.1661,
+            "summary": "ink we draw that the reference does not",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "top-left",
+            "boundsPt": [
+              151.5,
+              80.5,
+              51.5,
+              4
+            ],
+            "pageFraction": 0.00041,
+            "actualInk": 0.1524,
+            "referenceInk": 0.2574,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "ExtraInk",
+            "where": "top-left",
+            "boundsPt": [
+              151.5,
+              89,
+              51.5,
+              4
+            ],
+            "pageFraction": 0.00041,
+            "actualInk": 0.2702,
+            "referenceInk": 0.1652,
+            "summary": "ink we draw that the reference does not",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              261.5,
+              477,
+              51.5
+            ],
+            "pageFraction": 0.04899,
+            "actualInk": 0.1661,
+            "referenceInk": 0.1811,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "WARNING",
+              "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+              "Residual pressure in an accumulator can be sufficient to cause injury."
+            ],
+            "actualText": [
+              "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+              "Residual pressure in an accumulator can be sufficient to cause injury.",
+              "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi.",
+              "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines"
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              315,
+              445.5,
+              15
+            ],
+            "pageFraction": 0.01204,
+            "actualInk": 0.1455,
+            "referenceInk": 0.163,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi."
+            ],
+            "actualText": [
+              "shut down, the reservoirs are pressurized by the hand pump on the ground service panel."
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              156.5,
+              475,
+              6
+            ],
+            "pageFraction": 0.00333,
+            "actualInk": 0.2649,
+            "referenceInk": 0.2512,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "The hydraulic power system supplies pressurized fluid to the flight control actuators, the landing gear retraction jacks,"
+            ],
+            "actualText": [
+              "The hydraulic power system supplies pressurized fluid to the flight control actuators, the landing gear retraction jacks,"
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              181.5,
+              467,
+              6
+            ],
+            "pageFraction": 0.00328,
+            "actualInk": 0.2516,
+            "referenceInk": 0.2383,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "throughout this publication as the green circuit and the yellow circuit, so that the loss of one circuit does not remove"
+            ],
+            "actualText": [
+              "throughout this publication as the green circuit and the yellow circuit, so that the loss of one circuit does not remove"
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              212.5,
+              465,
+              6
+            ],
+            "pageFraction": 0.00326,
+            "actualInk": 0.2698,
+            "referenceInk": 0.2562,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "Each circuit has its own reservoir, engine-driven pump, filter assembly and accumulator. The circuits share no fluid"
+            ],
+            "actualText": [
+              "Each circuit has its own reservoir, engine-driven pump, filter assembly and accumulator. The circuits share no fluid"
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              225,
+              464.5,
+              6
+            ],
+            "pageFraction": 0.00325,
+            "actualInk": 0.2753,
+            "referenceInk": 0.2617,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "path in normal operation. A power transfer unit couples the two circuits mechanically, without transferring fluid, so"
+            ],
+            "actualText": [
+              "path in normal operation. A power transfer unit couples the two circuits mechanically, without transferring fluid, so"
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              169,
+              457,
+              6
+            ],
+            "pageFraction": 0.0032,
+            "actualInk": 0.2652,
+            "referenceInk": 0.2517,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "the wheel brakes and the nose wheel steering unit. The system is arranged as two independent circuits, referred to"
+            ],
+            "actualText": [
+              "the wheel brakes and the nose wheel steering unit. The system is arranged as two independent circuits, referred to"
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69,
+              45,
+              477,
+              5
+            ],
+            "pageFraction": 0.00476,
+            "actualInk": 0.139,
+            "referenceInk": 0.139,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "bottom-centre",
+            "boundsPt": [
+              69,
+              775,
+              477,
+              5
+            ],
+            "pageFraction": 0.00476,
+            "actualInk": 0.0993,
+            "referenceInk": 0.0993,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              237.5,
+              335,
+              6
+            ],
+            "pageFraction": 0.00235,
+            "actualInk": 0.2653,
+            "referenceInk": 0.2519,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "that a circuit whose pump has failed can still be pressurized from the opposite side."
+            ],
+            "actualText": [
+              "that a circuit whose pump has failed can still be pressurized from the opposite side."
+            ]
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              163.5,
+              475,
+              3.5
+            ],
+            "pageFraction": 0.00332,
+            "actualInk": 0.1906,
+            "referenceInk": 0.2141,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              188.5,
+              467,
+              3.5
+            ],
+            "pageFraction": 0.00326,
+            "actualInk": 0.1858,
+            "referenceInk": 0.2087,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              219.5,
+              465,
+              3.5
+            ],
+            "pageFraction": 0.00325,
+            "actualInk": 0.1901,
+            "referenceInk": 0.2135,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69.5,
+              232,
+              465,
+              3.5
+            ],
+            "pageFraction": 0.00325,
+            "actualInk": 0.1901,
+            "referenceInk": 0.2135,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [],
+            "actualText": []
+          }
+        ]
+      },
+      "structure": {
+        "pageShiftPt": -1.2,
+        "pageShiftXPt": 0,
+        "textSimilarity": 0.9915,
+        "rewrapped": false,
+        "counts": {
+          "same": 9,
+          "moved": 12,
+          "restyled": 0,
+          "retexted": 0,
+          "missing": 2,
+          "extra": 0
+        },
+        "changes": [
+          {
+            "change": "moved",
+            "text": "AIRCRAFT MAINTENANCE MANUAL",
+            "actualText": "AIRCRAFT MAINTENANCE MANUAL",
+            "referenceText": "AIRCRAFT MAINTENANCE MANUAL",
+            "deltaXPt": 0,
+            "deltaYPt": 0,
+            "residualYPt": 1.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 8.0pt #000000",
+            "actualStyle": "Liberation Serif 8.0pt #000000",
+            "referenceAt": [
+              70.9,
+              41.5
+            ],
+            "actualAt": [
+              70.9,
+              41.5
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "DMC-S1KDPDF-A-00-00-00-00A-040AD",
+            "actualText": "DMC-S1KDPDF-A-00-00-00-00A-040AD",
+            "referenceText": "DMC-S1KDPDF-A-00-00-00-00A-040AD",
+            "deltaXPt": 9.3,
+            "deltaYPt": 0,
+            "residualYPt": 1.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 8.0pt #000000",
+            "actualStyle": "Liberation Serif 8.0pt #000000",
+            "referenceAt": [
+              396.3,
+              41.5
+            ],
+            "actualAt": [
+              405.6,
+              41.5
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "Hydraulic power system",
+            "actualText": "Hydraulic power system",
+            "referenceText": "Hydraulic power system",
+            "deltaXPt": 0,
+            "deltaYPt": 0,
+            "residualYPt": 1.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif,Bold 18.0pt bold #000000",
+            "actualStyle": "Liberation Serif,Bold 18.0pt bold #000000",
+            "referenceAt": [
+              70.9,
+              90.6
+            ],
+            "actualAt": [
+              70.9,
+              90.6
+            ]
+          },
+          {
+            "change": "missing",
+            "text": "WARNING",
+            "actualText": null,
+            "referenceText": "WARNING",
+            "deltaXPt": null,
+            "deltaYPt": null,
+            "residualYPt": null,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif,Bold 9.0pt bold #000000",
+            "actualStyle": null,
+            "referenceAt": [
+              93.7,
+              277.4
+            ],
+            "actualAt": null
+          },
+          {
+            "change": "moved",
+            "text": "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+            "actualText": "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+            "referenceText": "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+            "deltaXPt": -5.8,
+            "deltaYPt": -22.8,
+            "residualYPt": -21.6,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 9.0pt #000000",
+            "actualStyle": "Liberation Serif 9.0pt #000000",
+            "referenceAt": [
+              93.7,
+              291.3
+            ],
+            "actualAt": [
+              87.9,
+              268.5
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "Residual pressure in an accumulator can be sufficient to cause injury.",
+            "actualText": "Residual pressure in an accumulator can be sufficient to cause injury.",
+            "referenceText": "Residual pressure in an accumulator can be sufficient to cause injury.",
+            "deltaXPt": -5.8,
+            "deltaYPt": -22.8,
+            "residualYPt": -21.6,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 9.0pt #000000",
+            "actualStyle": "Liberation Serif 9.0pt #000000",
+            "referenceAt": [
+              93.7,
+              302.3
+            ],
+            "actualAt": [
+              87.9,
+              279.5
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi.",
+            "actualText": "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi.",
+            "referenceText": "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi.",
+            "deltaXPt": 0,
+            "deltaYPt": -30.6,
+            "residualYPt": -29.4,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 10.0pt #000000",
+            "actualStyle": "Liberation Serif 10.0pt #000000",
+            "referenceAt": [
+              70.9,
+              328.2
+            ],
+            "actualAt": [
+              70.9,
+              297.6
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines",
+            "actualText": "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines",
+            "referenceText": "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines",
+            "deltaXPt": 0,
+            "deltaYPt": -30.6,
+            "residualYPt": -29.4,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 10.0pt #000000",
+            "actualStyle": "Liberation Serif 10.0pt #000000",
+            "referenceAt": [
+              70.9,
+              340.7
+            ],
+            "actualAt": [
+              70.9,
+              310.1
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "shut down, the reservoirs are pressurized by the hand pump on the ground service panel.",
+            "actualText": "shut down, the reservoirs are pressurized by the hand pump on the ground service panel.",
+            "referenceText": "shut down, the reservoirs are pressurized by the hand pump on the ground service panel.",
+            "deltaXPt": 0,
+            "deltaYPt": -30.6,
+            "residualYPt": -29.4,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 10.0pt #000000",
+            "actualStyle": "Liberation Serif 10.0pt #000000",
+            "referenceAt": [
+              70.9,
+              353.2
+            ],
+            "actualAt": [
+              70.9,
+              322.6
+            ]
+          },
+          {
+            "change": "missing",
+            "text": "NOTE",
+            "actualText": null,
+            "referenceText": "NOTE",
+            "deltaXPt": null,
+            "deltaYPt": null,
+            "residualYPt": null,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif,Bold 9.0pt bold #000000",
+            "actualStyle": null,
+            "referenceAt": [
+              110.9,
+              376.5
+            ],
+            "actualAt": null
+          },
+          {
+            "change": "moved",
+            "text": "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another",
+            "actualText": "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another",
+            "referenceText": "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another",
+            "deltaXPt": -23.01,
+            "deltaYPt": -41.4,
+            "residualYPt": -40.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 9.0pt #000000",
+            "actualStyle": "Liberation Serif 9.0pt #000000",
+            "referenceAt": [
+              110.9,
+              387.4
+            ],
+            "actualAt": [
+              87.9,
+              346
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "location is stated.",
+            "actualText": "location is stated.",
+            "referenceText": "location is stated.",
+            "deltaXPt": -23.01,
+            "deltaYPt": -41.4,
+            "residualYPt": -40.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 9.0pt #000000",
+            "actualStyle": "Liberation Serif 9.0pt #000000",
+            "referenceAt": [
+              110.9,
+              398.4
+            ],
+            "actualAt": [
+              87.9,
+              357
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "Issue 001 \u2014 2026-03-17",
+            "actualText": "Issue 001 \u2014 2026-03-17",
+            "referenceText": "Issue 001 \u2014 2026-03-17",
+            "deltaXPt": 0,
+            "deltaYPt": 0,
+            "residualYPt": 1.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 8.0pt #000000",
+            "actualStyle": "Liberation Serif 8.0pt #000000",
+            "referenceAt": [
+              70.9,
+              787.6
+            ],
+            "actualAt": [
+              70.9,
+              787.6
+            ]
+          },
+          {
+            "change": "moved",
+            "text": "Page 1",
+            "actualText": "Page 1",
+            "referenceText": "Page 1",
+            "deltaXPt": 0,
+            "deltaYPt": 0,
+            "residualYPt": 1.2,
+            "styleChanges": [],
+            "referenceStyle": "Liberation Serif 8.0pt #000000",
+            "actualStyle": "Liberation Serif 8.0pt #000000",
+            "referenceAt": [
+              522.7,
+              787.6
+            ],
+            "actualAt": [
+              522.7,
+              787.6
+            ]
+          }
+        ]
+      },
+      "referenceOutline": {
+        "widthPt": 595.28,
+        "heightPt": 841.89,
+        "lines": [
+          {
+            "text": "AIRCRAFT MAINTENANCE MANUAL",
+            "xPt": 70.9,
+            "baselinePt": 41.5,
+            "widthPt": 143.9,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "DMC-S1KDPDF-A-00-00-00-00A-040AD",
+            "xPt": 396.3,
+            "baselinePt": 41.5,
+            "widthPt": 148,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Hydraulic power system",
+            "xPt": 70.9,
+            "baselinePt": 90.6,
+            "widthPt": 186.8,
+            "font": "Liberation Serif,Bold",
+            "sizePt": 18,
+            "bold": true,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "General description",
+            "xPt": 70.9,
+            "baselinePt": 115.7,
+            "widthPt": 96.2,
+            "font": "Liberation Serif,Italic",
+            "sizePt": 12,
+            "bold": false,
+            "italic": true,
+            "color": "#000000"
+          },
+          {
+            "text": "1. General",
+            "xPt": 70.9,
+            "baselinePt": 146,
+            "widthPt": 62.1,
+            "font": "Liberation Serif,Bold",
+            "sizePt": 14,
+            "bold": true,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "The hydraulic power system supplies pressurized fluid to the flight control actuators, the landing gear retraction jacks,",
+            "xPt": 70.9,
+            "baselinePt": 165.3,
+            "widthPt": 472.2,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "the wheel brakes and the nose wheel steering unit. The system is arranged as two independent circuits, referred to",
+            "xPt": 70.9,
+            "baselinePt": 177.8,
+            "widthPt": 453.9,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "throughout this publication as the green circuit and the yellow circuit, so that the loss of one circuit does not remove",
+            "xPt": 70.9,
+            "baselinePt": 190.3,
+            "widthPt": 464.2,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "hydraulic power from any flight-critical function.",
+            "xPt": 70.9,
+            "baselinePt": 202.8,
+            "widthPt": 197.5,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Each circuit has its own reservoir, engine-driven pump, filter assembly and accumulator. The circuits share no fluid",
+            "xPt": 70.9,
+            "baselinePt": 221.3,
+            "widthPt": 461.9,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "path in normal operation. A power transfer unit couples the two circuits mechanically, without transferring fluid, so",
+            "xPt": 70.9,
+            "baselinePt": 233.8,
+            "widthPt": 462,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "that a circuit whose pump has failed can still be pressurized from the opposite side.",
+            "xPt": 70.9,
+            "baselinePt": 246.3,
+            "widthPt": 332.1,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "WARNING",
+            "xPt": 93.7,
+            "baselinePt": 277.4,
+            "widthPt": 49.1,
+            "font": "Liberation Serif,Bold",
+            "sizePt": 9,
+            "bold": true,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+            "xPt": 93.7,
+            "baselinePt": 291.3,
+            "widthPt": 433.5,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Residual pressure in an accumulator can be sufficient to cause injury.",
+            "xPt": 93.7,
+            "baselinePt": 302.3,
+            "widthPt": 249.4,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi.",
+            "xPt": 70.9,
+            "baselinePt": 328.2,
+            "widthPt": 441.7,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines",
+            "xPt": 70.9,
+            "baselinePt": 340.7,
+            "widthPt": 470,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "shut down, the reservoirs are pressurized by the hand pump on the ground service panel.",
+            "xPt": 70.9,
+            "baselinePt": 353.2,
+            "widthPt": 353,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "NOTE",
+            "xPt": 110.9,
+            "baselinePt": 376.5,
+            "widthPt": 25.5,
+            "font": "Liberation Serif,Bold",
+            "sizePt": 9,
+            "bold": true,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another",
+            "xPt": 110.9,
+            "baselinePt": 387.4,
+            "widthPt": 429.3,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "location is stated.",
+            "xPt": 110.9,
+            "baselinePt": 398.4,
+            "widthPt": 62.7,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Issue 001 \u2014 2026-03-17",
+            "xPt": 70.9,
+            "baselinePt": 787.6,
+            "widthPt": 79.8,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Page 1",
+            "xPt": 522.7,
+            "baselinePt": 787.6,
+            "widthPt": 21.5,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          }
+        ],
+        "graphics": [
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              99.3,
+              473.4,
+              1.2
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "fill",
+            "boundsPt": [
+              70.9,
+              263.2,
+              473.4,
+              47.4
+            ],
+            "color": "#e8e8e8"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              263.2,
+              473.4,
+              0.8
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              309.8,
+              473.4,
+              0.8
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              263.2,
+              0.8,
+              47.4
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              543.5,
+              263.2,
+              0.8,
+              47.4
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              368.1,
+              2,
+              32.8
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              46.6,
+              473.4,
+              0.7
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              776.7,
+              473.4,
+              0.4
+            ],
+            "color": "#000000"
+          }
+        ]
+      },
+      "actualOutline": {
+        "widthPt": 595.28,
+        "heightPt": 841.89,
+        "lines": [
+          {
+            "text": "AIRCRAFT MAINTENANCE MANUAL",
+            "xPt": 70.9,
+            "baselinePt": 41.5,
+            "widthPt": 137.2,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "DMC-S1KDPDF-A-00-00-00-00A-040AD",
+            "xPt": 405.6,
+            "baselinePt": 41.5,
+            "widthPt": 138.6,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Hydraulic power system",
+            "xPt": 70.9,
+            "baselinePt": 90.6,
+            "widthPt": 186.8,
+            "font": "Liberation Serif,Bold",
+            "sizePt": 18,
+            "bold": true,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "General description",
+            "xPt": 70.9,
+            "baselinePt": 114.5,
+            "widthPt": 96.2,
+            "font": "Liberation Serif,Italic",
+            "sizePt": 12,
+            "bold": false,
+            "italic": true,
+            "color": "#000000"
+          },
+          {
+            "text": "1. General",
+            "xPt": 70.9,
+            "baselinePt": 144.8,
+            "widthPt": 62.1,
+            "font": "Liberation Serif,Bold",
+            "sizePt": 14,
+            "bold": true,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "The hydraulic power system supplies pressurized fluid to the flight control actuators, the landing gear retraction jacks,",
+            "xPt": 70.9,
+            "baselinePt": 164.1,
+            "widthPt": 472.2,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "the wheel brakes and the nose wheel steering unit. The system is arranged as two independent circuits, referred to",
+            "xPt": 70.9,
+            "baselinePt": 176.6,
+            "widthPt": 453.9,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "throughout this publication as the green circuit and the yellow circuit, so that the loss of one circuit does not remove",
+            "xPt": 70.9,
+            "baselinePt": 189.1,
+            "widthPt": 464.2,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "hydraulic power from any flight-critical function.",
+            "xPt": 70.9,
+            "baselinePt": 201.6,
+            "widthPt": 197.5,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Each circuit has its own reservoir, engine-driven pump, filter assembly and accumulator. The circuits share no fluid",
+            "xPt": 70.9,
+            "baselinePt": 220.1,
+            "widthPt": 461.9,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "path in normal operation. A power transfer unit couples the two circuits mechanically, without transferring fluid, so",
+            "xPt": 70.9,
+            "baselinePt": 232.6,
+            "widthPt": 462,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "that a circuit whose pump has failed can still be pressurized from the opposite side.",
+            "xPt": 70.9,
+            "baselinePt": 245.1,
+            "widthPt": 332.1,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Do not disconnect any hydraulic line before the circuit has been depressurized and the accumulator has been discharged.",
+            "xPt": 87.9,
+            "baselinePt": 268.5,
+            "widthPt": 433.5,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Residual pressure in an accumulator can be sufficient to cause injury.",
+            "xPt": 87.9,
+            "baselinePt": 279.5,
+            "widthPt": 249.4,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Nominal system pressure is 3000 psi. The relief valve in each circuit opens at 3500 psi and reseats at 3200 psi.",
+            "xPt": 70.9,
+            "baselinePt": 297.6,
+            "widthPt": 441.7,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Reservoir pressurization is taken from engine bleed air through a dedicated regulator; on the ground, with the engines",
+            "xPt": 70.9,
+            "baselinePt": 310.1,
+            "widthPt": 470,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "shut down, the reservoirs are pressurized by the hand pump on the ground service panel.",
+            "xPt": 70.9,
+            "baselinePt": 322.6,
+            "widthPt": 353,
+            "font": "Liberation Serif",
+            "sizePt": 10,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "All pressures quoted in this data module are gauge pressures measured at the system pressure transducer unless another",
+            "xPt": 87.9,
+            "baselinePt": 346,
+            "widthPt": 429.3,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "location is stated.",
+            "xPt": 87.9,
+            "baselinePt": 357,
+            "widthPt": 62.7,
+            "font": "Liberation Serif",
+            "sizePt": 9,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Issue 001 \u2014 2026-03-17",
+            "xPt": 70.9,
+            "baselinePt": 787.6,
+            "widthPt": 79.8,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          },
+          {
+            "text": "Page 1",
+            "xPt": 522.7,
+            "baselinePt": 787.6,
+            "widthPt": 21.5,
+            "font": "Liberation Serif",
+            "sizePt": 8,
+            "bold": false,
+            "italic": false,
+            "color": "#000000"
+          }
+        ],
+        "graphics": [
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              46.6,
+              473.4,
+              0.7
+            ],
+            "color": "#000000"
+          },
+          {
+            "kind": "rule",
+            "boundsPt": [
+              70.9,
+              776.7,
+              473.4,
+              0.4
+            ],
+            "color": "#000000"
+          }
+        ]
+      }
+    },
+    {
+      "number": 2,
+      "inActual": true,
+      "inReference": true,
+      "actualWords": 275,
+      "referenceWords": 279,
+      "score": 0.7633,
+      "hasDifference": true,
+      "detailed": false,
+      "verdict": "CONTENT DIFFERS \u2014 1 line(s) missing, 0 extra.",
+      "ink": {
+        "geometryMatches": true,
+        "actualCoverage": 0.08884,
+        "referenceCoverage": 0.09277,
+        "ratio": 0.9577,
+        "iou": 0.5522,
+        "differingFraction": 0.08145,
+        "meanAbsError": 0.02601,
+        "verticalShiftPt": -0,
+        "totalRegions": 8,
+        "regions": [
+          {
+            "kind": "MissingFill",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              324,
+              477,
+              50.5
+            ],
+            "pageFraction": 0.04804,
+            "actualInk": 0.0725,
+            "referenceInk": 0.1712,
+            "summary": "a shaded area the reference has and we do not",
+            "referenceText": [
+              "CAUTION",
+              "Running the pump dry for more than fifteen seconds will damage the piston shoes. Prime the circuit before the first engine",
+              "start after any component change."
+            ],
+            "actualText": [
+              "Running the pump dry for more than fifteen seconds will damage the piston shoes. Prime the circuit before the first engine",
+              "start after any component change.",
+              "2.3. Accumulator"
+            ]
+          },
+          {
+            "kind": "ExtraInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              382.5,
+              475.5,
+              22.5
+            ],
+            "pageFraction": 0.01817,
+            "actualInk": 0.2256,
+            "referenceInk": 0.0264,
+            "summary": "ink we draw that the reference does not",
+            "referenceText": [
+              "2.3. Accumulator"
+            ],
+            "actualText": [
+              "Each circuit has a piston accumulator precharged with dry nitrogen. The accumulator damps pressure transients",
+              "caused by rapid actuator movement and provides a reserve of stored energy for brake application after the loss of both"
+            ]
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              424,
+              475.5,
+              12
+            ],
+            "pageFraction": 0.00926,
+            "actualInk": 0.117,
+            "referenceInk": 0.2149,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "caused by rapid actuator movement and provides a reserve of stored energy for brake application after the loss of both"
+            ],
+            "actualText": [
+              "Green circuit accumulator, 1.5 litre, precharged to 1800 psi."
+            ]
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              409.5,
+              449.5,
+              12.5
+            ],
+            "pageFraction": 0.00896,
+            "actualInk": 0.0113,
+            "referenceInk": 0.2192,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "Each circuit has a piston accumulator precharged with dry nitrogen. The accumulator damps pressure transients"
+            ],
+            "actualText": [
+              "pumps."
+            ]
+          },
+          {
+            "kind": "ExtraInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              438.5,
+              264.5,
+              10
+            ],
+            "pageFraction": 0.00516,
+            "actualInk": 0.2602,
+            "referenceInk": 0.0233,
+            "summary": "ink we draw that the reference does not",
+            "referenceText": [
+              "pumps."
+            ],
+            "actualText": [
+              "Yellow circuit accumulator, 1.0 litre, precharged to 1800 psi."
+            ]
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              111.5,
+              475,
+              247.5,
+              10
+            ],
+            "pageFraction": 0.00492,
+            "actualInk": 0,
+            "referenceInk": 0.278,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "(b) Yellow circuit accumulator, 1.0 litre, precharged to 1800 psi."
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              111.5,
+              490.5,
+              214,
+              10
+            ],
+            "pageFraction": 0.00425,
+            "actualInk": 0,
+            "referenceInk": 0.2762,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "(c) Brake accumulator, 0.5 litre, precharged to 1200 psi."
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "middle-centre",
+            "boundsPt": [
+              86,
+              451,
+              268,
+              18.5
+            ],
+            "pageFraction": 0.00875,
+            "actualInk": 0.1194,
+            "referenceInk": 0.1413,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "(a) Green circuit accumulator, 1.5 litre, precharged to 1800 psi."
+            ],
+            "actualText": [
+              "Brake accumulator, 0.5 litre, precharged to 1200 psi."
+            ]
+          }
+        ]
+      },
+      "structure": {
+        "pageShiftPt": 0,
+        "pageShiftXPt": 0,
+        "textSimilarity": 0.9857,
+        "rewrapped": false,
+        "counts": {
+          "same": 18,
+          "moved": 7,
+          "restyled": 0,
+          "retexted": 3,
+          "missing": 1,
+          "extra": 0
+        }
+      }
+    },
+    {
+      "number": 3,
+      "inActual": true,
+      "inReference": true,
+      "actualWords": 130,
+      "referenceWords": 130,
+      "score": 0.6147,
+      "hasDifference": true,
+      "detailed": false,
+      "verdict": "REWRAPPED \u2014 the same words, broken into different lines. Suspect the measure (region width, indents) or the font metrics, not the content.",
+      "ink": {
+        "geometryMatches": true,
+        "actualCoverage": 0.04188,
+        "referenceCoverage": 0.05783,
+        "ratio": 0.7242,
+        "iou": 0.3396,
+        "differingFraction": 0.05306,
+        "meanAbsError": 0.02001,
+        "verticalShiftPt": -0,
+        "totalRegions": 4,
+        "regions": [
+          {
+            "kind": "MissingInk",
+            "where": "middle-centre",
+            "boundsPt": [
+              69,
+              279.5,
+              455,
+              10.5
+            ],
+            "pageFraction": 0.0093,
+            "actualInk": 0,
+            "referenceInk": 0.261,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "different specifications must not be mixed, and a circuit that has been contaminated must be drained, flushed and"
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "top-centre",
+            "boundsPt": [
+              69,
+              267,
+              454.5,
+              10.5
+            ],
+            "pageFraction": 0.00942,
+            "actualInk": 0,
+            "referenceInk": 0.2683,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "Fluid conforming to the specification quoted in the consumables data module must be used throughout. Fluids of"
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "MissingInk",
+            "where": "middle-left",
+            "boundsPt": [
+              69,
+              292,
+              157,
+              10.5
+            ],
+            "pageFraction": 0.00321,
+            "actualInk": 0,
+            "referenceInk": 0.2577,
+            "summary": "ink missing from ours \u2014 glyphs, a graphic or a fill",
+            "referenceText": [
+              "refilled before it is returned to service."
+            ],
+            "actualText": []
+          },
+          {
+            "kind": "Displaced",
+            "where": "top-centre",
+            "boundsPt": [
+              69,
+              148.5,
+              455,
+              113
+            ],
+            "pageFraction": 0.06354,
+            "actualInk": 0.0975,
+            "referenceInk": 0.0968,
+            "summary": "the same ink, displaced or reshaped",
+            "referenceText": [
+              "Parameter",
+              "Value",
+              "Tolerance",
+              "System pressure *",
+              "3000 psi",
+              "\u002B/- 50 psi"
+            ],
+            "actualText": [
+              "Parameter Value Tolerance",
+              "System pressure * 3000 psi \u002B/- 50 psi",
+              "Relief valve cracking pressure 3500 psi \u002B/- 75 psi",
+              "Reservoir capacity 12 L \u002B/- 0.2 L",
+              "Accumulator precharge * 1800 psi \u002B/- 25 psi",
+              "Case drain flow at idle 1.2 L/min max"
+            ]
+          }
+        ]
+      },
+      "structure": {
+        "pageShiftPt": -0,
+        "pageShiftXPt": 0,
+        "textSimilarity": 1,
+        "rewrapped": true,
+        "counts": {
+          "same": 7,
+          "moved": 4,
+          "restyled": 0,
+          "retexted": 3,
+          "missing": 15,
+          "extra": 3
+        }
+      }
+    }
+  ]
+}
