@@ -109,17 +109,65 @@ public class PdfDumpToolTests : IDisposable
         Assert.Equal(1.25, facts.LineHeightRatio, 2);
     }
 
+    /// <summary>
+    /// Content that overruns the bottom of a region carries onto the next page — both when
+    /// the overflow falls between blocks and when it falls inside one.
+    ///
+    /// <para>
+    /// Pinned because it is easy to conclude otherwise from a fixture that merely happens
+    /// to fit: 60 single-line 10pt blocks come to 720pt, and an A4 region body with 20mm
+    /// margins is 728.5pt, so a 60-block document lands on one page for entirely correct
+    /// reasons. Everything the comparison tools measure per page rests on this working, so
+    /// it is worth a test rather than an assumption.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void Renderer_PaginatesContentThatOverrunsTheRegion()
+    {
+        string Document(string flow) => $"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" font-family="serif">
+              <fo:layout-master-set>
+                <fo:simple-page-master master-name="p" page-width="210mm" page-height="297mm"
+                  margin="20mm"><fo:region-body/></fo:simple-page-master>
+              </fo:layout-master-set>
+              <fo:page-sequence master-reference="p"><fo:flow flow-name="xsl-region-body">
+                {flow}
+              </fo:flow></fo:page-sequence>
+            </fo:root>
+            """;
+
+        // Between blocks: 60 fill the body, so 62 spill onto a second page.
+        string manyBlocks = string.Concat(Enumerable.Range(1, 62).Select(i =>
+            $"<fo:block font-size=\"10pt\">Line {i} of a flow that overruns the body.</fo:block>"));
+        PdfDocumentModel split = PdfExtractor.Load(RenderPdf(Document(manyBlocks)));
+
+        Assert.Equal(2, split.PageCount);
+        Assert.Equal(60, split.Pages[0].Lines.Count);
+        Assert.Equal(2, split.Pages[1].Lines.Count);
+        Assert.StartsWith("Line 61", split.Pages[1].Lines[0].Text);
+
+        // Inside one block: a single paragraph long enough to run over three pages.
+        string words = string.Join(" ", Enumerable.Range(1, 1600).Select(i => $"word{i}"));
+        PdfDocumentModel wrapped = PdfExtractor.Load(
+            RenderPdf(Document($"<fo:block font-size=\"10pt\">{words}</fo:block>")));
+
+        Assert.True(wrapped.PageCount >= 3, $"expected at least 3 pages, got {wrapped.PageCount}");
+        // No word is lost or duplicated at a page boundary.
+        Assert.Equal(1600, wrapped.Words.Count(w => w.StartsWith("word", StringComparison.Ordinal)));
+    }
+
     [Fact]
     public void Analyser_TakesTheMarginAsTheClosestApproachOfInkToTheEdge()
     {
-        // A long first page and a two-line second one — how every document ends. A median
+        // A full first page and a two-line second one — how every document ends. A median
         // over pages would report that last page's white space as the document's bottom
-        // margin. The break is explicit because this renderer does not paginate a flow
-        // that runs past the bottom of its region.
-        string Lines(int n, bool newPage) => string.Concat(Enumerable.Range(1, n).Select(i =>
-            $"<fo:block font-size=\"10pt\"{(newPage && i == 1 ? " break-before=\"page\"" : "")}>"
-            + $"Line {i} of a page long enough to reach the bottom margin.</fo:block>"));
-        string paragraphs = Lines(40, newPage: false) + Lines(2, newPage: true);
+        // margin, which is why the measurement is a minimum. The overflow is natural: at
+        // 10pt on A4 with 20mm margins, 60 single-line blocks fill the region body, so 62
+        // of them spill two lines onto a second page.
+        string paragraphs = string.Concat(Enumerable.Range(1, 62).Select(i =>
+            $"<fo:block font-size=\"10pt\">Line {i} of a flow long enough to overrun the "
+            + "region body and carry onto a second page.</fo:block>"));
         string fo = $"""
                      <?xml version="1.0" encoding="UTF-8"?>
                      <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format" font-family="serif">

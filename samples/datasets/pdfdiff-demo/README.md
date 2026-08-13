@@ -57,11 +57,13 @@ warning box and the list labels.
 The harness fails if `improved` does not outscore `baseline`. A progress metric that does
 not go up when the work goes well is not one.
 
-## A renderer limitation worth knowing
+## Where the page-count difference comes from
 
-FOP.Sharp does not paginate a flow that overruns the bottom of its region — it keeps
-drawing on the same page. Both stylesheets here therefore break pages explicitly with
-`break-before="page"`, and the page-count difference between them (2 against 3) comes from
-`baseline.xsl` not breaking at all rather than from the two disagreeing about where a break
-falls. When the reference PDF comes from a real toolchain this does not arise; it only
-shapes how this particular dataset had to be written.
+`reference.xsl` starts each top-level section on a new page (`break-before="page"`), which
+is an editorial decision some toolchains make and some do not — and it is exactly the kind
+of decision a comparison has to be able to surface, because it changes the page count
+before it changes anything else. `baseline.xsl` makes no such decision, so its content
+flows continuously and falls where it falls: 2 pages against the reference's 3.
+
+Both stylesheets rely on ordinary pagination for everything else; content that overruns the
+bottom of a region carries onto the next page normally, including within a single block.
