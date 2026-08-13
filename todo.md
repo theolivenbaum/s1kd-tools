@@ -9,7 +9,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 ## Status (all 32 tools ported)
 
 All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
-the test suite (**701 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
+the test suite (**757 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
 them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
 libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
 too. The library API also has a parity test suite ported from the C
@@ -167,6 +167,45 @@ Publication:
       foInput, Stream output, format, fontDirs, native)` over FOP.Sharp's
       `Convert(Stream, Stream)`, plus a `Render(string) -> byte[]` wrapper.
       Package `FOP.Sharp` 26.6.2312. Tests in `RenderToolTests.cs`.
+- [x] s1kd-pdfdiff — compare a rendered PDF against a reference PDF from another
+      toolchain, for reverse-engineering a presentation stylesheet. Reports
+      document-wide metrics (page count, words per page, ink per page, ink
+      placement IoU) as a single parity score out of 100 plus the five
+      agreements it is made of, then takes the FIRST divergent page apart:
+      clustered regions of differing ink with a classification (missing/extra
+      ink, rule, fill, displaced) and the text each region covers; a
+      line-by-line diff (missing/extra/moved/restyled/retexted) with Δx/Δy and
+      the residual after removing the page-wide shift; a structure dump of both
+      sides; and document-wide style differences (paper, margins, body font,
+      leading, size roles, running heads, indent stops) stated as the XSL-FO
+      properties that set them. Markdown / JSON (`s1kd-pdfdiff/1`) / one-line
+      summary; `-I` writes per-page PNGs. Exit 0 match, 1 differ, 2 error;
+      `-F/--fail-under` gates on the score instead. Options `-a/--all-pages`,
+      `-p/--detail-pages`, `-l/--max-lines`, `-d/--dpi`, `-t/--threshold`,
+      `-D/--dilate`, `-m/--min-region`, `-T/--tolerance`.
+- [x] s1kd-pdfdump — describe one PDF: every text line with position, font,
+      size, weight and colour, every rule/fill/image, and the derived layout
+      (paper, margins, body style, leading, indent stops, running heads).
+      `-s` style only, `-x` text only, `-p` page spec, `-J` JSON
+      (`s1kd-pdfdump/1`). The first move when reverse-engineering: describe the
+      target before comparing anything to it.
+
+      Both are pure C#: PDF parsing is `PdfPig` 0.1.15 (managed, Apache-2.0);
+      the model, synthetic ink raster, diffing, clustering, scoring, reports and
+      PNG writer are in `S1kdTools.Core/Pdf/`. No native rasteriser and no
+      external process. Design notes in `CLAUDE.md`, user-facing docs in
+      `doc/PDFDIFF.md`, worked example in `samples/datasets/pdfdiff-demo/`
+      (driven by `samples/harnesses/Samples.PdfDiff`, which fails if the
+      "improved" stylesheet does not outscore the placeholder one). Tests in
+      `PdfDiffToolTests.cs` and `PdfDumpToolTests.cs`.
+
+      Known limits, each deliberate: glyph *shape* is not compared (the raster
+      is drawn from measured ink boxes, not a font rasteriser, so two
+      toolchains' different font programs do not differ on every glyph edge — a
+      wrong typeface at the same metrics shows up as a `font-family` change in
+      the structural diff instead); images are treated as mid-grey blocks;
+      only vertical shift is compensated when locating regions; white marks are
+      ignored; pages are aligned positionally.
 
 ## 4. Cross-cutting
 - [x] Common option handling: `--version`, `-h/--help` done per tool; libxml2

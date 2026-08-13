@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_4-2/xml_schema_flat/descript.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="S1KDPDF" systemDiffCode="A"
+          systemCode="00" subSystemCode="0" subSubSystemCode="0"
+          assyCode="00" disassyCode="00" disassyCodeVariant="A"
+          infoCode="040" infoCodeVariant="A" itemLocationCode="D"/>
+        <language languageIsoCode="en" countryIsoCode="CA"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="03" day="17"/>
+        <dmTitle>
+          <techName>Hydraulic power system</techName>
+          <infoName>General description</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany>
+        <enterpriseName>Example Aerospace Ltd</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator>
+        <enterpriseName>Example Aerospace Ltd</enterpriseName>
+      </originator>
+      <applic>
+        <displayText>
+          <simplePara>All aircraft</simplePara>
+        </displayText>
+      </applic>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <description>
+      <levelledPara id="sec-general">
+        <title>General</title>
+        <para>The hydraulic power system supplies pressurized fluid to the flight control
+          actuators, the landing gear retraction jacks, the wheel brakes and the nose wheel
+          steering unit. The system is arranged as two independent circuits, referred to
+          throughout this publication as the green circuit and the yellow circuit, so that
+          the loss of one circuit does not remove hydraulic power from any flight-critical
+          function.</para>
+        <para>Each circuit has its own reservoir, engine-driven pump, filter assembly and
+          accumulator. The circuits share no fluid path in normal operation. A power transfer
+          unit couples the two circuits mechanically, without transferring fluid, so that a
+          circuit whose pump has failed can still be pressurized from the opposite side.</para>
+        <warning>
+          <warningAndCautionPara>Do not disconnect any hydraulic line before the circuit has
+            been depressurized and the accumulator has been discharged. Residual pressure in
+            an accumulator can be sufficient to cause injury.</warningAndCautionPara>
+        </warning>
+        <para>Nominal system pressure is 3000 psi. The relief valve in each circuit opens at
+          3500 psi and reseats at 3200 psi. Reservoir pressurization is taken from engine
+          bleed air through a dedicated regulator; on the ground, with the engines shut down,
+          the reservoirs are pressurized by the hand pump on the ground service panel.</para>
+        <note>
+          <notePara>All pressures quoted in this data module are gauge pressures measured at
+            the system pressure transducer unless another location is stated.</notePara>
+        </note>
+      </levelledPara>
+      <levelledPara id="sec-components">
+        <title>Component description</title>
+        <para>The main components of each circuit are listed below. Part numbers are given in
+          the illustrated parts data module for the system.</para>
+        <levelledPara id="sec-reservoir">
+          <title>Reservoir</title>
+          <para>The reservoir is a welded aluminium cylinder of 12 litre usable capacity with
+            a bootstrap piston. The piston is driven by system pressure so that the return
+            side of the circuit is held above the cavitation threshold of the engine-driven
+            pump at all attitudes and at all altitudes within the flight envelope.</para>
+          <para>A sight glass on the forward face of the reservoir shows the fluid level
+            against three marks: <emphasis>REFILL</emphasis>, <emphasis>FULL</emphasis> and
+            <emphasis>MAX</emphasis>. The level must be read with the aircraft on the ground,
+            the circuit depressurized and the landing gear extended.</para>
+        </levelledPara>
+        <levelledPara id="sec-pump">
+          <title>Engine-driven pump</title>
+          <para>The engine-driven pump is a variable displacement axial piston unit mounted on
+            the accessory gearbox. Displacement is controlled by a compensator that maintains
+            delivery pressure at the nominal value across the whole flow range. At zero demand
+            the pump destrokes and the delivery flow falls to the case drain flow only.</para>
+          <caution>
+            <warningAndCautionPara>Running the pump dry for more than fifteen seconds will
+              damage the piston shoes. Prime the circuit before the first engine start after
+              any component change.</warningAndCautionPara>
+          </caution>
+        </levelledPara>
+        <levelledPara id="sec-accumulator">
+          <title>Accumulator</title>
+          <para>Each circuit has a piston accumulator precharged with dry nitrogen. The
+            accumulator damps pressure transients caused by rapid actuator movement and
+            provides a reserve of stored energy for brake application after the loss of both
+            pumps.</para>
+          <randomList>
+            <listItem>
+              <para>Green circuit accumulator, 1.5 litre, precharged to 1800 psi.</para>
+            </listItem>
+            <listItem>
+              <para>Yellow circuit accumulator, 1.0 litre, precharged to 1800 psi.</para>
+            </listItem>
+            <listItem>
+              <para>Brake accumulator, 0.5 litre, precharged to 1200 psi.</para>
+            </listItem>
+          </randomList>
+        </levelledPara>
+      </levelledPara>
+      <levelledPara id="sec-data">
+        <title>Leading particulars</title>
+        <para>The table that follows gives the values used when the system is set up after
+          installation. Values marked with an asterisk are checked at every scheduled
+          inspection.</para>
+        <table id="tab-particulars">
+          <title>System leading particulars</title>
+          <tgroup cols="3">
+            <colspec colname="c1" colwidth="55mm"/>
+            <colspec colname="c2" colwidth="35mm"/>
+            <colspec colname="c3" colwidth="30mm"/>
+            <thead>
+              <row>
+                <entry><para>Parameter</para></entry>
+                <entry><para>Value</para></entry>
+                <entry><para>Tolerance</para></entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry><para>System pressure *</para></entry>
+                <entry><para>3000 psi</para></entry>
+                <entry><para>+/- 50 psi</para></entry>
+              </row>
+              <row>
+                <entry><para>Relief valve cracking pressure</para></entry>
+                <entry><para>3500 psi</para></entry>
+                <entry><para>+/- 75 psi</para></entry>
+              </row>
+              <row>
+                <entry><para>Reservoir capacity</para></entry>
+                <entry><para>12 L</para></entry>
+                <entry><para>+/- 0.2 L</para></entry>
+              </row>
+              <row>
+                <entry><para>Accumulator precharge *</para></entry>
+                <entry><para>1800 psi</para></entry>
+                <entry><para>+/- 25 psi</para></entry>
+              </row>
+              <row>
+                <entry><para>Case drain flow at idle</para></entry>
+                <entry><para>1.2 L/min</para></entry>
+                <entry><para>max</para></entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <para>Fluid conforming to the specification quoted in the consumables data module must
+          be used throughout. Fluids of different specifications must not be mixed, and a
+          circuit that has been contaminated must be drained, flushed and refilled before it
+          is returned to service.</para>
+      </levelledPara>
+    </description>
+  </content>
+</dmodule>

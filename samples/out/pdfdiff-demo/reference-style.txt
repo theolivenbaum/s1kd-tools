@@ -1,0 +1,45 @@
+# /home/user/s1kd-tools/samples/out/pdfdiff-demo/reference.pdf
+
+pages          3
+words          644
+paper          A4 (595.3x841.9pt)
+margins        left   70.9pt (25.0mm)  right   51.0pt (18.0mm)  top   36.2pt (12.8mm)  bottom   54.3pt (19.2mm)
+body style     Liberation Serif 10.0pt
+leading        12.5pt  (1.25x the body size)
+graphics       61 rule(s), 5 fill(s), 0 image(s)
+running head   AIRCRAFT MAINTENANCE MANUAL | DMC-S#KDPDF-A-#-#-#-#A-#AD
+running foot   Issue # — #-#-# | Page #
+
+## Text styles (most glyphs first)
+
+     2421 glyphs    32 lines  Liberation Serif 10.0pt
+                             e.g. "The hydraulic power system supplies pressurized fluid to th…"
+      576 glyphs    21 lines  Liberation Serif 9.0pt
+                             e.g. "Running the pump dry for more than fifteen seconds will dam…"
+      243 glyphs    12 lines  Liberation Serif 8.0pt
+                             e.g. "DMC-S1KDPDF-A-00-00-00-00A-040AD"
+       71 glyphs     7 lines  Liberation Serif,Bold 9.0pt bold
+                             e.g. "Table 1 System leading particulars"
+       51 glyphs     3 lines  Liberation Serif,Bold 14.0pt bold
+                             e.g. "2. Component description"
+       49 glyphs     3 lines  Liberation Serif,Bold 11.5pt bold
+                             e.g. "2.2. Engine-driven pump"
+       20 glyphs     1 lines  Liberation Serif,Bold 18.0pt bold
+                             e.g. "Hydraulic power system"
+       18 glyphs     1 lines  Liberation Serif,Italic 12.0pt italic
+                             e.g. "General description"
+       11 glyphs     1 lines  Liberation Serif,Bold 10.0pt bold
+                             e.g. "REFILL , FULL"
+
+## Indent stops (line-start x, and how many lines use it)
+
+  x=   71.0pt (  25.0mm)  43 line(s)
+  x=   88.0pt (  31.0mm)  4 line(s)
+  x=   91.0pt (  32.1mm)  6 line(s)
+  x=   94.0pt (  33.2mm)  6 line(s)
+  x=  111.0pt (  39.2mm)  3 line(s)
+  x=  247.0pt (  87.1mm)  6 line(s)
+  x=  346.0pt ( 122.1mm)  6 line(s)
+  x=  396.0pt ( 139.7mm)  3 line(s)
+
+
