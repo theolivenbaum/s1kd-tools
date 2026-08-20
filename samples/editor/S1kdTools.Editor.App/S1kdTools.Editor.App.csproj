@@ -1,0 +1,27 @@
+<Project Sdk="Transpose.Build.Target/26.8.4125">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DefineConstants>TRANSPOSE</DefineConstants>
+    <AssemblyName>app</AssemblyName>
+    <RootNamespace>S1kdTools.Editor.App</RootNamespace>
+    <LangVersion>7.2</LangVersion>
+    <IsPackable>false</IsPackable>
+    <MinifyLocalVariables>true</MinifyLocalVariables>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Transpose.BCL" Version="26.8.4275" />
+    <PackageReference Include="Transpose.Core" Version="26.8.4176" />
+    <PackageReference Include="Tesserae" Version="2026.8.69740" />
+    <!-- The source pane. Monaco ships inside this package and its buildTransitive
+         targets copy it into this project's output, so there is no preload step,
+         no CDN, and nothing to serve it from but the editor server itself. -->
+    <PackageReference Include="Tesserae.Monaco" Version="26.8.4279" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\S1kdTools.Editor\S1kdTools.Editor.csproj" />
+  </ItemGroup>
+
+</Project>

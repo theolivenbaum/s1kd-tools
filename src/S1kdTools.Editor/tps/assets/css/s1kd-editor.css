@@ -326,11 +326,6 @@
     display: contents;
 }
 
-.s1kd-field-label {
-    font-size: 12px;
-    color: var(--tss-secondary-foreground-color);
-}
-
 .s1kd-field-value {
     font: inherit;
     font-size: 13px;
@@ -437,37 +432,6 @@
     100% { background: transparent; }
 }
 
-/* ------------------------------------------------------------- the preview */
-
-.s1kd-pdf {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: var(--tss-secondary-background-color);
-}
-
-.s1kd-pdf-frame {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    display: block;
-}
-
-.s1kd-pdf-status {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 13px;
-    color: var(--tss-secondary-foreground-color);
-    text-align: center;
-    padding: 12px 18px;
-    border-radius: 4px;
-    background: var(--tss-default-background-color);
-    border: 1px solid var(--tss-default-border-color);
-    max-width: 80%;
-}
-
 /* ------------------------------------------------------------- command bar */
 
 .s1kd-commandbar {
@@ -502,4 +466,17 @@
 
 .s1kd-findings-ok {
     box-shadow: inset 3px 0 0 0 var(--tss-colors-lime-600);
+}
+
+/* ------------------------------------------------------------ page preview */
+
+/*
+  The laid-out page. The viewer inside it is Tesserae.Pdf's, which draws no chrome
+  of its own - deliberately, so it looks like the application around it - and
+  S1kdPdfPreview supplies the toolbar. All this contributes is the ground the pages
+  sit on, so a page reads as a sheet of paper against a desk rather than as white
+  on white.
+*/
+.s1kd-pdf {
+    background: var(--tss-secondary-background-color);
 }

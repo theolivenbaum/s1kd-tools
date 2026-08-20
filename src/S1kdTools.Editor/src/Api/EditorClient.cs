@@ -63,10 +63,21 @@ namespace S1kdTools.Editor
         /// <summary>The open document's identifier, or null.</summary>
         public string DocumentId { get; private set; }
 
-        /// <summary>Every CSDB object the server offers.</summary>
-        public Task<IDocumentSummary[]> ListAsync()
+        /// <summary>
+        /// Every CSDB object the server offers.
+        ///
+        /// <c>Script.Write</c> rather than a cast or a generic helper, here and at
+        /// every other place a payload is named. The wire types are
+        /// <c>[External]</c> declarations of a shape the parsed object already has,
+        /// so there is nothing to convert — but a generic method would make the
+        /// compiler pass a runtime type token for one of them, and an external type
+        /// has no runtime type to pass. <c>Script.Write</c> emits the value and
+        /// nothing else.
+        /// </summary>
+        public async Task<IDocumentSummary[]> ListAsync()
         {
-            return SendAsync<IDocumentSummary[]>("GET", _baseUrl + "/api/documents", null);
+            object parsed = await SendAsync("GET", _baseUrl + "/api/documents", null);
+            return Script.Write<IDocumentSummary[]>("{0}", parsed);
         }
 
         /// <summary>Open a document, replacing whatever was open.</summary>
@@ -121,10 +132,11 @@ namespace S1kdTools.Editor
         }
 
         /// <summary>Check the document: well-formedness, business rules, and whether it can be laid out.</summary>
-        public Task<ICheckReport> CheckAsync()
+        public async Task<ICheckReport> CheckAsync()
         {
-            return SendAsync<ICheckReport>("GET", _baseUrl + "/api/documents/" +
-                Escape(DocumentId) + "/check", null);
+            object parsed = await SendAsync("GET",
+                _baseUrl + "/api/documents/" + Escape(DocumentId) + "/check", null);
+            return Script.Write<ICheckReport>("{0}", parsed);
         }
 
         /// <summary>
@@ -143,7 +155,8 @@ namespace S1kdTools.Editor
 
         private async Task<IEditorState> StateAsync(string method, string path, object body)
         {
-            IEditorState state = await SendAsync<IEditorState>(method, _baseUrl + "/api" + path, body);
+            object parsed = await SendAsync(method, _baseUrl + "/api" + path, body);
+            IEditorState state = Script.Write<IEditorState>("{0}", parsed);
 
             if (state is object)
             {
@@ -158,7 +171,17 @@ namespace S1kdTools.Editor
             return state;
         }
 
-        private async Task<T> SendAsync<T>(string method, string url, object body) where T : class
+        /// <summary>
+        /// One request, and the parsed body or null.
+        ///
+        /// Deliberately not generic. The result is a plain parsed JSON value that
+        /// the caller names with <see cref="As{T}"/> — a cast that compiles to
+        /// nothing, since the wire types are <c>[External]</c> declarations of the
+        /// shape the payload already has. A generic async method here would make the
+        /// compiler emit a type for the result and the runtime look it up, which is
+        /// work to describe a type that has no representation at all.
+        /// </summary>
+        private async Task<object> SendAsync(string method, string url, object body)
         {
             var init = new RequestInit { method = method };
 
@@ -180,7 +203,7 @@ namespace S1kdTools.Editor
                 return null;
             }
 
-            return text.Length == 0 ? null : es5.JSON.parse(text).As<T>();
+            return text.Length == 0 ? null : es5.JSON.parse(text);
         }
 
         private void Fail(string message)
@@ -199,7 +222,7 @@ namespace S1kdTools.Editor
         {
             try
             {
-                var parsed = es5.JSON.parse(body).As<IErrorResponse>();
+                IErrorResponse parsed = Script.Write<IErrorResponse>("{0}", es5.JSON.parse(body));
                 if (parsed is object && !string.IsNullOrEmpty(parsed.error))
                 {
                     return parsed.error;

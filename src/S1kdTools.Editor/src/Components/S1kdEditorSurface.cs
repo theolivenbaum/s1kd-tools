@@ -264,8 +264,10 @@ namespace S1kdTools.Editor
         /// </summary>
         private static HTMLElement Field(IEditBlock block)
         {
+            // No label of its own: the block has already drawn one, and in the
+            // identification section that label is the grid's first column. A second
+            // one here would land in the value column and push every field down a row.
             HTMLElement row = Div(Att("s1kd-field"));
-            row.appendChild(Div(Att("s1kd-field-label", text: block.label ?? block.attrName)));
 
             string[] options = block.options;
             HTMLElement input;

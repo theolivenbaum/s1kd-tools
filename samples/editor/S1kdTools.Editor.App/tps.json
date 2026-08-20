@@ -1,0 +1,13 @@
+{
+    "output": "$(OutDir)/tps/",
+    "fileName": "app.js",
+    "html": {
+        "disabled": false,
+        "title": "s1kd editor"
+    },
+    "cleanOutputFolderBeforeBuildPattern": "*.js|*.css|*.html",
+    "console": { "enabled": false },
+    "loader": { "type": "Global" },
+    "sourceMap": { "enabled": true },
+    "reflection": { "disabled": true, "target": "inline" }
+}

@@ -16,6 +16,11 @@
     <PackageReference Include="Transpose.BCL" Version="26.8.4275" />
     <PackageReference Include="Transpose.Core" Version="26.8.4176" />
     <PackageReference Include="Tesserae" Version="2026.8.69740" />
+    <!-- The page preview. Tesserae.Pdf wraps Mozilla's pdf.js and ships it inside
+         the package, so the preview needs nothing added to the host page: no CDN,
+         no worker path to keep in sync, and no dependence on the browser having a
+         PDF plugin (headless Chrome does not - it downloads the file instead). -->
+    <PackageReference Include="Tesserae.Pdf" Version="1.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
