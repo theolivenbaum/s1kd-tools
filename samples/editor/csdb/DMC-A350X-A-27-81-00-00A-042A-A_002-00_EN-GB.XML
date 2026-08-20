@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/descript.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="003" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="03" day="12"/>
+        <dmTitle>
+          <techName>Slat control and monitoring system</techName>
+          <infoName>Description of function</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="02"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+      </originator>
+      <applic>
+        <displayText>
+          <simplePara>A350X-900 and A350X-1000, all aircraft</simplePara>
+        </displayText>
+      </applic>
+      <brexDmRef>
+        <dmRef>
+          <dmRefIdent>
+            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/>
+          </dmRefIdent>
+        </dmRef>
+      </brexDmRef>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <refs>
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>Slat actuation power control unit</techName>
+            <infoName>Installation</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+      <dmRef>
+        <dmRefIdent>
+          <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="040" infoCodeVariant="A" itemLocationCode="A"/>
+        </dmRefIdent>
+        <dmRefAddressItems>
+          <dmTitle>
+            <techName>High lift system</techName>
+            <infoName>Description</infoName>
+          </dmTitle>
+        </dmRefAddressItems>
+      </dmRef>
+    </refs>
+    <referencedApplicGroup>
+      <applic id="app-post-mod">
+        <displayText>
+          <simplePara>Aircraft post-modification 27-8104 embodied</simplePara>
+        </displayText>
+      </applic>
+    </referencedApplicGroup>
+    <description>
+      <levelledPara>
+        <title>General</title>
+        <para>The slat control and monitoring system moves the leading edge slats between the retracted
+          position and the four extended positions selected on the flap and slat control lever. The system
+          is made of two slat flap control computers (SFCC), one power control unit (PCU) with two
+          hydraulic motors, a torque shaft transmission along the leading edge of each wing, and the
+          wing tip brakes that hold the transmission if an asymmetry is detected.</para>
+        <para>Each SFCC has one slat channel and one flap channel. The two computers work in an
+          active/standby arrangement: the master computer commands the PCU while the standby computer
+          monitors the command and the position feedback. If the master computer fails, control passes to
+          the standby computer without an interruption of the surface movement.</para>
+        <para changeMark="1" changeType="modify">The position feedback comes from two feedback position
+          pick-off units (FPPU) installed on the PCU output and from one asymmetry position pick-off unit
+          (APPU) installed at the outboard end of each transmission. The APPU signals are compared
+          continuously; a difference of more than 3.6 degrees of transmission rotation between the left
+          and the right wing causes the wing tip brakes to engage <emphasis>and latches the slat
+          system</emphasis> until the fault is cleared on the ground.</para>
+      </levelledPara>
+      <levelledPara>
+        <title>Component location</title>
+        <para>The PCU is installed in the belly fairing between frame C41 and frame C44, on the left hand
+          side of the centre line. Access is through the fwd belly fairing access panel 196AB. The two
+          SFCC are installed in the avionics compartment, in rack 92VU.</para>
+        <figure>
+          <title>Slat control and monitoring system — component location</title>
+          <graphic infoEntityIdent="ICN-A350X-A-278100-A-U8025-00001-A-001-01"/>
+        </figure>
+        <note>
+          <notePara>The APPU on the right hand wing is accessible only when the slats are fully retracted
+            and the hydraulic systems are depressurized.</notePara>
+        </note>
+      </levelledPara>
+      <levelledPara>
+        <title>Operation</title>
+        <levelledPara>
+          <title>Normal operation</title>
+          <para>When the flight crew moves the control lever, the two SFCC read the lever position from
+            two independent position sensors. The master computer calculates the commanded slat position,
+            compares it with the FPPU feedback and energizes the PCU valve block until the difference is
+            inside the tolerance band given in <internalRef internalRefId="tab-tol"/>.</para>
+          <table id="tab-tol">
+            <title>Slat position tolerance band</title>
+            <tgroup cols="4">
+              <colspec colname="c1" colwidth="1.4*"/>
+              <colspec colname="c2" colwidth="1*"/>
+              <colspec colname="c3" colwidth="1*"/>
+              <colspec colname="c4" colwidth="1.6*"/>
+              <thead>
+                <row>
+                  <entry>Lever position</entry>
+                  <entry>Slat angle (deg)</entry>
+                  <entry>Tolerance (deg)</entry>
+                  <entry>Placard speed (kt)</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry align="center">0.0</entry>
+                  <entry align="center">±0.5</entry>
+                  <entry align="center">—</entry>
+                </row>
+                <row>
+                  <entry>1</entry>
+                  <entry align="center">14.5</entry>
+                  <entry align="center">±0.8</entry>
+                  <entry align="center">263</entry>
+                </row>
+                <row>
+                  <entry>2</entry>
+                  <entry align="center">19.0</entry>
+                  <entry align="center">±0.8</entry>
+                  <entry align="center">222</entry>
+                </row>
+                <row>
+                  <entry>3</entry>
+                  <entry align="center">23.0</entry>
+                  <entry align="center">±1.0</entry>
+                  <entry align="center">196</entry>
+                </row>
+                <row>
+                  <entry>FULL</entry>
+                  <entry align="center">27.0</entry>
+                  <entry align="center">±1.0</entry>
+                  <entry align="center">180</entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </table>
+        </levelledPara>
+        <levelledPara applicRefId="app-post-mod">
+          <title>Alternate operation</title>
+          <para>After modification 27-8104, a slat runaway that is detected during the extension sequence
+            no longer causes both hydraulic motors to be isolated. The affected motor is isolated and the
+            remaining motor drives the transmission at half rate. The flight crew gets the
+            <verbatimText>SLATS SLOW</verbatimText> memo on the engine and warning display.</para>
+          <caution>
+            <warningAndCautionPara>Do not dispatch the aircraft with one slat motor isolated unless the
+              dispatch conditions of the minimum equipment list are satisfied. The landing distance
+              penalty is not applied automatically by the flight management system.</warningAndCautionPara>
+          </caution>
+        </levelledPara>
+      </levelledPara>
+      <levelledPara>
+        <title>Interfaces</title>
+        <randomList listItemPrefix="pf03">
+          <listItem>
+            <para>Hydraulic: green and yellow systems, through the PCU valve block.</para>
+          </listItem>
+          <listItem>
+            <para>Electrical: 28 V DC essential bus for SFCC 1 and 28 V DC bus 2 for SFCC 2.</para>
+          </listItem>
+          <listItem>
+            <para>Avionics: two AFDX ports per computer to the flight control and guidance function.</para>
+          </listItem>
+        </randomList>
+      </levelledPara>
+    </description>
+  </content>
+</dmodule>
