@@ -136,3 +136,10 @@ Thumbs.db
 
 # node_modules for the end-to-end tests.
 tests/editor-e2e/node_modules/
+
+# The editor sample's save destination and the end-to-end run's own leavings.
+# samples/out/ is otherwise checked in - the dataset harnesses' artifacts are
+# reviewed - but a data module written by a test is not one of those.
+samples/out/editor/
+tests/editor-e2e/test-results/
+tests/editor-e2e/playwright-report/
