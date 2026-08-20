@@ -1,0 +1,42 @@
+<Project Sdk="Transpose.Build.Target/26.8.4125">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DefineConstants>TRANSPOSE</DefineConstants>
+    <AssemblyName>S1kdTools.Editor</AssemblyName>
+    <RootNamespace>S1kdTools.Editor</RootNamespace>
+    <LangVersion>7.2</LangVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <MinifyLocalVariables>true</MinifyLocalVariables>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Transpose.BCL" Version="26.8.4275" />
+    <PackageReference Include="Transpose.Core" Version="26.8.4176" />
+    <PackageReference Include="Tesserae" Version="2026.8.69740" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageId>S1kdTools.Editor</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>s1kd-tools contributors</Authors>
+    <Company>s1kd-tools contributors</Company>
+    <Title>s1kd-tools — S1000D editing components for Tesserae</Title>
+    <Description>A WYSIWYG editing surface for S1000D CSDB objects, built with Tesserae (Transpose C# to JavaScript). Draws the block projection produced by S1kdTools.Core's editing stylesheet and posts edits back as commands; includes a PDF preview of the laid-out page and a typed client for the editor endpoints.</Description>
+    <PackageTags>s1000d;csdb;technical-publications;editor;wysiwyg;transpose;tesserae</PackageTags>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/theolivenbaum/s1kd-tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/theolivenbaum/s1kd-tools</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <NoWarn>1701;1702</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

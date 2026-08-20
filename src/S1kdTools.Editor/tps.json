@@ -1,0 +1,50 @@
+{
+    // Both formattings, so a consuming app can be built either way: Transpose only
+    // includes the ".min.js" resources of a referenced project when the app is
+    // built in Release and only the non-minified ones in Debug. Declaring a
+    // "resources" section loses that default, so it is opted back into by hand -
+    // the same arrangement Tesserae.Monaco uses, for the same reason.
+    "outputFormatting": "Both",
+    "resources": [
+        {
+            "name": "S1kdTools.Editor.js",
+            "files": [ "$(OutDir)tps/S1kdTools.Editor.js" ]
+        },
+        {
+            "name": "S1kdTools.Editor.meta.js",
+            "files": [ "$(OutDir)tps/S1kdTools.Editor.meta.js" ]
+        },
+        {
+            "name": "S1kdTools.Editor.min.js",
+            "files": [ "$(OutDir)tps/S1kdTools.Editor.min.js" ]
+        },
+        {
+            "name": "S1kdTools.Editor.meta.min.js",
+            "files": [ "$(OutDir)tps/S1kdTools.Editor.meta.min.js" ]
+        },
+        {
+            // The editing surface's stylesheet. A resource rather than something the
+            // host app has to remember to link: a component that arrives unstyled is
+            // a component that looks broken on first use.
+            "name": "s1kd-editor.css",
+            "files": [ "tps/assets/css/s1kd-editor.css" ],
+            "output": "assets/css"
+        }
+    ],
+    "cleanOutputFolderBeforeBuildPattern": "*.*",
+    "loader": { "type": "Global" },
+    "generateTypeScript": false,
+    "generateDocumentation": "None",
+    "rules": {
+        "anonymousType": "Plain",
+        "arrayIndex": "Managed",
+        "autoProperty": "Plain",
+        "boxing": "Managed",
+        "externalCast": "Plain",
+        "inlineComment": "Plain",
+        "integer": "Managed",
+        "lambda": "Plain",
+        "useShortForms": true
+    },
+    "sourceMap": { "enabled": false }
+}
