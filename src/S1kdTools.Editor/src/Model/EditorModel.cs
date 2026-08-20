@@ -252,19 +252,28 @@ namespace S1kdTools.Editor
         string[] options { get; }
     }
 
-    /// <summary>An element the author may insert, as the menu shows it.</summary>
+    /// <summary>
+    /// An element the author may insert, as the menu shows it.
+    ///
+    /// Lower-case like every other wire type here, and worth saying why: the server
+    /// declares these as a record's <c>Element</c>/<c>Label</c>/<c>Kind</c>, but its
+    /// JSON naming policy camel-cases every property on the way out. What arrives is
+    /// <c>element</c>, and under <c>Notation.None</c> a member spelled <c>Element</c>
+    /// reads <c>undefined</c> — silently, since nothing about an external interface
+    /// is checked at run time.
+    /// </summary>
     [External]
     [Convention(Notation.None)]
     public interface IInsertOption
     {
         /// <summary>The element name to send in the command.</summary>
-        string Element { get; }
+        string element { get; }
 
         /// <summary>What the menu calls it.</summary>
-        string Label { get; }
+        string label { get; }
 
         /// <summary>The block kind it will project as, for the menu's icon.</summary>
-        string Kind { get; }
+        string kind { get; }
     }
 
     /// <summary>One document in the CSDB, as the picker lists it.</summary>

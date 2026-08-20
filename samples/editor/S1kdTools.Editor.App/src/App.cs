@@ -13,11 +13,12 @@ namespace S1kdTools.Editor.App
     /// <code>
     ///   ┌ CSDB ────────┬ Slat actuation power control unit — Installation ─────────┐
     ///   │ · Procedure  │ [ Edit | Source | Page ]                                  │
-    ///   │ · Descriptive├───────────────────────────────────────────────────────────┤
-    ///   │ · Parts data │  [undo] [redo] [save] [B I x₂ x²] [check]                 │
-    ///   │ · Fault iso  │                                                           │
-    ///   │ …            │  the data module, drawn as its page and typed into        │
-    ///   └──────────────┴───────────────────────────────────────────────────────────┘
+    ///   │ · Descriptive├──────────────┬────────────────────────────────────────────┤
+    ///   │ · Parts data │ COMPONENTS   │ [undo] [redo] [save] [B I x₂ x²] [check]   │
+    ///   │ · Fault iso  │ ▤ Paragraph  ├────────────────────────────────────────────┤
+    ///   │ …            │ ⚠ Warning    │  the data module, drawn as its page        │
+    ///   │              │ ☰ Step  …    │  and typed into                            │
+    ///   └──────────────┴──────────────┴────────────────────────────────────────────┘
     /// </code>
     ///
     /// <b>The three tabs are one document seen three ways, not three documents.</b>
@@ -40,6 +41,7 @@ namespace S1kdTools.Editor.App
 
         private static EditorClient _client;
         private static S1kdEditorSurface _surface;
+        private static S1kdComponentPalette _palette;
         private static S1kdEditor _editor;
         private static SourcePane _source;
         private static S1kdPdfPreview _preview;
@@ -64,6 +66,7 @@ namespace S1kdTools.Editor.App
 
             _surface = new S1kdEditorSurface(_client);
             _editor = new S1kdEditor(_client, _surface);
+            _palette = new S1kdComponentPalette(_client, _surface);
             _source = new SourcePane(_client);
             _preview = new S1kdPdfPreview(_client);
 
@@ -76,7 +79,13 @@ namespace S1kdTools.Editor.App
                 // page it was scrolled to. Rebuilding either on a tab switch throws
                 // away exactly the state the switch exists to come back to.
                 .SegmentedPivot(EditTab, SegmentTitle("Edit", UIcons.PenField),
-                    () => VStack().S().Children(_editor), cached: true)
+                    // The rail beside the editor rather than inside it: the palette
+                    // belongs to the act of writing, not to this document, so it
+                    // does not move or reload when a different one is opened.
+                    () => HStack().S().Children(
+                        _palette.HS().W(236.px()).NoShrink(),
+                        VStack().HS().W(1).Grow().Children(_editor)),
+                    cached: true)
                 .SegmentedPivot(SourceTab, SegmentTitle("Source", UIcons.FileCode),
                     () => VStack().S().Children(_source), cached: true)
                 .SegmentedPivot(PageTab, SegmentTitle("Page", UIcons.FilePdf),
@@ -92,6 +101,7 @@ namespace S1kdTools.Editor.App
             MountToBody(layout);
 
             LoadCsdbAsync().FireAndForget();
+            _palette.LoadAsync().FireAndForget();
         }
 
         /// <summary>

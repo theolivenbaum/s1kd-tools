@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Tesserae;
 using Transpose.Core;
@@ -37,7 +38,7 @@ namespace S1kdTools.Editor
     /// </summary>
     public sealed class S1kdEditorSurface : IComponent
     {
-        private const string PathAttribute = "data-path";
+        private const string PathAttribute = BlockRenderer.PathAttribute;
 
         private readonly EditorClient _client;
         private readonly HTMLElement _root;
@@ -75,6 +76,14 @@ namespace S1kdTools.Editor
             _root.addEventListener("keyup", RecordCaret);
             _root.addEventListener("mouseup", RecordCaret);
             _root.addEventListener("click", OnClick);
+
+            // Dropping a component out of the palette. The listeners are on the
+            // surface rather than on each block for the same reason the others are:
+            // a procedure runs to a few hundred blocks, and four listeners each is
+            // most of the cost of drawing one.
+            _root.addEventListener("dragover", OnDragOver);
+            _root.addEventListener("dragleave", OnDragLeave);
+            _root.addEventListener("drop", OnDrop);
 
             _client.StateChanged += Draw;
         }
@@ -187,164 +196,7 @@ namespace S1kdTools.Editor
 
         private HTMLElement Block(IEditBlock block)
         {
-            HTMLElement host = Div(Att("s1kd-block s1kd-kind-" + block.kind));
-            host.setAttribute(PathAttribute, block.path);
-            host.setAttribute("data-element", block.element);
-            host.setAttribute("data-kind", block.kind);
-
-            if (!string.IsNullOrEmpty(block.label))
-            {
-                host.appendChild(Div(Att("s1kd-label", text: block.label)));
-            }
-
-            HTMLElement body = Div(Att("s1kd-body"));
-
-            if (!string.IsNullOrEmpty(block.heading))
-            {
-                body.appendChild(Div(Att("s1kd-heading", text: block.heading)));
-            }
-
-            if (block.editable == EditModes.Text)
-            {
-                body.appendChild(Text(block));
-            }
-            else if (block.editable == EditModes.Attr)
-            {
-                body.appendChild(Field(block));
-            }
-            else if (!string.IsNullOrEmpty(block.value))
-            {
-                // A reference or a graphic: a value the author does not type, shown
-                // so the block is not an empty box with a heading over it.
-                body.appendChild(Div(Att("s1kd-value", text: block.value)));
-            }
-
-            IEditBlock[] children = block.blocks;
-            if (children is object && children.Length > 0)
-            {
-                HTMLElement nested = Div(Att("s1kd-children"));
-                for (var i = 0; i < children.Length; i++)
-                {
-                    nested.appendChild(Block(children[i]));
-                }
-                body.appendChild(nested);
-            }
-
-            host.appendChild(body);
-            host.appendChild(Gutter(block));
-            return host;
-        }
-
-        /// <summary>The editable text of a block: a contenteditable holding its runs.</summary>
-        private static HTMLElement Text(IEditBlock block)
-        {
-            HTMLElement text = Div(Att("s1kd-text"));
-            text.setAttribute("contenteditable", "true");
-            text.setAttribute("spellcheck", "true");
-            text.setAttribute("data-placeholder", block.placeholder ?? "");
-
-            // A field's label sits in front of its value on the same line; a
-            // paragraph's does not. Both are the same editable element, so the
-            // difference is a class rather than two shapes.
-            RunCodec.Write(text, block.runs);
-
-            if (block.kind == BlockKinds.Field || block.kind == BlockKinds.MetaField)
-            {
-                text.classList.add("s1kd-text-inline");
-            }
-
-            return text;
-        }
-
-        /// <summary>
-        /// A block whose substance is one attribute — the issue number, the security
-        /// classification. An input rather than a contenteditable, because these are
-        /// values with a shape rather than prose, and a select when the projection
-        /// knows what the shape is.
-        /// </summary>
-        private static HTMLElement Field(IEditBlock block)
-        {
-            // No label of its own: the block has already drawn one, and in the
-            // identification section that label is the grid's first column. A second
-            // one here would land in the value column and push every field down a row.
-            HTMLElement row = Div(Att("s1kd-field"));
-
-            string[] options = block.options;
-            HTMLElement input;
-
-            if (options is object && options.Length > 0)
-            {
-                var select = document.createElement("select") as HTMLSelectElement;
-                select.className = "s1kd-field-value";
-
-                for (var i = 0; i < options.Length; i++)
-                {
-                    var option = document.createElement("option") as HTMLOptionElement;
-                    option.value = options[i];
-                    option.textContent = options[i];
-                    select.appendChild(option);
-                }
-
-                select.value = block.value ?? "";
-                input = select;
-            }
-            else
-            {
-                var box = document.createElement("input") as HTMLInputElement;
-                box.className = "s1kd-field-value";
-                box.type = "text";
-                box.value = block.value ?? "";
-                input = box;
-            }
-
-            input.setAttribute("data-attr", block.attrName);
-            row.appendChild(input);
-            return row;
-        }
-
-        /// <summary>
-        /// The per-block commands, in a gutter that appears on hover.
-        ///
-        /// Buttons rather than a context menu because an author editing a procedure
-        /// reorders steps constantly, and a right-click and a menu for every one of
-        /// them is three actions where one would do. They are drawn for every block
-        /// and hidden by CSS rather than built on hover: building them on hover
-        /// means measuring and positioning on a pointer move.
-        /// </summary>
-        private HTMLElement Gutter(IEditBlock block)
-        {
-            HTMLElement gutter = Div(Att("s1kd-gutter"));
-
-            IInsertOption[] siblings = block.insertSiblings;
-            if (siblings is object && siblings.Length > 0)
-            {
-                gutter.appendChild(GutterButton("insert", "+", "Insert after this", block.path));
-            }
-
-            if (block.canMove)
-            {
-                gutter.appendChild(GutterButton("up", "↑", "Move up", block.path));
-                gutter.appendChild(GutterButton("down", "↓", "Move down", block.path));
-            }
-
-            if (block.canDelete)
-            {
-                gutter.appendChild(GutterButton("delete", "×", "Delete", block.path));
-            }
-
-            return gutter;
-        }
-
-        private static HTMLElement GutterButton(string action, string glyph, string title, string path)
-        {
-            var button = document.createElement("button") as HTMLButtonElement;
-            button.className = "s1kd-gutter-button s1kd-gutter-" + action;
-            button.type = "button";
-            button.title = title;
-            button.setAttribute("data-action", action);
-            button.setAttribute("data-target", path);
-            button.textContent = glyph;
-            return button;
+            return BlockRenderer.Draw(block, BlockRenderer.Mode.Interactive);
         }
 
         // --------------------------------------------------------------------
@@ -462,8 +314,115 @@ namespace S1kdTools.Editor
             }
 
             e.preventDefault();
-            GutterAsync(button.getAttribute("data-action"), button.getAttribute("data-target"))
-                .FireAndForget();
+
+            string action = button.getAttribute("data-action");
+            string path = button.getAttribute("data-target");
+
+            if (action == "insert")
+            {
+                ShowInsertMenuAsync(button, path).FireAndForget();
+                return;
+            }
+
+            GutterAsync(action, path).FireAndForget();
+        }
+
+        /// <summary>
+        /// Offer everything that may go here, rather than guessing.
+        ///
+        /// The projection knows what the schema allows beside a block and inside it,
+        /// and an author reaching for the plus wants a warning about as often as they
+        /// want another paragraph. Picking the first option for them would make the
+        /// button useless for everything else, and a button that always inserts a
+        /// paragraph is a button that teaches the author the editor cannot do more.
+        ///
+        /// Siblings first, then children under a divider, because "beside this" is
+        /// the common case and "inside this" is the one a container needs.
+        /// </summary>
+        private async Task ShowInsertMenuAsync(HTMLElement button, string path)
+        {
+            await CommitPendingAsync();
+
+            IEditBlock block = FindBlock(path);
+            if (block is null)
+            {
+                return;
+            }
+
+            var items = new List<ContextMenu.Item>();
+
+            IInsertOption[] siblings = block.insertSiblings;
+            if (siblings is object)
+            {
+                for (var i = 0; i < siblings.Length; i++)
+                {
+                    items.Add(InsertItem(siblings[i], path, EditPositions.After));
+                }
+            }
+
+            IInsertOption[] children = block.insertChildren;
+            if (children is object && children.Length > 0)
+            {
+                items.Add(ContextMenuItem("Inside this " + Readable(block.element)).Header());
+
+                for (var i = 0; i < children.Length; i++)
+                {
+                    items.Add(InsertItem(children[i], path, EditPositions.LastChild));
+                }
+            }
+
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            ContextMenu().Items(items.ToArray()).ShowFor(button);
+        }
+
+        private ContextMenu.Item InsertItem(IInsertOption option, string path, string position)
+        {
+            string element = option.element;
+
+            return ContextMenuItem(option.label).OnClick(() =>
+            {
+                // The caret follows only when the new element is the same kind as the
+                // one it was put beside, because that is the only case where its path
+                // can be worked out rather than guessed at.
+                _focusPath = position == EditPositions.After && element == LeafElementOf(path)
+                    ? NextSiblingPath(path)
+                    : null;
+                _focusOffset = 0;
+
+                _client.ApplyAsync(EditCommand.Insert(path, position, element)).FireAndForget();
+            });
+        }
+
+        /// <summary>An element name as a menu says it: <c>proceduralStep</c> to "step".</summary>
+        private static string Readable(string element)
+        {
+            switch (element)
+            {
+                case "proceduralStep":
+                case "isolationStep":
+                case "crewDrillStep": return "step";
+                case "levelledPara": return "section";
+                case "para": return "paragraph";
+                case "listItem": return "list item";
+                default: return element;
+            }
+        }
+
+        private static string LeafElementOf(string path)
+        {
+            string[] steps = (path ?? "").Split('/');
+            if (steps.Length == 0)
+            {
+                return "";
+            }
+
+            string last = steps[steps.Length - 1];
+            int bracket = last.IndexOf('[');
+            return bracket < 0 ? last : last.Substring(0, bracket);
         }
 
         /// <summary>Send a block's text, if the author changed it.</summary>
@@ -542,18 +501,6 @@ namespace S1kdTools.Editor
 
             switch (action)
             {
-                case "insert":
-                    IInsertOption[] options = block.insertSiblings;
-                    if (options is object && options.Length > 0)
-                    {
-                        string element = options[0].Element;
-                        _focusPath = element == block.element ? NextSiblingPath(path) : null;
-                        _focusOffset = 0;
-                        await _client.ApplyAsync(
-                            EditCommand.Insert(path, EditPositions.After, element));
-                    }
-                    break;
-
                 case "up":
                     _focusPath = null;
                     await _client.ApplyAsync(EditCommand.Move(path, MoveDirections.Up));
@@ -569,6 +516,269 @@ namespace S1kdTools.Editor
                     await _client.ApplyAsync(EditCommand.Delete(path));
                     break;
             }
+        }
+
+        // --------------------------------------------------------------------
+        // dropping a component
+        // --------------------------------------------------------------------
+
+        /// <summary>
+        /// Add a palette component without dragging it: after the block the author
+        /// was last in, or inside it when that is the only place it can go.
+        /// </summary>
+        /// <returns>Whether there was anywhere for it to go.</returns>
+        public async Task<bool> InsertFromPaletteAsync(string element)
+        {
+            await CommitPendingAsync();
+
+            IEditBlock target = FindBlock(_focusPath);
+
+            if (target is null)
+            {
+                // Nothing has been typed into yet. The last block of the content is
+                // where an author adding their first component means, far more often
+                // than the first one.
+                target = LastContentBlock();
+            }
+
+            Drop drop = Where(target, element, after: true);
+
+            if (drop is null)
+            {
+                return false;
+            }
+
+            await ApplyDropAsync(drop);
+            return true;
+        }
+
+        private void OnDragOver(Event e)
+        {
+            if (PaletteDrag.Element is null)
+            {
+                return;
+            }
+
+            Drop drop = DropAt(e as DragEvent);
+            Highlight(drop);
+
+            if (drop is null)
+            {
+                return;
+            }
+
+            // Calling preventDefault on dragover is what makes an element a drop
+            // target at all. Not calling it is how a place a component may not go
+            // refuses it, with the browser's own "no" cursor rather than a message.
+            e.preventDefault();
+
+            var drag = e as DragEvent;
+            if (drag is object && drag.dataTransfer is object)
+            {
+                drag.dataTransfer.dropEffect = "copy";
+            }
+        }
+
+        private void OnDragLeave(Event e)
+        {
+            // Only when the pointer has left the surface, not when it crosses from
+            // one block to the next - which fires dragleave for the block behind it
+            // and would make the insertion line flicker on every move.
+            var target = e.target as HTMLElement;
+            if (target is object && target == _root)
+            {
+                Highlight(null);
+            }
+        }
+
+        private void OnDrop(Event e)
+        {
+            string element = PaletteDrag.Element;
+            if (element is null)
+            {
+                return;
+            }
+
+            e.preventDefault();
+
+            Drop drop = DropAt(e as DragEvent);
+            Highlight(null);
+            PaletteDrag.End();
+
+            if (drop is object)
+            {
+                ApplyDropAsync(drop).FireAndForget();
+            }
+        }
+
+        /// <summary>Where the pointer currently is, as a place a component could go.</summary>
+        private Drop DropAt(DragEvent e)
+        {
+            if (e is null)
+            {
+                return null;
+            }
+
+            HTMLElement block = Closest(document.elementFromPoint(e.clientX, e.clientY) as HTMLElement,
+                "s1kd-block");
+
+            IEditBlock target = block is null ? null : FindBlock(block.getAttribute(PathAttribute));
+            if (target is null)
+            {
+                return null;
+            }
+
+            // Above or below the block's midpoint - the same gesture every list
+            // editor uses, and the reason the insertion line is drawn on an edge
+            // rather than around the block.
+            DOMRect box = block.getBoundingClientRect().As<DOMRect>();
+            bool after = e.clientY > box.top + (box.height / 2);
+
+            return Where(target, PaletteDrag.Element, after);
+        }
+
+        /// <summary>
+        /// Decide where a component would land relative to a block, or null when it
+        /// may not go there.
+        ///
+        /// Beside it if the schema allows it beside it; otherwise inside it, which is
+        /// what makes dropping a step onto a container work without the author having
+        /// to find its last child. Both answers come from the projection - the
+        /// front-end is not deciding what S1000D permits, it is reading it.
+        /// </summary>
+        private Drop Where(IEditBlock target, string element, bool after)
+        {
+            if (target is null || element is null)
+            {
+                return null;
+            }
+
+            if (Offers(target.insertSiblings, element))
+            {
+                return new Drop(target, element,
+                    after ? EditPositions.After : EditPositions.Before);
+            }
+
+            if (Offers(target.insertChildren, element))
+            {
+                return new Drop(target, element, EditPositions.LastChild);
+            }
+
+            return null;
+        }
+
+        private static bool Offers(IInsertOption[] options, string element)
+        {
+            if (options is null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < options.Length; i++)
+            {
+                if (options[i].element == element)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task ApplyDropAsync(Drop drop)
+        {
+            // The caret follows a component that landed beside one of its own kind,
+            // because that is the only case where its path can be worked out rather
+            // than guessed at - and it is the case where the author is about to type
+            // into it.
+            _focusPath = drop.Position == EditPositions.After && drop.Element == drop.Target.element
+                ? NextSiblingPath(drop.Target.path)
+                : null;
+            _focusOffset = 0;
+
+            await _client.ApplyAsync(
+                EditCommand.Insert(drop.Target.path, drop.Position, drop.Element));
+        }
+
+        /// <summary>
+        /// Draw the insertion line, and only there.
+        ///
+        /// The previous one is cleared by query rather than by remembering it: a
+        /// redraw between two pointer moves would have thrown away the element the
+        /// class was on, and a line left behind on a block nothing will land on is
+        /// worse than no line at all.
+        /// </summary>
+        private void Highlight(Drop drop)
+        {
+            NodeList marked = _page.querySelectorAll(".s1kd-drop-before, .s1kd-drop-after, .s1kd-drop-into");
+            for (uint i = 0; i < marked.length; i++)
+            {
+                var element = marked[i] as HTMLElement;
+                element.classList.remove("s1kd-drop-before");
+                element.classList.remove("s1kd-drop-after");
+                element.classList.remove("s1kd-drop-into");
+            }
+
+            if (drop is null)
+            {
+                return;
+            }
+
+            HTMLElement block = BlockElement(drop.Target.path);
+            if (block is null)
+            {
+                return;
+            }
+
+            block.classList.add(
+                drop.Position == EditPositions.Before ? "s1kd-drop-before" :
+                drop.Position == EditPositions.After ? "s1kd-drop-after" : "s1kd-drop-into");
+        }
+
+        /// <summary>The last block of the content section, for a palette click with no caret.</summary>
+        private IEditBlock LastContentBlock()
+        {
+            IEditorState state = _client.State;
+
+            if (state is null || state.model is null)
+            {
+                return null;
+            }
+
+            IEditSection[] sections = state.model.sections;
+            for (var i = sections.Length - 1; i >= 0; i--)
+            {
+                IEditBlock[] blocks = sections[i].blocks;
+                if (blocks is object && blocks.Length > 0)
+                {
+                    return Deepest(blocks[blocks.Length - 1]);
+                }
+            }
+
+            return null;
+        }
+
+        private static IEditBlock Deepest(IEditBlock block)
+        {
+            IEditBlock[] children = block.blocks;
+            return children is object && children.Length > 0
+                ? Deepest(children[children.Length - 1])
+                : block;
+        }
+
+        /// <summary>A place a component would land: which block, and on which side of it.</summary>
+        private sealed class Drop
+        {
+            internal Drop(IEditBlock target, string element, string position)
+            {
+                Target = target;
+                Element = element;
+                Position = position;
+            }
+
+            internal IEditBlock Target { get; }
+            internal string Element { get; }
+            internal string Position { get; }
         }
 
         // --------------------------------------------------------------------

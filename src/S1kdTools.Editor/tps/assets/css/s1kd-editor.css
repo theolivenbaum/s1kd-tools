@@ -389,9 +389,17 @@
     pointer-events: auto;
 }
 
-/* A nested block's gutter would sit on top of its parent's. The parent's is
-   hidden while the pointer is over a child, so only one is ever offered. */
-.s1kd-block:hover > .s1kd-gutter:has(~ .s1kd-body .s1kd-block:hover) {
+/*
+  Only the innermost one.
+
+  Blocks nest four and five deep, and both :hover and :focus-within match every
+  ancestor of the block the pointer or the caret is in — so without this a step
+  inside a step inside a procedure offers three columns of buttons stacked across
+  the margin, and the author has to work out which "delete" they are aiming at.
+  A block whose descendant is the real target withdraws its own.
+*/
+.s1kd-block:has(.s1kd-block:hover) > .s1kd-gutter,
+.s1kd-block:has(.s1kd-block:focus-within) > .s1kd-gutter {
     opacity: 0;
     pointer-events: none;
 }
@@ -441,6 +449,13 @@
     gap: 2px;
 }
 
+/* The history buttons say what they would reverse, so their labels are as long as
+   the last edit's name. Wrapping one makes the whole bar two rows tall and moves
+   the page under it; the label is allowed to be long and stay on one line. */
+.s1kd-commandbar .tss-btn {
+    white-space: nowrap;
+}
+
 .s1kd-commandbar-sep {
     width: 1px;
     height: 18px;
@@ -479,4 +494,131 @@
 */
 .s1kd-pdf {
     background: var(--tss-secondary-background-color);
+}
+
+/* ----------------------------------------------------------- the components */
+
+/*
+  The rail of components to drag into the page.
+
+  Narrow on purpose — though the width is the host's to set, not this file's. Its
+  job is to be reachable, not to be read: a card is an icon, a name and a line, and
+  the shape of the thing it makes is in the preview behind it rather than on the
+  card. A rail wide enough to show a table at its real width is a rail nobody keeps
+  open beside a page.
+*/
+.s1kd-palette {
+    border-right: 1px solid var(--tss-default-border-color);
+    background: var(--tss-default-background-color);
+}
+
+.s1kd-palette-head {
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 10px 12px 6px 12px;
+    border-bottom: 1px solid var(--tss-default-border-color);
+}
+
+.s1kd-palette-cards {
+    padding: 6px;
+    gap: 2px;
+}
+
+.s1kd-palette-status {
+    padding: 8px 12px;
+    border-top: 1px solid var(--tss-default-border-color);
+    line-height: 1.4;
+}
+
+/* grab, not pointer: the card's first affordance is that it can be picked up. */
+.s1kd-palette-card {
+    cursor: grab;
+    user-select: none;
+
+    /* The rail is narrow and the names are not: without a floor of zero a flex
+       item refuses to shrink below its content, and the rail scrolls sideways
+       instead of the card getting narrower. */
+    width: 100%;
+    min-width: 0;
+}
+
+/* Two lines of explanation, then stop. The whole line is in the tooltip with the
+   preview, and a card that grows to five lines stops being scannable. */
+.s1kd-palette-card .tss-contextcard-sublabel {
+    white-space: normal;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.s1kd-palette-card .tss-contextcard-text {
+    min-width: 0;
+}
+
+.s1kd-palette-card:focus-visible {
+    outline: 2px solid var(--tss-primary-background-color, #0078d4);
+    outline-offset: 1px;
+}
+
+.s1kd-palette-dragging {
+    opacity: .45;
+}
+
+/* The preview inside the tooltip is a fragment of a page, so it is given the
+   page's type and none of its furniture — no border, no shadow, no margin. */
+.s1kd-palette-preview {
+    max-width: none;
+    margin: 0;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    font-size: 13px;
+}
+
+/* A preview has nothing to hover and nothing to press. */
+.s1kd-palette-preview .s1kd-text:hover {
+    background: transparent;
+}
+
+/* ------------------------------------------------------------- drop targets */
+
+/*
+  Where a dragged component would land: a line on the edge it would go in on,
+  drawn in the margin so nothing on the page moves while the author is aiming.
+*/
+.s1kd-drop-before > .s1kd-body,
+.s1kd-drop-after > .s1kd-body {
+    position: relative;
+}
+
+.s1kd-drop-before > .s1kd-body::before,
+.s1kd-drop-after > .s1kd-body::after {
+    content: "";
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--tss-primary-background-color, #0078d4);
+}
+
+.s1kd-drop-before > .s1kd-body::before {
+    top: -3px;
+}
+
+.s1kd-drop-after > .s1kd-body::after {
+    bottom: -3px;
+}
+
+/* Dropping into a container rather than beside it — the answer when the schema
+   allows the component inside but not alongside. Outlined rather than under-lined,
+   because "in here" is a different promise from "here". */
+.s1kd-drop-into > .s1kd-body {
+    outline: 2px dashed var(--tss-primary-background-color, #0078d4);
+    outline-offset: 3px;
+    border-radius: 3px;
 }

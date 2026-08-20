@@ -80,6 +80,19 @@ namespace S1kdTools.Editor
             return Script.Write<IDocumentSummary[]>("{0}", parsed);
         }
 
+        /// <summary>
+        /// The catalogue of components an author can add, each with the block it
+        /// projects as.
+        ///
+        /// Not per-document: what may be inserted is a property of the editing
+        /// stylesheet, so the palette asks once and keeps the answer.
+        /// </summary>
+        public async Task<IPaletteEntry[]> PaletteAsync()
+        {
+            object parsed = await SendAsync("GET", _baseUrl + "/api/palette", null);
+            return Script.Write<IPaletteEntry[]>("{0}", parsed);
+        }
+
         /// <summary>Open a document, replacing whatever was open.</summary>
         public Task<IEditorState> OpenAsync(string id)
         {

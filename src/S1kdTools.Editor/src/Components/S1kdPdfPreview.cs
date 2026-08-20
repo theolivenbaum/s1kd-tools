@@ -69,16 +69,11 @@ namespace S1kdTools.Editor
             // which is what a four-page data module wants.
             _bar = HStack().WS().AlignItemsCenter().Class("s1kd-commandbar").PL(8).PR(8).PT(6).PB(6)
                 .Children(
-                    Button().SetIcon(UIcons.ZoomOut).LessPadding().Tooltip("Zoom out")
-                        .OnClick(() => _viewer.ZoomOut()),
-                    Button().SetIcon(UIcons.ZoomIn).LessPadding().Tooltip("Zoom in")
-                        .OnClick(() => _viewer.ZoomIn()),
-                    Button().SetIcon(UIcons.ExpandArrows).LessPadding().Tooltip("Fit page width")
-                        .OnClick(() => _viewer.FitWidth()),
-                    Button().SetIcon(UIcons.Expand).LessPadding().Tooltip("Fit whole page")
-                        .OnClick(() => _viewer.FitPage()),
-                    Button().SetIcon(UIcons.Refresh).LessPadding().Tooltip("Lay out again")
-                        .OnClick(() => RefreshAsync().FireAndForget()),
+                    Control(UIcons.ZoomOut, "Zoom out", () => _viewer.ZoomOut()),
+                    Control(UIcons.ZoomIn, "Zoom in", () => _viewer.ZoomIn()),
+                    Control(UIcons.ExpandArrows, "Fit page width", () => _viewer.FitWidth()),
+                    Control(UIcons.Expand, "Fit whole page", () => _viewer.FitPage()),
+                    Control(UIcons.Refresh, "Lay out again", () => RefreshAsync().FireAndForget()),
                     Empty().Grow(),
                     _status);
 
@@ -95,6 +90,20 @@ namespace S1kdTools.Editor
                     RefreshIfChangedAsync().FireAndForget();
                 }
             };
+        }
+
+        /// <summary>
+        /// One toolbar button.
+        ///
+        /// The aria-label is not the tooltip repeated: a tooltip is a popover the
+        /// pointer summons, and an icon button without a label is unnamed to
+        /// anything that is not a mouse.
+        /// </summary>
+        private static Button Control(UIcons icon, string label, Action onClick)
+        {
+            Button button = Button().SetIcon(icon).LessPadding().Tooltip(label).OnClick(onClick);
+            button.Render().setAttribute("aria-label", label);
+            return button;
         }
 
         /// <inheritdoc/>

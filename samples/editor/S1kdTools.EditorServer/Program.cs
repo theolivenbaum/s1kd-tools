@@ -48,6 +48,13 @@ RouteGroupBuilder api = app.MapGroup("/api");
 
 api.MapGet("/documents", (CsdbLibrary library) => library.List());
 
+// What an author can add to a data module, each entry carrying the block it
+// projects as. The preview is built by the same template call an insert command
+// makes and run through the same editing stylesheet, so a palette card is drawn
+// by the front-end's own block renderer and cannot promise a shape that dropping
+// it would not produce.
+api.MapGet("/palette", () => EditPalette.Build());
+
 api.MapGet("/documents/{id}", (string id, CsdbLibrary library) => library.Read(id));
 
 api.MapPost("/documents/{id}/commands", (string id, CommandsRequest request, CsdbLibrary library) =>

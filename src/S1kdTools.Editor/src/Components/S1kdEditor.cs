@@ -179,6 +179,12 @@ namespace S1kdTools.Editor
         {
             Button button = Button().SetIcon(icon).LessPadding().Tooltip(label);
 
+            // An icon with a tooltip has no accessible name: a tooltip is a popover
+            // the pointer summons, not something a screen reader reads off the
+            // button. Without this the formatting controls are four unlabelled
+            // buttons - and unreachable by name to anything that is not a mouse.
+            button.Render().setAttribute("aria-label", label);
+
             button.Render().addEventListener("mousedown", e =>
             {
                 e.preventDefault();

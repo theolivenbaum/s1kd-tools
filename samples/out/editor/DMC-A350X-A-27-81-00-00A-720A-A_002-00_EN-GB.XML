@@ -51,7 +51,9 @@
     </referencedApplicGroup>
     <procedure>
       <commonInfo>
-        <warning><warningAndCautionPara>Do not work under a raised unit.</warningAndCautionPara></warning><para>EDITED FROM THE API. Do the procedure after the removal procedure <dmRef>
+        <para>This data module gives the procedure to install the slat actuation power control unit
+          (PCU) in the belly fairing. Do the procedure after the removal procedure
+          <dmRef>
             <dmRefIdent>
               <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="520" infoCodeVariant="A" itemLocationCode="A" />
             </dmRefIdent>
@@ -189,8 +191,7 @@
         <proceduralStep id="stp-prepare">
           <title>Prepare for the installation</title>
           <proceduralStep>
-            <para>Make sure that the mounting flange of the PCU support structure is clean and that no
-              damage is found on the sealing face.</para>
+            <para>Saved text.</para>
           </proceduralStep>
           <proceduralStep>
             <para>Install a new packing NSA8102-118 on each of the two hydraulic manifold ports.</para>
