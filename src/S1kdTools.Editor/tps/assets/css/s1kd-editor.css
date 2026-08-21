@@ -1,0 +1,623 @@
+/*
+  The editing surface.
+
+  It is styled as the page rather than as a form, because the author's question
+  while they type is "what will this look like" and an editor that answers it
+  everywhere except where the caret is has stopped being a WYSIWYG. So the shapes
+  here follow the XSL-FO presentation stylesheets the page preview uses: the same
+  step indentation, the same boxed warnings and cautions, the same rules above a
+  section. They do not match to the millimetre and are not meant to - the preview
+  pane is where the page is exact.
+
+  Everything that is *editor* rather than *page* is kept in the margins and out of
+  the flow: the block commands live in a gutter that appears on hover, and the
+  focused block is marked with a rule in the start margin rather than with a box
+  that would move the text.
+
+  Colours come from Tesserae's theme variables, so the surface follows the app
+  into dark mode without a second palette here.
+*/
+
+.s1kd-surface {
+    height: 100%;
+    overflow: auto;
+    background: var(--tss-secondary-background-color);
+    padding: 16px 0 64px 0;
+}
+
+/* The page: a measured column, because a maintenance procedure read across a
+   1600px window is unreadable and the printed one is 170mm wide. */
+.s1kd-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 40px 48px 40px;
+    background: var(--tss-default-background-color);
+    color: var(--tss-default-foreground-color);
+    border: 1px solid var(--tss-default-border-color);
+    border-radius: 4px;
+    box-shadow: var(--tss-shadow-md);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------ header */
+
+.s1kd-page-head {
+    border-bottom: 2px solid var(--tss-default-foreground-color);
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+}
+
+.s1kd-page-type {
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--tss-secondary-foreground-color);
+}
+
+.s1kd-page-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 2px 0 4px 0;
+}
+
+.s1kd-page-code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--tss-secondary-foreground-color);
+}
+
+/* ---------------------------------------------------------------- sections */
+
+.s1kd-section {
+    margin-bottom: 28px;
+}
+
+.s1kd-section-head {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--tss-secondary-foreground-color);
+    border-bottom: 1px solid var(--tss-default-border-color);
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+}
+
+/* The identification fields are a two-column list, not prose. */
+.s1kd-section-ident .s1kd-section-body {
+    display: grid;
+    grid-template-columns: minmax(140px, 220px) 1fr;
+    gap: 2px 16px;
+    align-items: baseline;
+}
+
+.s1kd-section-ident > .s1kd-section-body > .s1kd-block {
+    display: contents;
+}
+
+/* ------------------------------------------------------------------ blocks */
+
+.s1kd-block {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 4px 0;
+}
+
+.s1kd-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.s1kd-children {
+    margin-top: 2px;
+}
+
+/* The number in the margin, the way the page prints it. Fixed width so a run of
+   steps lines up whether they are numbered 1. or (12). */
+.s1kd-label {
+    flex: 0 0 auto;
+    min-width: 30px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.s1kd-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--tss-secondary-foreground-color);
+    margin-top: 10px;
+}
+
+.s1kd-value {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--tss-secondary-foreground-color);
+}
+
+/* A step is indented from its parent, as it is on the page. */
+.s1kd-kind-step > .s1kd-body > .s1kd-children {
+    margin-left: 14px;
+}
+
+.s1kd-kind-group > .s1kd-body > .s1kd-children,
+.s1kd-kind-section > .s1kd-body > .s1kd-children {
+    margin-left: 4px;
+}
+
+.s1kd-kind-title > .s1kd-body > .s1kd-text {
+    font-weight: 700;
+}
+
+.s1kd-kind-group {
+    margin-top: 10px;
+}
+
+/* Warnings and cautions are boxed and ruled the way the printed page boxes them,
+   because their whole job is to stop the eye. */
+.s1kd-kind-warning > .s1kd-body,
+.s1kd-kind-caution > .s1kd-body,
+.s1kd-kind-attention > .s1kd-body {
+    border: 1.5px solid var(--tss-colors-red-600);
+    border-radius: 3px;
+    padding: 6px 10px;
+    margin: 8px 0;
+}
+
+.s1kd-kind-caution > .s1kd-body {
+    border-color: var(--tss-colors-orange-600, #d97706);
+}
+
+.s1kd-kind-attention > .s1kd-body {
+    border-color: var(--tss-colors-orange-600, #d97706);
+}
+
+.s1kd-kind-warning > .s1kd-body > .s1kd-heading {
+    color: var(--tss-colors-red-600);
+    margin-top: 0;
+}
+
+.s1kd-kind-caution > .s1kd-body > .s1kd-heading,
+.s1kd-kind-attention > .s1kd-body > .s1kd-heading {
+    color: var(--tss-colors-orange-700, #b45309);
+    margin-top: 0;
+}
+
+/* A note is ruled rather than boxed - it informs, it does not warn. */
+.s1kd-kind-note > .s1kd-body {
+    border-left: 3px solid var(--tss-default-border-color);
+    padding: 2px 0 2px 10px;
+    margin: 6px 0;
+}
+
+.s1kd-kind-note > .s1kd-body > .s1kd-heading {
+    margin-top: 0;
+}
+
+/* Equipment, consumables, spares and parts rows: a line of labelled fields. */
+.s1kd-kind-requirement > .s1kd-body > .s1kd-children,
+.s1kd-kind-partRow > .s1kd-body > .s1kd-children {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 20px;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--tss-default-border-color);
+}
+
+.s1kd-kind-field {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+}
+
+.s1kd-kind-field > .s1kd-label {
+    min-width: 0;
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--tss-secondary-foreground-color);
+}
+
+.s1kd-kind-reference > .s1kd-body {
+    font-size: 13px;
+    color: var(--tss-secondary-foreground-color);
+}
+
+.s1kd-kind-graphic > .s1kd-body,
+.s1kd-kind-applic > .s1kd-body {
+    font-size: 12.5px;
+    color: var(--tss-secondary-foreground-color);
+}
+
+.s1kd-kind-unknown > .s1kd-body {
+    border-left: 3px dashed var(--tss-default-border-color);
+    padding-left: 10px;
+}
+
+/* Lists. */
+.s1kd-kind-listItem > .s1kd-label {
+    min-width: 20px;
+}
+
+/* Table rows sit on one line so a table still reads as a table. */
+.s1kd-kind-row > .s1kd-body > .s1kd-children {
+    display: flex;
+    gap: 12px;
+}
+
+.s1kd-kind-row > .s1kd-body > .s1kd-children > .s1kd-block {
+    flex: 1 1 0;
+}
+
+.s1kd-kind-tableHead > .s1kd-body {
+    font-weight: 600;
+}
+
+/* -------------------------------------------------------------- edit boxes */
+
+.s1kd-text {
+    /* pre-wrap, so the spaces the author types survive and the ones the runs
+       carry - the single space in front of a reference chip - are drawn. */
+    white-space: pre-wrap;
+    outline: none;
+    border-radius: 3px;
+    padding: 1px 3px;
+    margin: 0 -3px;
+    transition: background-color .12s ease;
+}
+
+.s1kd-text:hover {
+    background: var(--tss-default-background-hover-color);
+}
+
+.s1kd-text:focus {
+    background: var(--tss-default-background-hover-color);
+    box-shadow: inset 2px 0 0 0 var(--tss-primary-background-color, #0078d4);
+}
+
+.s1kd-text:empty::before {
+    content: attr(data-placeholder);
+    color: var(--tss-secondary-foreground-color);
+    opacity: .55;
+}
+
+.s1kd-text-inline {
+    display: inline-block;
+    min-width: 40px;
+}
+
+/* An inline reference: shown as a chip because its text is derived from what it
+   points at, and retyping it in prose would not change the target. */
+.s1kd-chip {
+    display: inline;
+    background: var(--tss-secondary-background-color);
+    border: 1px solid var(--tss-default-border-color);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin: 0 1px;
+    font-size: .92em;
+    white-space: normal;
+    cursor: default;
+    user-select: none;
+}
+
+.s1kd-chip-dmRef,
+.s1kd-chip-pmRef,
+.s1kd-chip-externalPubRef {
+    border-color: var(--tss-primary-background-color, #0078d4);
+}
+
+.s1kd-chip-warningRef,
+.s1kd-chip-cautionRef {
+    border-color: var(--tss-colors-red-600);
+    color: var(--tss-colors-red-700);
+}
+
+/* Attribute fields. */
+.s1kd-field {
+    display: contents;
+}
+
+.s1kd-field-value {
+    font: inherit;
+    font-size: 13px;
+    color: inherit;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 1px 4px;
+    width: 100%;
+    max-width: 380px;
+}
+
+.s1kd-field-value:hover {
+    border-color: var(--tss-default-border-color);
+}
+
+.s1kd-field-value:focus {
+    outline: none;
+    background: var(--tss-default-background-color);
+    border-color: var(--tss-primary-background-color, #0078d4);
+}
+
+/* The identification section lays label and value out as grid columns itself, so
+   a field there must not also be a row. */
+.s1kd-section-ident .s1kd-block > .s1kd-body {
+    display: contents;
+}
+
+.s1kd-section-ident .s1kd-block > .s1kd-body > .s1kd-text {
+    grid-column: 2;
+}
+
+.s1kd-section-ident .s1kd-block > .s1kd-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--tss-secondary-foreground-color);
+}
+
+/* ------------------------------------------------------------------ gutter */
+
+/*
+  The per-block commands. Absolutely positioned in the start margin so that
+  showing them does not move a single word of the page - an author reaching for
+  "move this step up" must not have the step move first.
+*/
+.s1kd-gutter {
+    position: absolute;
+    left: -34px;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .1s ease;
+}
+
+/*
+  Exactly one gutter is ever offered: the innermost block under the pointer, or -
+  while the pointer is off the page - the innermost block holding the caret.
+
+  Blocks nest four and five deep, and :hover and :focus-within both match every
+  ancestor of their target. Without the "innermost" clauses a step inside a step
+  inside a procedure stacks three columns of buttons across the margin and the
+  author has to work out which "delete" they are aiming at. `:not(:has(...))` says
+  innermost directly: a block that contains the real target is not the target.
+
+  The pointer outranks the caret, because the pointer is what is aiming. An author
+  whose caret is in a nested paragraph can still reach the enclosing step's
+  commands by moving to it.
+*/
+.s1kd-block:hover:not(:has(.s1kd-block:hover)) > .s1kd-gutter,
+.s1kd-surface:not(:hover) .s1kd-block:focus-within:not(:has(.s1kd-block:focus-within)) > .s1kd-gutter {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.s1kd-gutter-button {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    line-height: 1;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--tss-secondary-foreground-color);
+    background: var(--tss-default-background-color);
+    border: 1px solid var(--tss-default-border-color);
+    border-radius: 3px;
+}
+
+.s1kd-gutter-button:hover {
+    color: var(--tss-default-foreground-color);
+    background: var(--tss-default-background-hover-color);
+}
+
+.s1kd-gutter-delete:hover {
+    color: var(--tss-colors-red-600);
+    border-color: var(--tss-colors-red-600);
+}
+
+/* ---------------------------------------------------------------- revealed */
+
+/* Where a check finding or a search result landed the author. It fades because
+   once they are looking at it, a permanent mark is only in the way. */
+.s1kd-revealed > .s1kd-body {
+    animation: s1kd-reveal 1.6s ease-out;
+}
+
+@keyframes s1kd-reveal {
+    0%   { background: var(--tss-colors-yellow-200, #fde68a); }
+    100% { background: transparent; }
+}
+
+/* ------------------------------------------------------------- command bar */
+
+.s1kd-commandbar {
+    border-bottom: 1px solid var(--tss-default-border-color);
+    background: var(--tss-default-background-color);
+    flex: 0 0 auto;
+    gap: 2px;
+}
+
+/* The history buttons say what they would reverse, so their labels are as long as
+   the last edit's name. Wrapping one makes the whole bar two rows tall and moves
+   the page under it; the label is allowed to be long and stay on one line. */
+.s1kd-commandbar .tss-btn {
+    white-space: nowrap;
+}
+
+.s1kd-commandbar-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--tss-default-border-color);
+}
+
+/* ---------------------------------------------------------------- findings */
+
+/*
+  What a check found, listed under the bar rather than in a dialog: an author
+  fixing three business-rule violations should be able to see the list and the
+  text at the same time, and a dialog makes them do one, reopen, do the next.
+*/
+.s1kd-finding {
+    padding: 3px 10px;
+    border-bottom: 1px solid var(--tss-default-border-color);
+    background: var(--tss-secondary-background-color);
+}
+
+.s1kd-finding-error {
+    box-shadow: inset 3px 0 0 0 var(--tss-colors-red-600);
+}
+
+.s1kd-findings-ok {
+    box-shadow: inset 3px 0 0 0 var(--tss-colors-lime-600);
+}
+
+/* ------------------------------------------------------------ page preview */
+
+/*
+  The laid-out page. The viewer inside it is Tesserae.Pdf's, which draws no chrome
+  of its own - deliberately, so it looks like the application around it - and
+  S1kdPdfPreview supplies the toolbar. All this contributes is the ground the pages
+  sit on, so a page reads as a sheet of paper against a desk rather than as white
+  on white.
+*/
+.s1kd-pdf {
+    background: var(--tss-secondary-background-color);
+}
+
+/* ----------------------------------------------------------- the components */
+
+/*
+  The rail of components to drag into the page.
+
+  Narrow on purpose — though the width is the host's to set, not this file's. Its
+  job is to be reachable, not to be read: a card is an icon, a name and a line, and
+  the shape of the thing it makes is in the preview behind it rather than on the
+  card. A rail wide enough to show a table at its real width is a rail nobody keeps
+  open beside a page.
+*/
+.s1kd-palette {
+    border-right: 1px solid var(--tss-default-border-color);
+    background: var(--tss-default-background-color);
+}
+
+.s1kd-palette-head {
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 10px 12px 6px 12px;
+    border-bottom: 1px solid var(--tss-default-border-color);
+}
+
+.s1kd-palette-cards {
+    padding: 6px;
+    gap: 2px;
+}
+
+.s1kd-palette-status {
+    padding: 8px 12px;
+    border-top: 1px solid var(--tss-default-border-color);
+    line-height: 1.4;
+}
+
+/* grab, not pointer: the card's first affordance is that it can be picked up. */
+.s1kd-palette-card {
+    cursor: grab;
+    user-select: none;
+
+    /* The rail is narrow and the names are not: without a floor of zero a flex
+       item refuses to shrink below its content, and the rail scrolls sideways
+       instead of the card getting narrower. */
+    width: 100%;
+    min-width: 0;
+}
+
+/* Two lines of explanation, then stop. The whole line is in the tooltip with the
+   preview, and a card that grows to five lines stops being scannable. */
+.s1kd-palette-card .tss-contextcard-sublabel {
+    white-space: normal;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.s1kd-palette-card .tss-contextcard-text {
+    min-width: 0;
+}
+
+.s1kd-palette-card:focus-visible {
+    outline: 2px solid var(--tss-primary-background-color, #0078d4);
+    outline-offset: 1px;
+}
+
+.s1kd-palette-dragging {
+    opacity: .45;
+}
+
+/* The preview inside the tooltip is a fragment of a page, so it is given the
+   page's type and none of its furniture — no border, no shadow, no margin. */
+.s1kd-palette-preview {
+    max-width: none;
+    margin: 0;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    font-size: 13px;
+}
+
+/* A preview has nothing to hover and nothing to press. */
+.s1kd-palette-preview .s1kd-text:hover {
+    background: transparent;
+}
+
+/* ------------------------------------------------------------- drop targets */
+
+/*
+  Where a dragged component would land: a line on the edge it would go in on,
+  drawn in the margin so nothing on the page moves while the author is aiming.
+*/
+.s1kd-drop-before > .s1kd-body,
+.s1kd-drop-after > .s1kd-body {
+    position: relative;
+}
+
+.s1kd-drop-before > .s1kd-body::before,
+.s1kd-drop-after > .s1kd-body::after {
+    content: "";
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--tss-primary-background-color, #0078d4);
+}
+
+.s1kd-drop-before > .s1kd-body::before {
+    top: -3px;
+}
+
+.s1kd-drop-after > .s1kd-body::after {
+    bottom: -3px;
+}
+
+/* Dropping into a container rather than beside it — the answer when the schema
+   allows the component inside but not alongside. Outlined rather than under-lined,
+   because "in here" is a different promise from "here". */
+.s1kd-drop-into > .s1kd-body {
+    outline: 2px dashed var(--tss-primary-background-color, #0078d4);
+    outline-offset: 3px;
+    border-radius: 3px;
+}

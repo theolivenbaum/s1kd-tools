@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/process.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="258" infoCodeVariant="A" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="001" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="05" day="26"/>
+        <dmTitle>
+          <techName>Slat actuation power control unit</techName>
+          <infoName>Interactive replacement process</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="new">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AERALIS AEROSPACE — Technical Data</enterpriseName>
+      </originator>
+      <applic>
+        <displayText><simplePara>AE100-900 and AE100-1000, all aircraft</simplePara></displayText>
+      </applic>
+      <qualityAssurance>
+        <unverified/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <process>
+      <para>This process drives a technician through the replacement of a slat actuation power
+        control unit on an electronic device. The printed form below gives the same sequence with
+        the branches written out, for use when no device is available.</para>
+      <dmSeq>
+        <dmNode id="nd-010" nodeIdent="ENTRY">
+          <proceduralStep>
+            <para>Confirm the reason for the removal: scheduled replacement, fault message, or
+              accomplishment of service bulletin AE100-27-1042.</para>
+          </proceduralStep>
+          <dmNodeAlts>
+            <dmNodeAlt altValue="Fault message" nextActionRefId="nd-020"/>
+            <dmNodeAlt altValue="Scheduled or service bulletin" nextActionRefId="nd-030"/>
+          </dmNodeAlts>
+        </dmNode>
+        <dmNode id="nd-020" nodeIdent="ISOLATE">
+          <proceduralStep>
+            <para>Do the fault isolation procedure for the reported message before you remove the
+              unit. A unit that is removed without fault isolation is charged to the operator if the
+              shop finds no fault.</para>
+          </proceduralStep>
+          <dmNodeAlts>
+            <dmNodeAlt altValue="Fault confirmed on the unit" nextActionRefId="nd-030"/>
+            <dmNodeAlt altValue="Fault elsewhere"/>
+          </dmNodeAlts>
+        </dmNode>
+        <dmNode id="nd-030" nodeIdent="REMOVE">
+          <proceduralStep>
+            <para>Do the removal procedure. Record the serial number of the unit that is removed and
+              the total flight hours of the aircraft.</para>
+          </proceduralStep>
+          <dmNodeAlts>
+            <dmNodeAlt altValue="Removal complete" nextActionRefId="nd-040"/>
+          </dmNodeAlts>
+        </dmNode>
+        <dmNode id="nd-040" nodeIdent="INSTALL">
+          <proceduralStep>
+            <para>Do the installation procedure with the replacement unit, then complete the
+              post-installation check list.</para>
+          </proceduralStep>
+          <dmNodeAlts>
+            <dmNodeAlt altValue="All check list items signed" nextActionRefId="nd-050"/>
+            <dmNodeAlt altValue="An item cannot be signed" nextActionRefId="nd-040"/>
+          </dmNodeAlts>
+        </dmNode>
+        <dmNode id="nd-050" nodeIdent="CLOSE">
+          <proceduralStep>
+            <para>Close the aircraft, make the technical log entry and report the replacement through
+              the customer services portal.</para>
+          </proceduralStep>
+          <dmNodeAlts>
+            <dmNodeAlt altValue="Complete"/>
+          </dmNodeAlts>
+        </dmNode>
+      </dmSeq>
+    </process>
+  </content>
+</dmodule>

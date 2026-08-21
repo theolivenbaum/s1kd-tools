@@ -110,6 +110,56 @@ A set of small, free and open source software tools for manipulating
 > read a report, and
 > [`samples/datasets/pdfdiff-demo/`](samples/datasets/pdfdiff-demo/README.md) for
 > a worked example.
+>
+> ### Editing (the WYSIWYG editor)
+>
+> The port also adds an **editor**: a data module open in a browser, drawn as the
+> page it will be published as and typed into in place, with its source and its
+> rendered PDF beside it and a rail of components to drag into it.
+>
+> ```
+> dotnet build S1kdTools.Editor.slnx
+> dotnet run --project samples/editor/S1kdTools.EditorServer   # then open localhost:5000
+> ```
+>
+> It rests on a second stylesheet family alongside the presentation ones.
+> `Resources/editing/edit.xsl` projects a CSDB object into an **addressed tree of
+> editable blocks** — every paragraph, step and field paired with the XPath of the
+> element it came from, and the number the page will print beside it — and
+> `S1kdTools.Core/Editing/` turns an edit made against a block back into a change
+> to that element. Programmatically:
+>
+> ```csharp
+> var session = EditSession.Open("DMC-….XML");
+> EditBlock step = session.Model.AllBlocks().First(b => b.Kind == "step");
+> session.Apply(EditCommand.Insert(step.Path, EditPositions.LastChild, "warning"));
+> session.Undo();
+> ```
+>
+> The XML stays the document of record: a command mutates it and the model is
+> re-projected from the result, so there is no second representation that can be
+> right when the file is wrong. A reference the author did not retype is *moved*
+> back into place rather than rebuilt, so it survives an edit to the sentence
+> around it with everything on it intact.
+>
+> Standing one up is two packages and about ten lines — the back-end is
+> [`S1kdTools.Editor.Server`](src/S1kdTools.Editor.Server), the browser half is
+> [`S1kdTools.Editor`](src/S1kdTools.Editor):
+>
+> ```csharp
+> builder.Services.AddS1kdEditor(new EditorOptions { CsdbDirectory = "csdb" });
+> app.MapS1kdEditor();
+> ```
+>
+> The front-end holds no S1000D knowledge at all, and the vocabulary it speaks is a
+> stylesheet away from being a different one: a project passes an `EditProfile`
+> whose stylesheet imports ours and overrides the templates it disagrees with. Nor
+> does any of it assume a name is a path — stylesheets, their imports and
+> illustrations all go through an `IResourceResolver`, so a CSDB held in a content
+> management system, an object store or a zip is a resolver rather than a fork.
+>
+> See **[doc/EDITOR.md](doc/EDITOR.md)** for the design and
+> [`samples/editor/`](samples/editor/README.md) for the running sample.
 
   - [Introduction](INTRO.md)
 

@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/S1kdTools.Cli/S1kdTools.Cli.csproj" />
     <Project Path="src/S1kdTools.Core/S1kdTools.Core.csproj" />
+    <Project Path="src/S1kdTools.Editor.Server/S1kdTools.Editor.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/S1kdTools.Tests/S1kdTools.Tests.csproj" />
@@ -14,5 +15,6 @@
     <Project Path="samples/harnesses/Samples.XslStylesheets/Samples.XslStylesheets.csproj" />
     <Project Path="samples/harnesses/Samples.S1kd2db/Samples.S1kd2db.csproj" />
     <Project Path="samples/harnesses/Samples.PdfDiff/Samples.PdfDiff.csproj" />
+    <Project Path="samples/editor/S1kdTools.EditorServer/S1kdTools.EditorServer.csproj" />
   </Folder>
 </Solution>

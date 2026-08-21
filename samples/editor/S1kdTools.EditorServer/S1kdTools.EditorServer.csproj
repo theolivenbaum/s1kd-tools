@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>S1kdTools.EditorServer</RootNamespace>
+    <AssemblyName>s1kd-editor-server</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\S1kdTools.Editor.Server\S1kdTools.Editor.Server.csproj" />
+  </ItemGroup>
+
+  <!--
+    The CSDB and the presentation stylesheets are read from the repository at run
+    time (see CsdbLibrary), not copied into the build output: the point of the
+    sample is to edit the files that are checked in, and a copy in bin/ would mean
+    a save that appeared to work and changed nothing anyone could see.
+  -->
+
+</Project>

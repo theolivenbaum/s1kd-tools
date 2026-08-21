@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dmodule>
+<dmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.s1000d.org/S1000D_6/xml_schema_flat/schedul.xsd">
+  <identAndStatusSection>
+    <dmAddress>
+      <dmIdent>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="310" infoCodeVariant="A" itemLocationCode="A"/>
+        <language languageIsoCode="en" countryIsoCode="GB"/>
+        <issueInfo issueNumber="005" inWork="00"/>
+      </dmIdent>
+      <dmAddressItems>
+        <issueDate year="2026" month="06" day="09"/>
+        <dmTitle>
+          <techName>Slat actuation and transmission</techName>
+          <infoName>Scheduled maintenance requirements</infoName>
+        </dmTitle>
+      </dmAddressItems>
+    </dmAddress>
+    <dmStatus issueType="revised">
+      <security securityClassification="01"/>
+      <responsiblePartnerCompany enterpriseCode="U8025">
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
+      </responsiblePartnerCompany>
+      <originator enterpriseCode="U8025">
+        <enterpriseName>AERALIS AEROSPACE — Maintenance Programme Engineering</enterpriseName>
+      </originator>
+      <applic>
+        <displayText>
+          <simplePara>AE100-900 and AE100-1000, all aircraft</simplePara>
+        </displayText>
+      </applic>
+      <qualityAssurance>
+        <firstVerification verificationType="tabtop"/>
+      </qualityAssurance>
+    </dmStatus>
+  </identAndStatusSection>
+  <content>
+    <maintPlanning>
+      <inspectionDefinition>
+        <title>Slat transmission — inspections</title>
+        <inspection inspectionIdent="271811-01">
+          <inspectionName>General visual inspection of the slat transmission shafts and couplings</inspectionName>
+          <inspectionDescr>Examine the transmission for corrosion, for damaged couplings and for
+            security of the support bearings between rib 1 and rib 14.</inspectionDescr>
+          <threshold limitValue="7200" limitUnitOfMeasure="FH"/>
+          <interval limitValue="3600" limitUnitOfMeasure="FH"/>
+          <zoneRef zoneNumber="571"/>
+          <manHours>1.5</manHours>
+          <dmRef>
+            <dmRefIdent>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="200" infoCodeVariant="A" itemLocationCode="A"/>
+            </dmRefIdent>
+          </dmRef>
+        </inspection>
+        <inspection inspectionIdent="271811-02">
+          <inspectionName>Detailed inspection of the wing tip brake attachment</inspectionName>
+          <inspectionDescr>Examine the wing tip brake attachment lugs for cracks with the transmission
+            in the retracted position.</inspectionDescr>
+          <threshold limitValue="24" limitUnitOfMeasure="MO"/>
+          <interval limitValue="24" limitUnitOfMeasure="MO"/>
+          <zoneRef zoneNumber="573"/>
+          <manHours>2.0</manHours>
+        </inspection>
+        <inspection inspectionIdent="271811-03">
+          <inspectionName>Operational check of the asymmetry detection</inspectionName>
+          <inspectionDescr>Do the asymmetry detection test and make sure that the wing tip brakes
+            engage inside the permitted time.</inspectionDescr>
+          <threshold limitValue="12" limitUnitOfMeasure="MO"/>
+          <interval limitValue="12" limitUnitOfMeasure="MO"/>
+          <zoneRef zoneNumber="192"/>
+          <manHours>0.8</manHours>
+        </inspection>
+      </inspectionDefinition>
+      <taskDefinition>
+        <title>Slat actuation — servicing tasks</title>
+        <task taskIdent="271811-51">
+          <taskName>Lubrication of the transmission support bearings</taskName>
+          <taskDescr>Apply grease to the eleven support bearings of each wing through the lubrication
+            nipples.</taskDescr>
+          <threshold limitValue="4000" limitUnitOfMeasure="FH"/>
+          <interval limitValue="4000" limitUnitOfMeasure="FH"/>
+          <zoneRef zoneNumber="571"/>
+          <manHours>3.0</manHours>
+        </task>
+        <task taskIdent="271811-52">
+          <taskName>Functional check of the feedback position pick-off units</taskName>
+          <taskDescr>Measure the drift of the position signal against the rigging position and record
+            the value in the maintenance record.</taskDescr>
+          <threshold limitValue="10000" limitUnitOfMeasure="FC"/>
+          <interval limitValue="5000" limitUnitOfMeasure="FC"/>
+          <zoneRef zoneNumber="192"/>
+          <manHours>1.2</manHours>
+        </task>
+      </taskDefinition>
+      <note>
+        <notePara>The thresholds are counted from the date of manufacture of the aircraft. An
+          operator that has an approved reliability programme may escalate the intervals by up to
+          10 percent with the agreement of the national authority.</notePara>
+      </note>
+    </maintPlanning>
+  </content>
+</dmodule>

@@ -1,0 +1,22 @@
+<!--
+  The Transpose half of the repository: the editing components and the demo app
+  that hosts them.
+
+  Kept out of S1kdTools.slnx on purpose. These two projects are built by the
+  Transpose compiler (`dotnet tool install -g Transpose.Compiler`) and target
+  netstandard2.0 to be compiled to JavaScript, while everything in the main
+  solution is net10.0 and needs nothing but the SDK. Folding them together would
+  mean `dotnet test S1kdTools.slnx` — which CI runs, and which has nothing to do
+  with the browser — could not run without the compiler installed.
+
+  The back-end that serves these two is in the main solution, at
+  samples/editor/S1kdTools.EditorServer.
+-->
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/S1kdTools.Editor/S1kdTools.Editor.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/editor/S1kdTools.Editor.App/S1kdTools.Editor.App.csproj" />
+  </Folder>
+</Solution>

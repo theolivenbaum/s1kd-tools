@@ -30,11 +30,23 @@ option flags, exit codes, and output format. Each tool also has a manpage under
 /src/
   S1kdTools.Core/         Ported shared library + programmatic API (≈ libs1kd)
   S1kdTools.Cli/          Command-line front-end (the `s1kd` executable)
+  S1kdTools.Editor.Server/ The editor's back-end: AddS1kdEditor / MapS1kdEditor
+  S1kdTools.Editor/       Tesserae components for editing a CSDB object (Transpose)
+/samples/editor/          The editor sample: a host, a demo front-end, and a CSDB
 /tests/
   S1kdTools.Tests/        xUnit test project
-/S1kdTools.slnx            Solution
+  editor-e2e/             Playwright tests for the editor (Node)
+/S1kdTools.slnx            Solution (net10.0: library, CLI, tests, editor back-end)
+/S1kdTools.Editor.slnx     Solution (Transpose: the editor components + demo app)
 /CLAUDE.md  /todo.md      This file and the porting task list
 ```
+
+**Two solutions on purpose.** Everything in `S1kdTools.slnx` is net10.0 and needs
+nothing but the SDK, so `dotnet test S1kdTools.slnx` — which CI runs, and which has
+nothing to do with a browser — works on a bare machine. The two projects compiled
+to JavaScript by the [Transpose](https://www.nuget.org/packages/Transpose.Compiler)
+compiler live in their own solution; the back-end that serves them is in the main
+one.
 
 ## Technology mapping (C → C#)
 
@@ -134,6 +146,73 @@ Conventions worth preserving when working here:
 See `doc/PDFDIFF.md` for the user-facing explanation and
 `samples/datasets/pdfdiff-demo/` for the end-to-end example.
 
+### Editing (the WYSIWYG editor)
+
+The port adds an editor for CSDB objects, which the C tools have no counterpart
+for. It is built on a second stylesheet family alongside the presentation ones:
+`Resources/editing/edit.xsl` projects an object into an **addressed tree of
+editable blocks** — every paragraph, step and field paired with the XPath of the
+element it came from — and `S1kdTools.Core/Editing/` turns an edit made against a
+block back into a change to that element.
+
+| file | responsibility |
+|---|---|
+| `Resources/editing/edit.xsl` | the projection: blocks, runs, labels, insert points |
+| `EditModel.cs` | the model a front-end draws: `EditDocument`/`EditBlock`/`EditRun` |
+| `EditProjection.cs` | run the stylesheet, read its output |
+| `EditCommands.cs` | apply an edit to the XML |
+| `EditTemplateCatalogue.cs` | what a new element is made of, and what may go where |
+| `EditStylesheet.cs` | where a projection comes from: assembly, file, string, stream, transform |
+| `EditProfile.cs` | the two together — which S1000D dialect this editor speaks |
+| `EditPalette.cs` | the component catalogue, each entry projected |
+| `EditSession.cs` | one open document: apply, undo, redo, serialize |
+| `../ResourceResolver.cs` | `IResourceResolver`: where a name turns into bytes (not editing-only) |
+
+Conventions worth preserving when working here:
+
+- **The XML is the document of record and everything else is derived from it.**
+  A command mutates the XML; the model is re-projected from the result. There is no
+  second representation to keep in step, which is what makes it impossible for the
+  editor to show something the file does not say.
+- **A block's path is generated exactly as `XmlUtils.XPathOf` generates one.** The
+  stylesheet writes them and `EditCommands` resolves them; a disagreement would
+  apply an edit to the wrong element.
+- **A path is only valid against the revision it was projected from.** Inserting a
+  paragraph renumbers its later siblings, so every mutating call returns a fresh
+  model and callers must not reuse paths across one.
+- **An element the author did not retype is put back, not recreated.** Each run
+  carries `Src`, the position of the child element it came from, so an untouched
+  `dmRef` survives an edit to the sentence around it as the same node.
+- **Nothing refuses an edit.** A module being written is invalid most of the time;
+  validity is reported by the check (schema well-formedness, BREX, and whether it
+  can be laid out), never enforced by the editor.
+- **Which parts of an object are editable is a stylesheet's decision, not a
+  program's.** Everything takes an `EditProfile`, and a house stylesheet resolves
+  its `xsl:import` against this assembly — so a project overrides a few templates
+  rather than forking. An element with no template still appears through a
+  fall-through; measured over `samples/datasets`, 99.9% of authorable text is
+  reachable on schemas nobody wrote templates for.
+- **Nothing assumes a name is a path.** Editing stylesheets and their imports,
+  presentation stylesheets and their imports, and illustrations all go through
+  `IResourceResolver` (`ResourceResolver.cs`), so a CSDB in a content management
+  system, an object store or a zip is a resolver rather than a fork. `LocalPath` is
+  on that interface as an optimisation only: it skips reading a file this process
+  never needs to hold. An illustration that is only bytes is read once and named
+  `s1kd-icn:<ident>` in the FO, and `ResolvedIllustrations` hands it back when
+  FOP.Sharp's own resolver asks — which is why `RenderTool.Render` takes a
+  `resources` argument. That hook is `FOP.Sharp` 26.8.4328 and later; before it,
+  the engine resolved an `external-graphic` by file path and by nothing else (a
+  `data:` URI rendered identically to a missing image), and this code wrote every
+  such illustration to a temporary file. Do not reintroduce that.
+
+The HTTP half is `src/S1kdTools.Editor.Server` — the session store, the check, the
+page layout and the endpoints, as `AddS1kdEditor` / `MapS1kdEditor`. The sample
+host is configuration only; if you are adding server behaviour it almost certainly
+belongs in the package rather than beside it.
+
+See `doc/EDITOR.md` for the user-facing explanation, `src/S1kdTools.Editor/` for
+the browser components, and `samples/editor/` for the running sample.
+
 ## CLI conventions
 
 The C project ships one executable per tool (`s1kd-newdm`, `s1kd-metadata`, …).
@@ -171,6 +250,21 @@ dotnet build S1kdTools.slnx
 dotnet test  S1kdTools.slnx
 dotnet run --project src/S1kdTools.Cli -- <tool> [args]
 ```
+
+The editor is a second solution, and needs the Transpose compiler:
+
+```
+dotnet tool install --global Transpose.Compiler
+dotnet build S1kdTools.Editor.slnx
+dotnet run --project samples/editor/S1kdTools.EditorServer   # then open localhost:5000
+cd tests/editor-e2e && npm install && npx playwright test
+```
+
+A trap worth knowing when working on `src/S1kdTools.Editor`: the surface's
+stylesheet is a Transpose *resource*, named in `tps.json`, and MSBuild watches
+`tps.json` but not the files it points at. The csproj adds the stylesheet to
+`MSBuildAllProjects` so a CSS-only change forces a rebuild; without that the old
+stylesheet stays in every consuming app's output, silently.
 
 ## Where to start when porting a tool
 
