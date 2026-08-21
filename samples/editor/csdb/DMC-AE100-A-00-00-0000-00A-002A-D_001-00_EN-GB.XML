@@ -4,14 +4,14 @@
   <identAndStatusSection>
     <dmAddress>
       <dmIdent>
-        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="002" infoCodeVariant="A" itemLocationCode="D"/>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="002" infoCodeVariant="A" itemLocationCode="D"/>
         <language languageIsoCode="en" countryIsoCode="GB"/>
         <issueInfo issueNumber="007" inWork="00"/>
       </dmIdent>
       <dmAddressItems>
         <issueDate year="2026" month="07" day="01"/>
         <dmTitle>
-          <techName>A350X Aircraft Maintenance Manual</techName>
+          <techName>AE100 Aircraft Maintenance Manual</techName>
           <infoName>List of effective data modules</infoName>
         </dmTitle>
       </dmAddressItems>
@@ -19,13 +19,13 @@
     <dmStatus issueType="revised">
       <security securityClassification="02"/>
       <responsiblePartnerCompany enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
       </responsiblePartnerCompany>
       <originator enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE — Technical Data</enterpriseName>
       </originator>
       <applic>
-        <displayText><simplePara>A350X-900 and A350X-1000, all aircraft</simplePara></displayText>
+        <displayText><simplePara>AE100-900 and AE100-1000, all aircraft</simplePara></displayText>
       </applic>
       <qualityAssurance>
         <firstVerification verificationType="tabtop"/>
@@ -35,17 +35,17 @@
   <content>
     <frontMatter>
       <frontMatterTitlePage>
-        <pmTitle>A350X AIRCRAFT MAINTENANCE MANUAL</pmTitle>
+        <pmTitle>AE100 AIRCRAFT MAINTENANCE MANUAL</pmTitle>
         <shortPmTitle>ATA 27 — Flight Controls</shortPmTitle>
-        <externalPubCode>Publication module PMC-A350X-U8025-00027-00, issue 007-00</externalPubCode>
-        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+        <externalPubCode>Publication module PMC-AE100-U8025-00027-00, issue 007-00</externalPubCode>
+        <enterpriseName>AERALIS AEROSPACE — Technical Data</enterpriseName>
       </frontMatterTitlePage>
       <frontMatterList type="loedm">
         <frontMatterTitle>List of effective data modules</frontMatterTitle>
         <frontMatterListItem>
           <dmRef>
             <dmRefIdent>
-              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
               <issueInfo issueNumber="003" inWork="00"/>
             </dmRefIdent>
             <dmRefAddressItems>
@@ -63,7 +63,7 @@
         <frontMatterListItem>
           <dmRef>
             <dmRefIdent>
-              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="420" infoCodeVariant="A" itemLocationCode="A"/>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="420" infoCodeVariant="A" itemLocationCode="A"/>
               <issueInfo issueNumber="001" inWork="00"/>
             </dmRefIdent>
             <dmRefAddressItems>
@@ -78,7 +78,7 @@
         <frontMatterListItem>
           <dmRef>
             <dmRefIdent>
-              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
               <issueInfo issueNumber="002" inWork="00"/>
             </dmRefIdent>
             <dmRefAddressItems>
@@ -90,13 +90,13 @@
             </dmRefAddressItems>
           </dmRef>
           <reasonForUpdate>
-            <simplePara>Thermal blanket step added for the A350X-1000.</simplePara>
+            <simplePara>Thermal blanket step added for the AE100-1000.</simplePara>
           </reasonForUpdate>
         </frontMatterListItem>
         <frontMatterListItem>
           <dmRef>
             <dmRefIdent>
-              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
               <issueInfo issueNumber="004" inWork="00"/>
             </dmRefIdent>
             <dmRefAddressItems>
@@ -111,7 +111,7 @@
         <frontMatterListItem>
           <dmRef>
             <dmRefIdent>
-              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="310" infoCodeVariant="A" itemLocationCode="A"/>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="310" infoCodeVariant="A" itemLocationCode="A"/>
               <issueInfo issueNumber="005" inWork="00"/>
             </dmRefIdent>
             <dmRefAddressItems>
@@ -130,7 +130,7 @@
           <tocEntry>
             <dmRef>
               <dmRefIdent>
-                <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
+                <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="042" infoCodeVariant="A" itemLocationCode="A"/>
               </dmRefIdent>
               <dmRefAddressItems>
                 <dmTitle>
@@ -143,7 +143,7 @@
           <tocEntry>
             <dmRef>
               <dmRefIdent>
-                <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+                <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
               </dmRefIdent>
               <dmRefAddressItems>
                 <dmTitle>

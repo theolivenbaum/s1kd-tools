@@ -241,8 +241,8 @@ Publication:
       **The sample.** `samples/editor/` — a Kestrel back-end
       (`S1kdTools.EditorServer`) over the editing model, a demo front-end with the
       document as WYSIWYG / Monaco source / rendered page over one session, ten
-      synthetic data modules and the XSL-FO stylesheets from the Airbus technical-
-      data demo. Tested by 26 xUnit tests (`EditingTests.cs`) and 28 Playwright
+      synthetic data modules and a house set of XSL-FO presentation stylesheets.
+      Tested by 26 xUnit tests (`EditingTests.cs`) and 28 Playwright
       tests (`tests/editor-e2e`) that drive the real server, stylesheet and layout
       engine.
 

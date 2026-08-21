@@ -70,7 +70,7 @@ test.describe('the editing surface', () => {
         // Not editable, and carrying what it points at — the two things that make it
         // a reference rather than a phrase that happens to look like one.
         await expect(chip).toHaveAttribute('contenteditable', 'false');
-        await expect(chip).toHaveAttribute('title', 'DMC-A350X-A-27-81-00-00A-520A-A');
+        await expect(chip).toHaveAttribute('title', 'DMC-AE100-A-27-81-00-00A-520A-A');
     });
 
     test('draws a descriptive module as levelled sections', async ({ page }) => {

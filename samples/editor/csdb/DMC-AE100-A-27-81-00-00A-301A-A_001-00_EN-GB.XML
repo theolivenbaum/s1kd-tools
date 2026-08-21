@@ -4,7 +4,7 @@
   <identAndStatusSection>
     <dmAddress>
       <dmIdent>
-        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="301" infoCodeVariant="A" itemLocationCode="A"/>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="301" infoCodeVariant="A" itemLocationCode="A"/>
         <language languageIsoCode="en" countryIsoCode="GB"/>
         <issueInfo issueNumber="001" inWork="01"/>
       </dmIdent>
@@ -19,14 +19,14 @@
     <dmStatus issueType="new">
       <security securityClassification="01"/>
       <responsiblePartnerCompany enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
       </responsiblePartnerCompany>
       <originator enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE — Technical Data</enterpriseName>
       </originator>
       <applic>
         <displayText>
-          <simplePara>A350X-900 and A350X-1000, all aircraft</simplePara>
+          <simplePara>AE100-900 and AE100-1000, all aircraft</simplePara>
         </displayText>
       </applic>
       <qualityAssurance>
@@ -37,7 +37,7 @@
   <content>
     <referencedApplicGroup>
       <applic id="app-1000">
-        <displayText><simplePara>A350X-1000 only</simplePara></displayText>
+        <displayText><simplePara>AE100-1000 only</simplePara></displayText>
       </applic>
     </referencedApplicGroup>
     <checkList>

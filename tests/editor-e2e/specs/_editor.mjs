@@ -10,10 +10,10 @@ import { expect } from '@playwright/test';
  */
 
 /** A procedure: numbered steps, warnings, a figure, an inline reference. */
-export const PROCEDURE = 'DMC-A350X-A-27-81-00-00A-720A-A_002-00_EN-GB';
+export const PROCEDURE = 'DMC-AE100-A-27-81-00-00A-720A-A_002-00_EN-GB';
 
 /** A descriptive module: levelled paragraphs with titles. */
-export const DESCRIPTIVE = 'DMC-A350X-A-27-81-00-00A-042A-A_002-00_EN-GB';
+export const DESCRIPTIVE = 'DMC-AE100-A-27-81-00-00A-042A-A_002-00_EN-GB';
 
 /** The paragraph that carries the inline dmRef, in the module as it ships. */
 export const REFERENCE_PARAGRAPH_PATH =

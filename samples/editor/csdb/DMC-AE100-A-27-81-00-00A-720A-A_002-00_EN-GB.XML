@@ -4,7 +4,7 @@
   <identAndStatusSection>
     <dmAddress>
       <dmIdent>
-        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="720" infoCodeVariant="A" itemLocationCode="A"/>
         <language languageIsoCode="en" countryIsoCode="GB"/>
         <issueInfo issueNumber="002" inWork="00"/>
       </dmIdent>
@@ -19,20 +19,20 @@
     <dmStatus issueType="revised">
       <security securityClassification="01"/>
       <responsiblePartnerCompany enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
       </responsiblePartnerCompany>
       <originator enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S. — Technical Data Toulouse</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE — Technical Data</enterpriseName>
       </originator>
       <applic>
         <displayText>
-          <simplePara>A350X-900 and A350X-1000, all aircraft</simplePara>
+          <simplePara>AE100-900 and AE100-1000, all aircraft</simplePara>
         </displayText>
       </applic>
       <brexDmRef>
         <dmRef>
           <dmRefIdent>
-            <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/>
+            <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="00" subSystemCode="0" subSubSystemCode="0" assyCode="0000" disassyCode="00" disassyCodeVariant="A" infoCode="022" infoCodeVariant="A" itemLocationCode="D"/>
           </dmRefIdent>
         </dmRef>
       </brexDmRef>
@@ -45,7 +45,7 @@
     <referencedApplicGroup>
       <applic id="app-1000">
         <displayText>
-          <simplePara>A350X-1000 only</simplePara>
+          <simplePara>AE100-1000 only</simplePara>
         </displayText>
       </applic>
     </referencedApplicGroup>
@@ -55,7 +55,7 @@
           (PCU) in the belly fairing. Do the procedure after the removal procedure
           <dmRef>
             <dmRefIdent>
-              <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="520" infoCodeVariant="A" itemLocationCode="A"/>
+              <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="520" infoCodeVariant="A" itemLocationCode="A"/>
             </dmRefIdent>
             <dmRefAddressItems>
               <dmTitle>
@@ -71,7 +71,7 @@
             <reqCond>The aircraft is safe for maintenance and the landing gear ground locks are installed.</reqCond>
             <dmRef>
               <dmRefIdent>
-                <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="00" subSystemCode="2" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
+                <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="00" subSystemCode="2" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="941" infoCodeVariant="A" itemLocationCode="A"/>
               </dmRefIdent>
               <dmRefAddressItems>
                 <dmTitle>
@@ -85,7 +85,7 @@
             <reqCond>The green and the yellow hydraulic systems are depressurized.</reqCond>
             <dmRef>
               <dmRefIdent>
-                <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="29" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="861" infoCodeVariant="A" itemLocationCode="A"/>
+                <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="29" subSystemCode="0" subSubSystemCode="0" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="861" infoCodeVariant="A" itemLocationCode="A"/>
               </dmRefIdent>
               <dmRefAddressItems>
                 <dmTitle>
@@ -220,7 +220,7 @@
               48 Nm to 52 Nm in the sequence shown in <internalRef internalRefId="fig-torque"/>.</para>
             <figure id="fig-torque">
               <title>Power control unit — bolt tightening sequence</title>
-              <graphic infoEntityIdent="ICN-A350X-A-278100-A-U8025-00002-A-001-01"/>
+              <graphic infoEntityIdent="ICN-AE100-A-278100-A-U8025-00002-A-001-01"/>
             </figure>
           </proceduralStep>
           <proceduralStep>

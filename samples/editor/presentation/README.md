@@ -7,12 +7,12 @@ status title block, ATA-style step numbering (`1.` / `A.` / `(1)` / `(a)`), boxe
 warnings and cautions, change bars in the start margin, and the fixed table shapes
 each schema calls for.
 
-**Where they came from.** These are copied from the Airbus technical-data demo
-(`curiosity-ai/tech-data-demo`, `src/TechData.Presentation/Xsl/`), where they are
-that project's house style rather than a part of s1kd-tools. They are here so the
-editor sample has a real presentation layer to preview against — a page that looks
-like something a maintenance organisation would publish — instead of a stylesheet
-written to make a demo look plausible.
+**They are a house style, not a part of S1000D.** S1000D says what a data module
+contains, not what its page looks like; every publisher decides the second for
+themselves. These stylesheets are one such decision — a plausible one for a civil
+aircraft maintenance publication — and they are here so the editor sample has a
+real presentation layer to preview against instead of a stylesheet written to make
+a demo look plausible.
 
 **They are the sample's, to change.** `S1kdTools.EditorServer` reads them from this
 folder at run time and compiles them on first use, so editing one and refreshing

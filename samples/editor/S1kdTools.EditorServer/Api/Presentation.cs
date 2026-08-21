@@ -10,10 +10,9 @@ namespace S1kdTools.EditorServer.Api;
 /// Lays a data module out as the page it will be published as, so the editor can
 /// show the author what they are making rather than only what they are typing.
 ///
-/// The stylesheets are the XSL-FO presentation stylesheets from the Airbus
-/// technical-data demo (see <c>samples/editor/presentation/README.md</c>), read
-/// from disk rather than embedded. That is the point of the arrangement: they are
-/// a *house* style, one file per CSDB object type, and the way to change how a
+/// The stylesheets live in <c>samples/editor/presentation/</c> and are read from
+/// disk rather than embedded. That is the point of the arrangement: they are a
+/// *house* style, one file per CSDB object type, and the way to change how a
 /// warning box looks in this editor is to edit <c>presentation/common.xsl</c> and
 /// press refresh. Nothing here is rebuilt.
 ///

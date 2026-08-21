@@ -9,7 +9,7 @@ var client = new EditorClient();                 // same origin as the page
 var editor = new S1kdEditor(client);
 
 MountToBody(editor);
-await editor.OpenAsync("DMC-A350X-A-27-81-00-00A-720A-A_002-00_EN-GB");
+await editor.OpenAsync("DMC-AE100-A-27-81-00-00A-720A-A_002-00_EN-GB");
 ```
 
 | Component | What it is |

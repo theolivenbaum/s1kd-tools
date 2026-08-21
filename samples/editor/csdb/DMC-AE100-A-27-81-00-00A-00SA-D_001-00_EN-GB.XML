@@ -4,7 +4,7 @@
   <identAndStatusSection>
     <dmAddress>
       <dmIdent>
-        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="00S" infoCodeVariant="A" itemLocationCode="D"/>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="00S" infoCodeVariant="A" itemLocationCode="D"/>
         <language languageIsoCode="en" countryIsoCode="GB"/>
         <issueInfo issueNumber="002" inWork="00"/>
       </dmIdent>
@@ -12,7 +12,7 @@
         <issueDate year="2026" month="04" day="27"/>
         <dmTitle>
           <techName>Flight controls — slat actuation</techName>
-          <infoName>Service bulletin A350X-27-1042</infoName>
+          <infoName>Service bulletin AE100-27-1042</infoName>
           <infoNameVariant>Replacement of the slat feedback position pick-off units</infoNameVariant>
         </dmTitle>
       </dmAddressItems>
@@ -20,14 +20,14 @@
     <dmStatus issueType="revised">
       <security securityClassification="02"/>
       <responsiblePartnerCompany enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
       </responsiblePartnerCompany>
       <originator enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S. — Customer Services Toulouse</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE — Customer Services</enterpriseName>
       </originator>
       <applic>
         <displayText>
-          <simplePara>A350X-900, MSN 0021 to 0184; A350X-1000, MSN 0201 to 0233</simplePara>
+          <simplePara>AE100-900, MSN 0021 to 0184; AE100-1000, MSN 0201 to 0233</simplePara>
         </displayText>
       </applic>
       <qualityAssurance>
@@ -38,7 +38,7 @@
   <content>
     <sb>
       <sbManagementInfo>
-        <sbNumber>A350X-27-1042</sbNumber>
+        <sbNumber>AE100-27-1042</sbNumber>
         <sbAta>27-81-00</sbAta>
         <sbCompliance sbComplianceCategory="sbcc02"/>
         <sbTaskType sbTaskCategory="sbtc03"/>
@@ -48,7 +48,7 @@
       </sbManagementInfo>
       <sbRevisionInfo>
         <sbRevisionSummary>
-          <para>Revision 2 adds the A350X-1000 aircraft to the effectivity and corrects the man-hour
+          <para>Revision 2 adds the AE100-1000 aircraft to the effectivity and corrects the man-hour
             estimate of the accomplishment instructions from 6.0 to 7.5 man-hours. The material
             information is unchanged.</para>
         </sbRevisionSummary>
@@ -65,11 +65,11 @@
           <para>This service bulletin applies to the aircraft listed below that do not have
             modification 27-8117 embodied in production.</para>
           <sbAircraftEffectivity>
-            <sbAircraftModel>A350X-900</sbAircraftModel>
+            <sbAircraftModel>AE100-900</sbAircraftModel>
             <sbSerialNumbers>0021 to 0184, except 0102, 0117 and 0140</sbSerialNumbers>
           </sbAircraftEffectivity>
           <sbAircraftEffectivity>
-            <sbAircraftModel>A350X-1000</sbAircraftModel>
+            <sbAircraftModel>AE100-1000</sbAircraftModel>
             <sbSerialNumbers>0201 to 0233</sbSerialNumbers>
           </sbAircraftEffectivity>
         </sbEffectivity>
@@ -91,7 +91,7 @@
             aircraft.</para>
         </sbDescription>
         <sbCompliance>
-          <para>Recommended. Airbus recommends that this service bulletin is accomplished at the next
+          <para>Recommended. Aeralis recommends that this service bulletin is accomplished at the next
             scheduled maintenance check that gives access to the belly fairing, and in any case
             within 24 months of the date of this revision.</para>
         </sbCompliance>
@@ -166,7 +166,7 @@
           </table>
         </sbMaterialKit>
         <sbMaterialAvailability>
-          <para>The kit is available from the Airbus spares centre with a lead time of six weeks. The
+          <para>The kit is available from the Aeralis spares centre with a lead time of six weeks. The
             units that are removed are to be returned within 60 days.</para>
         </sbMaterialAvailability>
       </sbMaterialInfo>

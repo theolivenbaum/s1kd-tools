@@ -157,7 +157,7 @@ target rules and the component palette are all reading one list.
 ```csharp
 using S1kdTools.Editing;
 
-var session = EditSession.Open("DMC-A350X-A-27-81-00-00A-720A-A_002-00_EN-GB.XML");
+var session = EditSession.Open("DMC-AE100-A-27-81-00-00A-720A-A_002-00_EN-GB.XML");
 
 EditBlock step = session.Model.AllBlocks().First(b => b.Kind == "step" && b.Label == "2.");
 

@@ -4,7 +4,7 @@
   <identAndStatusSection>
     <dmAddress>
       <dmIdent>
-        <dmCode modelIdentCode="A350X" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="130" infoCodeVariant="A" itemLocationCode="A"/>
+        <dmCode modelIdentCode="AE100" systemDiffCode="A" systemCode="27" subSystemCode="8" subSubSystemCode="1" assyCode="00" disassyCode="00" disassyCodeVariant="A" infoCode="130" infoCodeVariant="A" itemLocationCode="A"/>
         <language languageIsoCode="en" countryIsoCode="GB"/>
         <issueInfo issueNumber="002" inWork="00"/>
       </dmIdent>
@@ -19,14 +19,14 @@
     <dmStatus issueType="revised">
       <security securityClassification="01"/>
       <responsiblePartnerCompany enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S.</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE</enterpriseName>
       </responsiblePartnerCompany>
       <originator enterpriseCode="U8025">
-        <enterpriseName>AIRBUS S.A.S. — Flight Operations Support</enterpriseName>
+        <enterpriseName>AERALIS AEROSPACE — Flight Operations Support</enterpriseName>
       </originator>
       <applic>
         <displayText>
-          <simplePara>A350X-900 and A350X-1000, all aircraft</simplePara>
+          <simplePara>AE100-900 and AE100-1000, all aircraft</simplePara>
         </displayText>
       </applic>
       <qualityAssurance>
