@@ -130,7 +130,7 @@ public sealed class DocumentCheck(EditorPresentation? presentation)
 
         try
         {
-            presentation.TransformToFo(xml, schema, title);
+            using PresentationFo fo = presentation.TransformToFo(xml, schema, title);
         }
         catch (Exception e)
         {

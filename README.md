@@ -153,7 +153,10 @@ A set of small, free and open source software tools for manipulating
 >
 > The front-end holds no S1000D knowledge at all, and the vocabulary it speaks is a
 > stylesheet away from being a different one: a project passes an `EditProfile`
-> whose stylesheet imports ours and overrides the templates it disagrees with.
+> whose stylesheet imports ours and overrides the templates it disagrees with. Nor
+> does any of it assume a name is a path — stylesheets, their imports and
+> illustrations all go through an `IResourceResolver`, so a CSDB held in a content
+> management system, an object store or a zip is a resolver rather than a fork.
 >
 > See **[doc/EDITOR.md](doc/EDITOR.md)** for the design and
 > [`samples/editor/`](samples/editor/README.md) for the running sample.

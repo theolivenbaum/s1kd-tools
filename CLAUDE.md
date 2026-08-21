@@ -162,10 +162,11 @@ block back into a change to that element.
 | `EditProjection.cs` | run the stylesheet, read its output |
 | `EditCommands.cs` | apply an edit to the XML |
 | `EditTemplateCatalogue.cs` | what a new element is made of, and what may go where |
-| `EditStylesheet.cs` | where a projection comes from: assembly, file, string, transform |
+| `EditStylesheet.cs` | where a projection comes from: assembly, file, string, stream, transform |
 | `EditProfile.cs` | the two together — which S1000D dialect this editor speaks |
 | `EditPalette.cs` | the component catalogue, each entry projected |
 | `EditSession.cs` | one open document: apply, undo, redo, serialize |
+| `../ResourceResolver.cs` | `IResourceResolver`: where a name turns into bytes (not editing-only) |
 
 Conventions worth preserving when working here:
 
@@ -191,6 +192,15 @@ Conventions worth preserving when working here:
   rather than forking. An element with no template still appears through a
   fall-through; measured over `samples/datasets`, 99.9% of authorable text is
   reachable on schemas nobody wrote templates for.
+- **Nothing assumes a name is a path.** Editing stylesheets and their imports,
+  presentation stylesheets and their imports, and illustrations all go through
+  `IResourceResolver` (`ResourceResolver.cs`), so a CSDB in a content management
+  system, an object store or a zip is a resolver rather than a fork. `LocalPath` is
+  on that interface for one measured reason: FOP.Sharp resolves an
+  `external-graphic` by file path and treats a `data:` URI exactly as a missing
+  file, so bytes with no path are materialized to a temporary file for one layout —
+  which is why `EditorPresentation.TransformToFo` returns a disposable
+  `PresentationFo`. Do not simplify that back to a bare `XmlDocument`.
 
 The HTTP half is `src/S1kdTools.Editor.Server` — the session store, the check, the
 page layout and the endpoints, as `AddS1kdEditor` / `MapS1kdEditor`. The sample

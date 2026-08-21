@@ -57,6 +57,8 @@ of bug is worth more than that.
 | `WorkingDirectory` | where `save` writes; defaults to `CsdbDirectory` |
 | `PresentationDirectory` | the XSL-FO stylesheets, named for the schema they present (`proced.xsl`) |
 | `GraphicsDirectory` | where the ICNs are; defaults to `CsdbDirectory` |
+| `PresentationStylesheets` | the same stylesheets, when they are not files — see below |
+| `Graphics` | the same illustrations, when they are not files |
 | `Profile` | which S1000D dialect to speak — see below |
 | `RoutePrefix` | defaults to `/api` |
 
@@ -67,6 +69,34 @@ and it is what a project that has not written its house style yet gets.
 
 This package ships no stylesheets of its own, deliberately: how a page looks is a
 publishing decision, S1000D does not make it, and neither should a NuGet package.
+
+## When the CSDB is not a folder of files
+
+The two directory settings are the common case written short. A CSDB held in a
+content management system, an object store or a zip supplies an
+`IResourceResolver` instead — `Open(name)` returns a stream or null — and nothing
+else changes:
+
+```csharp
+builder.Services.AddS1kdEditor(new EditorOptions
+{
+    CsdbDirectory           = csdb,
+    PresentationStylesheets = ResourceResolvers.FromDelegate(store.Open),
+    Graphics                = ResourceResolvers.FromDelegate(icns.Open),
+});
+```
+
+A presentation stylesheet's own `xsl:import` hrefs go back through the same
+resolver, so a house style is still one `common.xsl` and thirty short stylesheets
+over it. Editing stylesheets take one too — `EditStylesheet.FromStream(…, imports:
+…)` — and fall back to the ones embedded in `S1kdTools.Core` for anything the
+resolver does not have.
+
+An illustration a resolver can only hand over as bytes is written to a temporary
+file for the length of one layout and deleted with it: the XSL-FO engine resolves
+an `external-graphic` by file path and treats a `data:` URI as a missing image. A
+resolver that already has the file on disk says so through `LocalPath` and nothing
+is copied.
 
 ## Speaking your own dialect
 

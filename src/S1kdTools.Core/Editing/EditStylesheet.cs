@@ -15,7 +15,7 @@ namespace S1kdTools.Editing;
 /// never retyped, should be able to change them without forking anything.
 ///
 /// So a stylesheet can come from the assembly (the default), from a file, from a
-/// string, or from a transform the caller compiled themselves:
+/// string, from a stream, or from a transform the caller compiled themselves:
 ///
 /// <code>
 /// var house = EditStylesheet.FromFile("editing/house.xsl");
@@ -23,9 +23,10 @@ namespace S1kdTools.Editing;
 /// </code>
 ///
 /// <b>A stylesheet of your own does not start from nothing.</b> However it is
-/// loaded, its <c>xsl:import</c> and <c>xsl:include</c> hrefs resolve against its
-/// own location first and then against this assembly's <c>Resources/editing/</c> —
-/// so a house stylesheet is usually a handful of templates over ours:
+/// loaded, its <c>xsl:import</c> and <c>xsl:include</c> hrefs resolve against the
+/// <c>imports</c> resolver if one was given, then against its own location, and
+/// finally against this assembly's <c>Resources/editing/</c> — so a house
+/// stylesheet is usually a handful of templates over ours:
 ///
 /// <code>
 /// &lt;xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
@@ -44,6 +45,16 @@ namespace S1kdTools.Editing;
 /// <c>xsl:include</c> to add matches for elements it does not — an included
 /// template that collides with an existing one at the same priority is an error,
 /// which is XSLT telling you that you meant to import.
+///
+/// <b>A stylesheet that is not on disk brings its own imports.</b> A CSDB held in
+/// a content management system, an object store or a zip has no directory for a
+/// relative href to resolve against, so pass an <see cref="IResourceResolver"/>
+/// and the hrefs are asked of it by name:
+///
+/// <code>
+/// var sheet = EditStylesheet.FromStream(store.Open("house.xsl"), "house.xsl",
+///     imports: ResourceResolvers.FromDelegate(store.Open));
+/// </code>
 ///
 /// Compiling costs tens of milliseconds and an editor re-projects after every
 /// committed edit, so each instance compiles once and holds the result. Hold the
@@ -86,7 +97,8 @@ public sealed class EditStylesheet
 
     /// <summary>A stylesheet embedded in this assembly, under <c>Resources/</c>.</summary>
     /// <param name="resourcePath">e.g. <c>editing/edit.xsl</c>.</param>
-    public static EditStylesheet Embedded(string resourcePath)
+    /// <param name="imports">Consulted first for <c>xsl:import</c>/<c>xsl:include</c> hrefs.</param>
+    public static EditStylesheet Embedded(string resourcePath, IResourceResolver? imports = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(resourcePath);
 
@@ -96,7 +108,7 @@ public sealed class EditStylesheet
                 ?? throw new FileNotFoundException(
                     $"Embedded editing stylesheet not found: {resourcePath}", resourcePath);
 
-            return Compile(stream, EmbeddedBaseUri + Path.GetFileName(resourcePath), null);
+            return Compile(stream, EmbeddedBaseUri + Path.GetFileName(resourcePath), null, imports);
         });
     }
 
@@ -105,7 +117,9 @@ public sealed class EditStylesheet
     /// from this assembly — so it can import <c>edit.xsl</c> and override a template
     /// or two.
     /// </summary>
-    public static EditStylesheet FromFile(string path)
+    /// <param name="path">The stylesheet's path.</param>
+    /// <param name="imports">Consulted before the file system, when given.</param>
+    public static EditStylesheet FromFile(string path, IResourceResolver? imports = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         string full = Path.GetFullPath(path);
@@ -118,15 +132,17 @@ public sealed class EditStylesheet
             }
 
             using Stream stream = File.OpenRead(full);
-            return Compile(stream, new Uri(full).AbsoluteUri, Path.GetDirectoryName(full));
+            return Compile(stream, new Uri(full).AbsoluteUri, Path.GetDirectoryName(full), imports);
         });
     }
 
     /// <summary>
     /// A stylesheet held in a string. Its imports resolve from
+    /// <paramref name="imports"/> first when one is given, then from
     /// <paramref name="baseDirectory"/> when one is given, then from this assembly.
     /// </summary>
-    public static EditStylesheet FromXml(string xml, string? baseDirectory = null, string name = "(inline)")
+    public static EditStylesheet FromXml(string xml, string? baseDirectory = null,
+        string name = "(inline)", IResourceResolver? imports = null)
     {
         ArgumentNullException.ThrowIfNull(xml);
 
@@ -137,8 +153,43 @@ public sealed class EditStylesheet
                 EmbeddedBaseUri + "inline.xsl");
 
             var xslt = new XslCompiledTransform();
-            xslt.Load(xmlReader, XsltSettings.Default, new EditStylesheetResolver(baseDirectory));
+            xslt.Load(xmlReader, XsltSettings.Default,
+                new EditStylesheetResolver(baseDirectory, imports));
             return xslt;
+        });
+    }
+
+    /// <summary>
+    /// A stylesheet read from a stream — a CMS, an object store, a zip entry, an
+    /// HTTP response. Give <paramref name="imports"/> a resolver reaching the same
+    /// place if the stylesheet imports anything of its own; whatever it does not
+    /// have still falls back to this assembly.
+    ///
+    /// The stream is read to the end and closed here, not at first projection: a
+    /// caller handing over a stream expects to be done with it when the call
+    /// returns, and compilation happens later.
+    /// </summary>
+    /// <param name="stream">The stylesheet's bytes. Consumed and disposed.</param>
+    /// <param name="name">What to call it in a message.</param>
+    /// <param name="imports">Consulted first for <c>xsl:import</c>/<c>xsl:include</c> hrefs.</param>
+    /// <param name="baseDirectory">A directory to try after <paramref name="imports"/>.</param>
+    public static EditStylesheet FromStream(Stream stream, string name = "(stream)",
+        IResourceResolver? imports = null, string? baseDirectory = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        byte[] bytes;
+        using (stream)
+        {
+            using var buffer = new MemoryStream();
+            stream.CopyTo(buffer);
+            bytes = buffer.ToArray();
+        }
+
+        return new EditStylesheet(name, () =>
+        {
+            using var source = new MemoryStream(bytes, writable: false);
+            return Compile(source, EmbeddedBaseUri + LeafOrDefault(name), baseDirectory, imports);
         });
     }
 
@@ -172,13 +223,30 @@ public sealed class EditStylesheet
         }
     }
 
-    private static XslCompiledTransform Compile(Stream stream, string baseUri, string? baseDirectory)
+    private static XslCompiledTransform Compile(Stream stream, string baseUri,
+        string? baseDirectory, IResourceResolver? imports)
     {
         using XmlReader reader = XmlReader.Create(stream, ReaderSettings, baseUri);
 
         var xslt = new XslCompiledTransform();
-        xslt.Load(reader, XsltSettings.Default, new EditStylesheetResolver(baseDirectory));
+        xslt.Load(reader, XsltSettings.Default, new EditStylesheetResolver(baseDirectory, imports));
         return xslt;
+    }
+
+    /// <summary>
+    /// A base URI has to end in something a relative href can resolve against. A
+    /// name like <c>(stream)</c> is a label rather than a file name, so anything
+    /// that is not usable as one becomes <c>inline.xsl</c>.
+    /// </summary>
+    private static string LeafOrDefault(string name)
+    {
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return "inline.xsl";
+        }
+
+        string leaf = Path.GetFileName(name);
+        return leaf.Length == 0 ? "inline.xsl" : Uri.EscapeDataString(leaf);
     }
 
     /// <inheritdoc/>
@@ -186,15 +254,18 @@ public sealed class EditStylesheet
 }
 
 /// <summary>
-/// Resolves <c>xsl:import</c> and <c>xsl:include</c> for an editing stylesheet:
-/// the including stylesheet's own directory first, then this assembly's
-/// <c>Resources/editing/</c>.
+/// Resolves <c>xsl:import</c> and <c>xsl:include</c> for an editing stylesheet: the
+/// caller's resolver if there is one, then the including stylesheet's own
+/// directory, then this assembly's <c>Resources/editing/</c>.
 ///
-/// The fallback is what makes a house stylesheet worth writing. Without it, a
+/// The last of those is what makes a house stylesheet worth writing. Without it, a
 /// project wanting to change how one element is projected would have to copy a
-/// thousand lines of XSLT to change ten of them, and would then own the copy.
+/// thousand lines of XSLT to change ten of them, and would then own the copy. The
+/// first is what lets a stylesheet that is not on a file system at all — a CMS
+/// record, a zip entry — import its own siblings.
 /// </summary>
-internal sealed class EditStylesheetResolver(string? baseDirectory) : XmlResolver
+internal sealed class EditStylesheetResolver(string? baseDirectory, IResourceResolver? imports = null)
+    : XmlResolver
 {
     public override Uri ResolveUri(Uri? baseUri, string? relativeUri)
     {
@@ -208,15 +279,23 @@ internal sealed class EditStylesheetResolver(string? baseDirectory) : XmlResolve
     {
         ArgumentNullException.ThrowIfNull(absoluteUri);
 
+        string name = Path.GetFileName(absoluteUri.LocalPath);
+
+        // An explicit hook wins over the file system: a caller who supplied one is
+        // saying where their stylesheets live, and a same-named file that happens to
+        // sit beside this one is not it.
+        if (imports?.Open(name) is Stream supplied)
+        {
+            return supplied;
+        }
+
         if (absoluteUri.IsFile && File.Exists(absoluteUri.LocalPath))
         {
             return File.OpenRead(absoluteUri.LocalPath);
         }
 
-        string name = Path.GetFileName(absoluteUri.LocalPath);
-
-        // A stylesheet loaded from a string has no directory of its own, so a
-        // caller can name one; a stylesheet on disk has already been tried above.
+        // A stylesheet loaded from a string or a stream has no directory of its own,
+        // so a caller can name one; a stylesheet on disk has already been tried above.
         if (baseDirectory is not null)
         {
             string beside = Path.Combine(baseDirectory, name);
@@ -228,7 +307,7 @@ internal sealed class EditStylesheetResolver(string? baseDirectory) : XmlResolve
 
         return EmbeddedResources.Open("editing/" + name)
             ?? throw new FileNotFoundException(
-                $"Editing stylesheet '{name}' was not found beside the stylesheet that " +
-                $"references it, and this library embeds none by that name.", name);
+                $"Editing stylesheet '{name}' was not found by the import resolver, beside " +
+                $"the stylesheet that references it, or among the ones this library embeds.", name);
     }
 }

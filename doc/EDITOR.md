@@ -131,9 +131,9 @@ var palette = EditPalette.Build(profile);
 ```
 
 **A house stylesheet starts from ours.** However it is loaded — a file, a string, a
-resource — its `xsl:import` hrefs resolve against its own directory first and then
-against `S1kdTools.Core`'s embedded stylesheets, so it is a handful of templates
-rather than a copy of a thousand lines:
+stream, a resource — its `xsl:import` hrefs resolve against its own directory first
+and then against `S1kdTools.Core`'s embedded stylesheets, so it is a handful of
+templates rather than a copy of a thousand lines:
 
 ```xml
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -182,6 +182,75 @@ rules, and on a component-palette card whose preview is a real projection throug
 your stylesheet — without being named anywhere else.
 `tests/S1kdTools.Tests/EditProfileTests.cs` does all of the above through the
 public API only, the way a consumer has to.
+
+## When the CSDB is not a folder of files
+
+Everything above assumes the stylesheets and the illustrations are on disk, because
+in a small CSDB they are. In a publishing organisation they are as likely to be rows
+in a content management system, objects in a bucket, or entries in a zip. That is a
+resolver, not a fork:
+
+```csharp
+public interface IResourceResolver
+{
+    Stream? Open(string name);          // null when this resolver does not have it
+    string? LocalPath(string name) => null;
+}
+```
+
+`ResourceResolvers` has the ones you rarely need to write yourself — `Directory`,
+`Embedded`, `FromDelegate`, `Compose` (first one that has the name wins) and `None`.
+The name handed to a resolver came out of a document, so treat it as untrusted; the
+directory resolver only ever joins its leaf to a folder, which is why
+`../../etc/passwd` resolves to nothing.
+
+There are three places a name turns into bytes, and each takes one.
+
+**An editing stylesheet, and what it imports.** Every factory takes an optional
+`imports` resolver, and there is a `FromStream` for a stylesheet that is not a file
+at all:
+
+```csharp
+var sheet = EditStylesheet.FromStream(
+    store.Open("house.xsl"), "house.xsl",
+    imports: ResourceResolvers.FromDelegate(store.Open));
+```
+
+An href is asked of your resolver first, then of the directory the stylesheet came
+from, then of this assembly — so `house-rules.xsl` comes out of your store and
+`edit.xsl` still comes out of the package. The stream is read and closed before the
+call returns, not at first projection: a caller handing over a stream expects to be
+done with it.
+
+**The presentation stylesheets.** `EditorOptions.PresentationStylesheets` replaces
+`PresentationDirectory`, and a stylesheet's own `xsl:import` hrefs go back through
+the same resolver — which is what keeps a house style one `common.xsl` and thirty
+short stylesheets over it, wherever those thirty live.
+
+**The illustrations.** `EditorOptions.Graphics` replaces `GraphicsDirectory` and
+answers to an ICN identifier.
+
+```csharp
+builder.Services.AddS1kdEditor(new EditorOptions
+{
+    CsdbDirectory = csdb,
+    PresentationStylesheets = ResourceResolvers.FromDelegate(store.Open),
+    Graphics = ResourceResolvers.FromDelegate(icns.Open),
+});
+```
+
+`LocalPath` is the one thing on the interface that is not obviously necessary, and
+it is there for a measured reason: the XSL-FO layout engine resolves an
+`external-graphic` by file path and by nothing else — it treats a `data:` URI
+exactly as it treats a missing file. So an illustration that a resolver can only
+hand over as bytes is written to a temporary file for the length of one layout and
+deleted with it, and a resolver that already has the file on disk says so through
+`LocalPath` and nothing is copied. That is also why `TransformToFo` returns a
+disposable `PresentationFo` rather than a bare `XmlDocument`.
+
+`tests/S1kdTools.Tests/ResourceResolverTests.cs` runs an editing stylesheet, its
+import, a presentation stylesheet, its import and an illustration entirely out of
+memory, and gets the same editor and the same page back.
 
 ## Writing back
 

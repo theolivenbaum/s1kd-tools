@@ -61,11 +61,16 @@ public static class EditorEndpoints
         // Registered only when there is one, rather than registered as null: a
         // service that resolves to null is a trap for everything downstream, and
         // "no page preview" is a supported way to run rather than a broken one.
-        if (options.PresentationDirectory is not null)
+        IResourceResolver? stylesheets =
+            options.PresentationStylesheets ?? Folder(options.PresentationDirectory);
+
+        if (stylesheets is not null)
         {
-            services.AddSingleton(new EditorPresentation(
-                options.PresentationDirectory,
-                options.GraphicsDirectory ?? options.CsdbDirectory));
+            services.AddSingleton(new EditorPresentation(stylesheets,
+                options.Graphics
+                ?? ResourceResolvers.Directory(
+                    [options.GraphicsDirectory ?? options.CsdbDirectory],
+                    EditorPresentation.GraphicExtensions)));
         }
 
         services.AddSingleton(provider =>
@@ -84,6 +89,9 @@ public static class EditorEndpoints
 
         return services;
     }
+
+    private static IResourceResolver? Folder(string? directory) =>
+        directory is null ? null : ResourceResolvers.Directory([directory]);
 
     /// <summary>Map the editor's endpoints under <see cref="EditorOptions.RoutePrefix"/>.</summary>
     public static RouteGroupBuilder MapS1kdEditor(this IEndpointRouteBuilder endpoints)
