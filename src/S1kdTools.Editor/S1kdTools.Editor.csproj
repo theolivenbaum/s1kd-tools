@@ -44,4 +44,20 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!--
+    The editing surface's stylesheet is a Transpose resource, named in tps.json.
+    MSBuild watches tps.json but not the files it points at, so without this a
+    change to the CSS alone leaves _TransposeBuild up to date and the previous
+    stylesheet in every consuming app's output - silently, and for as long as
+    nobody happens to touch a .cs file.
+
+    MSBuildAllProjects is what the SDK's target already lists among its inputs for
+    the build files themselves, and "a file whose change must force a rebuild" is
+    exactly what it means. Adding the stylesheet to it is one line and needs no
+    knowledge of the SDK's internals; the alternatives all do.
+  -->
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildProjectDirectory)/tps/assets/css/s1kd-editor.css</MSBuildAllProjects>
+  </PropertyGroup>
+
 </Project>

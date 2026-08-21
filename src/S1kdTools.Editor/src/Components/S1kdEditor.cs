@@ -224,7 +224,10 @@ namespace S1kdTools.Editor
                     : state.fileName + " — saved";
 
             // Any edit invalidates the findings on screen: they name paths in a
-            // document that has just been renumbered.
+            // document that has just been reprojected, and a finding that points at
+            // a plausible-looking wrong element is worse than no finding. Cleared
+            // rather than hidden, so nothing is left behind to come back.
+            _findings.Clear();
             _findings.Collapse();
         }
 

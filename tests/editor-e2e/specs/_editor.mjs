@@ -98,17 +98,39 @@ export class Editor {
      * nested block's button and quietly tests the wrong thing.
      */
     async gutter(path, action) {
-        await this.block(path).hover();
+        await this.reach(path);
         await this.block(path).locator(`> .s1kd-gutter > .s1kd-gutter-${action}`).click();
         await this.page.waitForTimeout(400);
     }
 
     /** Open the block's insert menu and choose an element by the name it is offered under. */
     async insert(path, label) {
-        await this.block(path).hover();
+        await this.reach(path);
         await this.block(path).locator('> .s1kd-gutter > .s1kd-gutter-insert').click();
         await this.page.locator('.tss-contextmenu-item').filter({ hasText: label }).first().click();
         await this.page.waitForTimeout(500);
+    }
+
+    /**
+     * Hover a block so that *its* gutter is the one showing.
+     *
+     * Its top-left corner, not its centre. Only the innermost block under the
+     * pointer offers its commands — otherwise a step inside a step inside a
+     * procedure stacks three columns of buttons across the margin — so hovering a
+     * container in the middle, where its children are, withdraws the very gutter
+     * the caller is reaching for.
+     */
+    async reach(path) {
+        const block = this.block(path);
+        await block.scrollIntoViewIfNeeded();
+
+        // Move the pointer away first. Every command redraws the page, and Chromium
+        // does not recompute :hover for a freshly inserted element while the pointer
+        // is stationary — so hovering the same spot twice in a row is a no-op move
+        // and the gutter stays hidden. A person moves the mouse between commands;
+        // a test has to be told to.
+        await this.page.mouse.move(0, 0);
+        await block.hover({ position: { x: 4, y: 4 } });
     }
 
     /**

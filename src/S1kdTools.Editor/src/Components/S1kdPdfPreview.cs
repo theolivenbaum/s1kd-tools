@@ -152,7 +152,12 @@ namespace S1kdTools.Editor
             }
 
             Status("Laying this data module out…");
-            _viewer.Url(url);
+
+            // Whole, not in ranges. pdf.js fetches a document in chunks by default,
+            // which is right for a publication on a CDN and pure overhead for one
+            // data module the server already has in memory - three round trips
+            // instead of one, each re-laying the module out to answer it.
+            _viewer.Source(PdfSource.FromUrl(url).WithoutRangeRequests());
             _shownRevision = url;
 
             return Task.CompletedTask;

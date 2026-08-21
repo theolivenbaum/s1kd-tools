@@ -383,25 +383,24 @@
     transition: opacity .1s ease;
 }
 
-.s1kd-block:hover > .s1kd-gutter,
-.s1kd-block:focus-within > .s1kd-gutter {
+/*
+  Exactly one gutter is ever offered: the innermost block under the pointer, or -
+  while the pointer is off the page - the innermost block holding the caret.
+
+  Blocks nest four and five deep, and :hover and :focus-within both match every
+  ancestor of their target. Without the "innermost" clauses a step inside a step
+  inside a procedure stacks three columns of buttons across the margin and the
+  author has to work out which "delete" they are aiming at. `:not(:has(...))` says
+  innermost directly: a block that contains the real target is not the target.
+
+  The pointer outranks the caret, because the pointer is what is aiming. An author
+  whose caret is in a nested paragraph can still reach the enclosing step's
+  commands by moving to it.
+*/
+.s1kd-block:hover:not(:has(.s1kd-block:hover)) > .s1kd-gutter,
+.s1kd-surface:not(:hover) .s1kd-block:focus-within:not(:has(.s1kd-block:focus-within)) > .s1kd-gutter {
     opacity: 1;
     pointer-events: auto;
-}
-
-/*
-  Only the innermost one.
-
-  Blocks nest four and five deep, and both :hover and :focus-within match every
-  ancestor of the block the pointer or the caret is in — so without this a step
-  inside a step inside a procedure offers three columns of buttons stacked across
-  the margin, and the author has to work out which "delete" they are aiming at.
-  A block whose descendant is the real target withdraws its own.
-*/
-.s1kd-block:has(.s1kd-block:hover) > .s1kd-gutter,
-.s1kd-block:has(.s1kd-block:focus-within) > .s1kd-gutter {
-    opacity: 0;
-    pointer-events: none;
 }
 
 .s1kd-gutter-button {
