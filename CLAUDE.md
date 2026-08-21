@@ -30,8 +30,9 @@ option flags, exit codes, and output format. Each tool also has a manpage under
 /src/
   S1kdTools.Core/         Ported shared library + programmatic API (≈ libs1kd)
   S1kdTools.Cli/          Command-line front-end (the `s1kd` executable)
+  S1kdTools.Editor.Server/ The editor's back-end: AddS1kdEditor / MapS1kdEditor
   S1kdTools.Editor/       Tesserae components for editing a CSDB object (Transpose)
-/samples/editor/          The editor sample: Kestrel back-end, demo front-end, CSDB
+/samples/editor/          The editor sample: a host, a demo front-end, and a CSDB
 /tests/
   S1kdTools.Tests/        xUnit test project
   editor-e2e/             Playwright tests for the editor (Node)
@@ -160,7 +161,9 @@ block back into a change to that element.
 | `EditModel.cs` | the model a front-end draws: `EditDocument`/`EditBlock`/`EditRun` |
 | `EditProjection.cs` | run the stylesheet, read its output |
 | `EditCommands.cs` | apply an edit to the XML |
-| `EditTemplates.cs` | what a new element is made of, and what may go where |
+| `EditTemplateCatalogue.cs` | what a new element is made of, and what may go where |
+| `EditStylesheet.cs` | where a projection comes from: assembly, file, string, transform |
+| `EditProfile.cs` | the two together — which S1000D dialect this editor speaks |
 | `EditPalette.cs` | the component catalogue, each entry projected |
 | `EditSession.cs` | one open document: apply, undo, redo, serialize |
 
@@ -183,8 +186,16 @@ Conventions worth preserving when working here:
   validity is reported by the check (schema well-formedness, BREX, and whether it
   can be laid out), never enforced by the editor.
 - **Which parts of an object are editable is a stylesheet's decision, not a
-  program's.** `EditProjection.Project` takes the stylesheet as an argument, and an
-  element with no template still appears through a fall-through.
+  program's.** Everything takes an `EditProfile`, and a house stylesheet resolves
+  its `xsl:import` against this assembly — so a project overrides a few templates
+  rather than forking. An element with no template still appears through a
+  fall-through; measured over `samples/datasets`, 99.9% of authorable text is
+  reachable on schemas nobody wrote templates for.
+
+The HTTP half is `src/S1kdTools.Editor.Server` — the session store, the check, the
+page layout and the endpoints, as `AddS1kdEditor` / `MapS1kdEditor`. The sample
+host is configuration only; if you are adding server behaviour it almost certainly
+belongs in the package rather than beside it.
 
 See `doc/EDITOR.md` for the user-facing explanation, `src/S1kdTools.Editor/` for
 the browser components, and `samples/editor/` for the running sample.

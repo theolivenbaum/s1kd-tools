@@ -142,10 +142,18 @@ A set of small, free and open source software tools for manipulating
 > back into place rather than rebuilt, so it survives an edit to the sentence
 > around it with everything on it intact.
 >
-> The browser half is a Tesserae component library
-> ([`src/S1kdTools.Editor`](src/S1kdTools.Editor)) that holds no S1000D knowledge
-> at all — the vocabulary it speaks is a stylesheet away from being a different
-> one.
+> Standing one up is two packages and about ten lines — the back-end is
+> [`S1kdTools.Editor.Server`](src/S1kdTools.Editor.Server), the browser half is
+> [`S1kdTools.Editor`](src/S1kdTools.Editor):
+>
+> ```csharp
+> builder.Services.AddS1kdEditor(new EditorOptions { CsdbDirectory = "csdb" });
+> app.MapS1kdEditor();
+> ```
+>
+> The front-end holds no S1000D knowledge at all, and the vocabulary it speaks is a
+> stylesheet away from being a different one: a project passes an `EditProfile`
+> whose stylesheet imports ours and overrides the templates it disagrees with.
 >
 > See **[doc/EDITOR.md](doc/EDITOR.md)** for the design and
 > [`samples/editor/`](samples/editor/README.md) for the running sample.

@@ -18,7 +18,7 @@ components to drag into it.
 
 | | |
 |---|---|
-| `S1kdTools.EditorServer/` | the back-end: the editing endpoints, and the host for the front-end |
+| `S1kdTools.EditorServer/` | the host: which folders to read, and serving the front-end. The endpoints themselves are [`S1kdTools.Editor.Server`](../../src/S1kdTools.Editor.Server) |
 | `S1kdTools.Editor.App/` | the front-end: the three views, the palette and the CSDB picker |
 | `csdb/` | ten data modules and two ICNs — synthetic, [see its README](csdb/README.md) |
 | `presentation/` | the XSL-FO stylesheets the page preview lays out with — [see its README](presentation/README.md) |
@@ -99,6 +99,11 @@ thing at the caret, because a palette that only works by dragging does not work 
 a keyboard at all.
 
 ## The endpoints
+
+They come from the [`S1kdTools.Editor.Server`](../../src/S1kdTools.Editor.Server)
+package rather than from this sample — standing one up is `AddS1kdEditor` and
+`MapS1kdEditor`, and everything below is what those two calls map.
+
 
 | | |
 |---|---|

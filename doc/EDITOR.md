@@ -10,8 +10,23 @@ There is no upstream C counterpart. The pieces are:
 |---|---|
 | `S1kdTools.Core/Resources/editing/edit.xsl` | the **editing projection** — a CSDB object as an addressed tree of editable blocks |
 | `S1kdTools.Core/Editing/` | the model, the command engine, the session, the component catalogue |
+| `src/S1kdTools.Editor.Server/` | the back-end, as two calls on an ASP.NET Core app |
 | `src/S1kdTools.Editor/` | a Tesserae component library: the WYSIWYG surface, the palette, the page preview |
-| `samples/editor/` | a Kestrel back-end, a demo front-end, and the CSDB they work on |
+| `samples/editor/` | a demo front-end and the CSDB it works on |
+
+Standing one up is three packages and about ten lines:
+
+```csharp
+// server
+builder.Services.AddS1kdEditor(new EditorOptions { CsdbDirectory = "csdb" });
+app.MapS1kdEditor();
+```
+```csharp
+// browser
+var editor = new S1kdEditor(new EditorClient());
+MountToBody(editor);
+await editor.OpenAsync("DMC-….XML");
+```
 
 Run it with [`samples/editor/README.md`](../samples/editor/README.md).
 
@@ -89,13 +104,84 @@ emphasis, or an *atomic* element the author sees as a chip and cannot retype.
 Each run that came from an element records that element's position in `@src`.
 
 **Which parts of an object are editable is a publishing decision, and it lives in
-a stylesheet.** A project with a schema this port has never seen, or a house rule
-that a certain title is never retyped, changes `edit.xsl` and gets a different
-editor with no C# rebuilt. `EditProjection.Project(doc, stylesheet)` takes the
-stylesheet as an argument for exactly that. An element with no template still
-appears, through a fall-through that shows it and its children uneditably — so an
-unfamiliar object opens rather than failing, and the parts that *are* understood
-stay editable.
+a stylesheet.** An element with no template still appears, through a fall-through
+that shows it and its children — so an unfamiliar object opens rather than failing.
+Measured over the 397 CSDB objects in `samples/datasets`, spanning Issues 4.0, 4.2
+and 5.0 and a dozen schemas this projection was never written for, **99.9% of the
+authorable text lands in an editable block** with no adaptation at all. What the
+fall-through cannot give you is the presentation intelligence: step numbering,
+boxed warnings, and headings better than the element name with its camel humps
+opened out.
+
+## Speaking your own dialect
+
+Those are exactly the things a project overrides, and doing so is a stylesheet and
+a profile rather than a fork.
+
+An `EditProfile` is the pair "how an object is projected" and "what may be added to
+one" — one decision seen from two sides, so they travel together:
+
+```csharp
+var profile = new EditProfile(
+    EditStylesheet.FromFile("editing/house.xsl"),
+    new HouseCatalogue());
+
+var session = EditSession.Open("DMC-….XML", profile);
+var palette = EditPalette.Build(profile);
+```
+
+**A house stylesheet starts from ours.** However it is loaded — a file, a string, a
+resource — its `xsl:import` hrefs resolve against its own directory first and then
+against `S1kdTools.Core`'s embedded stylesheets, so it is a handful of templates
+rather than a copy of a thousand lines:
+
+```xml
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:import href="edit.xsl"/>
+
+  <!-- teach it an element we have never heard of -->
+  <xsl:template match="houseHazard">
+    <xsl:param name="level" select="0"/>
+    <xsl:call-template name="container-block">
+      <xsl:with-param name="kind" select="'warning'"/>
+      <xsl:with-param name="level" select="$level"/>
+      <xsl:with-param name="heading" select="'HAZARD'"/>
+    </xsl:call-template>
+  </xsl:template>
+</xsl:stylesheet>
+```
+
+Use `xsl:import` to *override* a template ours already has — import precedence is
+what makes yours win — and `xsl:include` to add matches for elements it does not.
+An included template that collides with an existing one at the same priority is an
+error, which is XSLT telling you that you meant to import.
+
+**A house vocabulary is a subclass.** `EditTemplateCatalogue` says what may be
+inserted where, what a new element is made of, and what the palette says about it.
+Override the parts you disagree with and call `base` for the rest:
+
+```csharp
+sealed class HouseCatalogue : EditTemplateCatalogue
+{
+    static readonly InsertOption Hazard = new("houseHazard", "Hazard notice", "warning");
+
+    public override IReadOnlyList<InsertOption> SiblingOptions(string parent) =>
+        parent == "proceduralStep"
+            ? [.. base.SiblingOptions(parent), Hazard]
+            : base.SiblingOptions(parent);
+
+    public override XmlElement Create(XmlDocument doc, string element, string text = "") =>
+        element == "houseHazard"
+            ? Wrap(doc, element, Text(doc, "warningAndCautionPara", text))
+            : base.Create(doc, element, text);
+}
+```
+
+That one element is now in the gutter's insert menu, in the drag-and-drop target
+rules, and on a component-palette card whose preview is a real projection through
+your stylesheet — without being named anywhere else.
+`tests/S1kdTools.Tests/EditProfileTests.cs` does all of the above through the
+public API only, the way a consumer has to.
 
 ## Writing back
 
@@ -173,8 +259,12 @@ session.Undo();
 File.WriteAllText("out.XML", session.Xml);
 ```
 
+`EditSession.Open(path, profile)` takes a profile too; omitting it is
+`EditProfile.Default`, the stylesheet and vocabulary this library ships.
+
 A session is one author's open document and is not thread-safe; a server holding
-several serializes access per session.
+several serializes access per session — which is what `CsdbLibrary` in
+`S1kdTools.Editor.Server` does.
 
 **A block's path is only valid against the revision it was projected from.**
 Inserting a paragraph renumbers the positional predicates of its later siblings,

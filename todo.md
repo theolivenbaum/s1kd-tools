@@ -9,7 +9,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 ## Status (all 32 tools ported)
 
 All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
-the test suite (**784 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
+the test suite (**794 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
 them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
 libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
 too. The library API also has a parity test suite ported from the C
@@ -232,19 +232,38 @@ Publication:
       around it as the same node — with its address items and every attribute this
       port has never heard of.
 
+      **Extensible without a fork.** An `EditProfile` carries the stylesheet and the
+      vocabulary. `EditStylesheet` loads a projection from the assembly, a file, a
+      string or a compiled transform, and resolves `xsl:import` from the
+      stylesheet's own directory first and this assembly second — so a house
+      stylesheet is a few templates over `edit.xsl` rather than a copy of it.
+      `EditTemplateCatalogue` is an overridable class, so a project adds an element
+      and the gutter menu, the drop rules and the palette all pick it up.
+      `EditProfileTests` does it through the public API only.
+
+      **The back-end.** `src/S1kdTools.Editor.Server` — the CSDB and its sessions,
+      the check, the page layout and the endpoints, as `AddS1kdEditor` /
+      `MapS1kdEditor`. Presentation stylesheets are optional and the package ships
+      none: how a page looks is a publishing decision.
+
       **The browser half.** `src/S1kdTools.Editor` — a Tesserae component library
       (Transpose C#→JS): the editing surface, a component palette whose cards are
       real projections and drag into the document, and a page preview
-      (Tesserae.Pdf). It holds no S1000D knowledge at all; the vocabulary it speaks
-      is a stylesheet away from being a different one.
+      (Tesserae.Pdf). It holds no S1000D knowledge at all.
 
-      **The sample.** `samples/editor/` — a Kestrel back-end
-      (`S1kdTools.EditorServer`) over the editing model, a demo front-end with the
-      document as WYSIWYG / Monaco source / rendered page over one session, ten
-      synthetic data modules and a house set of XSL-FO presentation stylesheets.
-      Tested by 26 xUnit tests (`EditingTests.cs`) and 28 Playwright
-      tests (`tests/editor-e2e`) that drive the real server, stylesheet and layout
-      engine.
+      **The sample.** `samples/editor/` — a host that is configuration only, a demo
+      front-end with the document as WYSIWYG / Monaco source / rendered page over
+      one session, ten synthetic data modules and a house set of XSL-FO
+      presentation stylesheets. Tested by 36 xUnit tests (`EditingTests.cs`,
+      `EditProfileTests.cs`) and 28 Playwright tests (`tests/editor-e2e`) that drive
+      the real server, stylesheet and layout engine.
+
+      Generalisation, measured over the 397 CSDB objects in `samples/datasets`
+      (Issues 4.0/4.2/5.0, a dozen schemas nobody wrote templates for): every one
+      projects, and 99.9% of the authorable text lands in an editable block. What
+      the fall-through cannot supply is the presentation intelligence — numbering,
+      boxed warnings, headings better than the element name — which is what a house
+      stylesheet is for.
 
       Known limits, each deliberate: markup nested inside markup is flattened (bold
       holding italic comes back as one bold run); validity is reported by the check
