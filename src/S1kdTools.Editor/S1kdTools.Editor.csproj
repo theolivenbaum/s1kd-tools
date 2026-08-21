@@ -20,7 +20,7 @@
          the package, so the preview needs nothing added to the host page: no CDN,
          no worker path to keep in sync, and no dependence on the browser having a
          PDF plugin (headless Chrome does not - it downloads the file instead). -->
-    <PackageReference Include="Tesserae.Pdf" Version="1.0.0" />
+    <PackageReference Include="Tesserae.Pdf" Version="26.8.4319" />
   </ItemGroup>
 
   <PropertyGroup>

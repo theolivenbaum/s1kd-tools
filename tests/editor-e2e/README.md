@@ -13,7 +13,6 @@ the front-end has been built, which it is not by `npm install`:
 
 ```bash
 dotnet tool install --global Transpose.Compiler
-../../samples/editor/pack-tesserae-pdf.sh
 dotnet build ../../S1kdTools.Editor.slnx
 ```
 

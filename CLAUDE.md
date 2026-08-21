@@ -227,12 +227,10 @@ dotnet test  S1kdTools.slnx
 dotnet run --project src/S1kdTools.Cli -- <tool> [args]
 ```
 
-The editor is a second solution, and needs the Transpose compiler plus (until the
-package is published) a locally packed `Tesserae.Pdf`:
+The editor is a second solution, and needs the Transpose compiler:
 
 ```
 dotnet tool install --global Transpose.Compiler
-./samples/editor/pack-tesserae-pdf.sh
 dotnet build S1kdTools.Editor.slnx
 dotnet run --project samples/editor/S1kdTools.EditorServer   # then open localhost:5000
 cd tests/editor-e2e && npm install && npx playwright test

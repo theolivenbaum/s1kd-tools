@@ -128,12 +128,6 @@ Thumbs.db
 # Claude Code agent worktrees (ephemeral)
 .claude/worktrees/
 
-# Locally packed NuGet packages that are not on nuget.org yet - currently only
-# Tesserae.Pdf, which the editor's page preview renders with. See
-# samples/editor/README.md; NuGet.config adds this folder as a source and
-# tolerates it being absent.
-.localfeed/
-
 # node_modules for the end-to-end tests.
 tests/editor-e2e/node_modules/
 

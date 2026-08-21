@@ -30,10 +30,9 @@ it — is in [`doc/EDITOR.md`](../../doc/EDITOR.md).
 ## Running it
 
 ```bash
-# once: the compiler, and the package the page preview renders with
+# once: the compiler that turns the front-end's C# into JavaScript
 dotnet tool install --global Transpose.Compiler
 export PATH="$PATH:$HOME/.dotnet/tools"
-./samples/editor/pack-tesserae-pdf.sh          # until Tesserae.Pdf is on nuget.org
 
 dotnet build S1kdTools.Editor.slnx             # the front-end
 dotnet run --project samples/editor/S1kdTools.EditorServer
