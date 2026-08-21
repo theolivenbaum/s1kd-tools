@@ -6,13 +6,16 @@ namespace S1kdTools.Editing;
 /// A block's path already says where it sits — the step before the last one names
 /// the element it is a child of — so the menu for "insert beside this" can be
 /// worked out from the model alone, without the stylesheet knowing the editor's
-/// vocabulary or the front-end knowing S1000D's.
+/// vocabulary or the front-end knowing S1000D's. The vocabulary itself comes from
+/// the profile's <see cref="EditTemplateCatalogue"/>.
 /// </summary>
 public static class EditInsertOptions
 {
     /// <summary>Attach the insert menus to every block in <paramref name="document"/>.</summary>
-    public static EditDocument Decorate(EditDocument document)
+    public static EditDocument Decorate(EditDocument document, EditProfile? profile = null)
     {
+        EditTemplateCatalogue templates = (profile ?? EditProfile.Default).Templates;
+
         foreach (EditBlock block in document.AllBlocks())
         {
             // A metadata field is a fixed part of the address; there is nothing to
@@ -26,10 +29,10 @@ public static class EditInsertOptions
 
             block.InsertSiblings = parent.Length == 0
                 ? []
-                : EditTemplates.SiblingOptions(parent);
+                : templates.SiblingOptions(parent);
 
             block.InsertChildren = block.Editable == EditMode.None
-                ? EditTemplates.ChildOptions(block.Element)
+                ? templates.ChildOptions(block.Element)
                 : [];
         }
 

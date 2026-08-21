@@ -25,8 +25,10 @@ public static class EditCommands
     /// <exception cref="EditCommandException">
     /// The path does not resolve, or the command is not one the engine knows.
     /// </exception>
-    public static void Apply(XmlDocument doc, EditCommand command)
+    public static void Apply(XmlDocument doc, EditCommand command, EditProfile? profile = null)
     {
+        EditTemplateCatalogue templates = (profile ?? EditProfile.Default).Templates;
+
         switch (command.Op)
         {
             case EditOps.SetText:
@@ -36,7 +38,7 @@ public static class EditCommands
                 SetAttr(doc, command);
                 break;
             case EditOps.Insert:
-                Insert(doc, command);
+                Insert(doc, command, templates);
                 break;
             case EditOps.Delete:
                 Delete(doc, command);
@@ -52,11 +54,12 @@ public static class EditCommands
     /// <summary>Apply a batch, in order. Either all of them land or none do:
     /// the caller works on a copy and swaps it in, because a half-applied batch
     /// is a document nobody asked for.</summary>
-    public static void ApplyAll(XmlDocument doc, IEnumerable<EditCommand> commands)
+    public static void ApplyAll(XmlDocument doc, IEnumerable<EditCommand> commands,
+        EditProfile? profile = null)
     {
         foreach (EditCommand command in commands)
         {
-            Apply(doc, command);
+            Apply(doc, command, profile);
         }
     }
 
@@ -226,10 +229,10 @@ public static class EditCommands
     // insert / delete / move
     // ------------------------------------------------------------------------
 
-    private static void Insert(XmlDocument doc, EditCommand command)
+    private static void Insert(XmlDocument doc, EditCommand command, EditTemplateCatalogue templates)
     {
         XmlElement anchor = Resolve(doc, command.Path);
-        XmlElement created = EditTemplates.Create(doc, command.Element, command.Text);
+        XmlElement created = templates.Create(doc, command.Element, command.Text);
 
         switch (command.Position)
         {

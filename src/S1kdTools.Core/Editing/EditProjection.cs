@@ -1,19 +1,19 @@
 using System.Xml;
-using System.Xml.Xsl;
 
 namespace S1kdTools.Editing;
 
 /// <summary>
-/// Projects a CSDB object into an <see cref="EditDocument"/> by running the
-/// editing stylesheet over it.
+/// Projects a CSDB object into an <see cref="EditDocument"/> by running an editing
+/// stylesheet over it.
 ///
 /// The projection is XSLT rather than a hand-written walk of the DOM for the same
 /// reason the presentation layer is: <b>which parts of an object are editable, and
 /// what they look like, is a publishing decision, not a program's</b>. A project
-/// with its own house rules — a schema this port has never seen, a business rule
-/// that a certain step's title is never retyped — changes a stylesheet and gets a
-/// different editor, with no C# rebuilt. <see cref="Transform(XmlDocument, string?)"/>
-/// takes a stylesheet argument for exactly that.
+/// with its own house rules — a schema this port has never seen, a rule that a
+/// certain step's title is never retyped — writes a stylesheet that imports ours,
+/// overrides the templates it disagrees with, and passes it on an
+/// <see cref="EditProfile"/>. No C# is rebuilt and nothing is forked; see
+/// <see cref="EditStylesheet"/> for what that looks like.
 ///
 /// What the C# keeps is the half XSLT cannot do: resolving a path back to a node
 /// and writing to it (<see cref="EditCommands"/>), and holding the document across
@@ -21,39 +21,21 @@ namespace S1kdTools.Editing;
 /// </summary>
 public static class EditProjection
 {
-    /// <summary>The stylesheet used when none is given.</summary>
-    public const string DefaultStylesheet = "editing/edit.xsl";
-
-    private static readonly XmlReaderSettings ReaderSettings = new()
-    {
-        DtdProcessing = DtdProcessing.Ignore,
-        XmlResolver = null,
-    };
-
-    /// <summary>Compiled stylesheets, keyed by resource path. Compiling one costs
-    /// tens of milliseconds and an editor re-projects after every keystroke's
-    /// worth of committed edit, so it is done once.</summary>
-    private static readonly Dictionary<string, XslCompiledTransform> Cache = [];
-
-    private static readonly Lock CacheLock = new();
-
     /// <summary>Project <paramref name="doc"/> into an editable model.</summary>
     /// <param name="doc">The CSDB object.</param>
-    /// <param name="stylesheet">
-    /// The embedded stylesheet to project with, relative to <c>Resources/</c>.
-    /// Defaults to <see cref="DefaultStylesheet"/>.
+    /// <param name="profile">
+    /// Which dialect to project with. <see cref="EditProfile.Default"/> when null.
     /// </param>
-    public static EditDocument Project(XmlDocument doc, string? stylesheet = null)
+    public static EditDocument Project(XmlDocument doc, EditProfile? profile = null)
     {
-        XmlDocument projected = Transform(doc, stylesheet);
-        return Parse(projected);
+        return Parse(Transform(doc, profile));
     }
 
     /// <summary>Run the editing stylesheet and return its raw output, for tests
     /// and for callers writing their own reader.</summary>
-    public static XmlDocument Transform(XmlDocument doc, string? stylesheet = null)
+    public static XmlDocument Transform(XmlDocument doc, EditProfile? profile = null)
     {
-        XslCompiledTransform xslt = Load(stylesheet ?? DefaultStylesheet);
+        ArgumentNullException.ThrowIfNull(doc);
 
         var output = XmlUtils.NewDocument();
         using (var ms = new MemoryStream())
@@ -64,7 +46,7 @@ public static class EditProjection
                 OmitXmlDeclaration = true,
             }))
             {
-                xslt.Transform(doc, null, writer);
+                (profile ?? EditProfile.Default).Stylesheet.Compiled.Transform(doc, null, writer);
             }
 
             ms.Position = 0;
@@ -72,51 +54,6 @@ public static class EditProjection
         }
 
         return output;
-    }
-
-    private static XslCompiledTransform Load(string resourcePath)
-    {
-        lock (CacheLock)
-        {
-            if (Cache.TryGetValue(resourcePath, out XslCompiledTransform? cached))
-            {
-                return cached;
-            }
-
-            var xslt = new XslCompiledTransform();
-            var resolver = new EmbeddedStylesheetResolver();
-
-            using (Stream stream = EmbeddedResources.Open(resourcePath)
-                ?? throw new FileNotFoundException($"Embedded editing stylesheet not found: {resourcePath}"))
-            using (XmlReader reader = XmlReader.Create(stream, ReaderSettings,
-                       EmbeddedStylesheetResolver.BaseUri + Path.GetFileName(resourcePath)))
-            {
-                xslt.Load(reader, XsltSettings.Default, resolver);
-            }
-
-            Cache[resourcePath] = xslt;
-            return xslt;
-        }
-    }
-
-    /// <summary>
-    /// Serves <c>xsl:include</c> and <c>xsl:import</c> out of the assembly's
-    /// embedded resources, so the editing stylesheets can be split into a shared
-    /// half and per-schema halves without ever touching the file system.
-    /// </summary>
-    private sealed class EmbeddedStylesheetResolver : XmlResolver
-    {
-        internal const string BaseUri = "s1kd-editing:///";
-
-        public override Uri ResolveUri(Uri? baseUri, string? relativeUri) =>
-            new(baseUri ?? new Uri(BaseUri), relativeUri ?? string.Empty);
-
-        public override object? GetEntity(Uri absoluteUri, string? role, Type? ofObjectToReturn)
-        {
-            string name = absoluteUri.AbsolutePath.TrimStart('/');
-            return EmbeddedResources.Open("editing/" + name)
-                ?? throw new FileNotFoundException($"Embedded editing stylesheet not found: {name}");
-        }
     }
 
     // ------------------------------------------------------------------------

@@ -33,26 +33,25 @@ public sealed class EditSession
 
     /// <summary>Open a session on a document. The session takes ownership of it.</summary>
     /// <param name="doc">The CSDB object.</param>
-    /// <param name="stylesheet">
-    /// The editing stylesheet, relative to <c>Resources/</c>. Defaults to
-    /// <see cref="EditProjection.DefaultStylesheet"/>.
+    /// <param name="profile">
+    /// Which dialect to edit in. <see cref="EditProfile.Default"/> when null.
     /// </param>
-    public EditSession(XmlDocument doc, string? stylesheet = null)
+    public EditSession(XmlDocument doc, EditProfile? profile = null)
     {
         _doc = doc;
-        Stylesheet = stylesheet ?? EditProjection.DefaultStylesheet;
+        Profile = profile ?? EditProfile.Default;
     }
 
     /// <summary>Open a session on the object in <paramref name="path"/>.</summary>
-    public static EditSession Open(string path, string? stylesheet = null) =>
-        new(XmlUtils.ReadDoc(path), stylesheet);
+    public static EditSession Open(string path, EditProfile? profile = null) =>
+        new(XmlUtils.ReadDoc(path), profile);
 
     /// <summary>Open a session on an object held in a string.</summary>
-    public static EditSession Parse(string xml, string? stylesheet = null) =>
-        new(XmlUtils.ReadMem(xml), stylesheet);
+    public static EditSession Parse(string xml, EditProfile? profile = null) =>
+        new(XmlUtils.ReadMem(xml), profile);
 
-    /// <summary>The editing stylesheet this session projects with.</summary>
-    public string Stylesheet { get; }
+    /// <summary>The stylesheet and vocabulary this session edits in.</summary>
+    public EditProfile Profile { get; }
 
     /// <summary>The document as it stands. Do not mutate it behind the session's back.</summary>
     public XmlDocument Document => _doc;
@@ -72,7 +71,7 @@ public sealed class EditSession
     /// <summary>The model of the document as it stands, projected on first ask and
     /// cached until the document changes.</summary>
     public EditDocument Model => _model ??=
-        EditInsertOptions.Decorate(EditProjection.Project(_doc, Stylesheet));
+        EditInsertOptions.Decorate(EditProjection.Project(_doc, Profile), Profile);
 
     /// <summary>The document, serialized the way the tools serialize one.</summary>
     public string Xml
@@ -103,7 +102,7 @@ public sealed class EditSession
         }
 
         var candidate = (XmlDocument)_doc.CloneNode(true);
-        EditCommands.ApplyAll(candidate, commands);
+        EditCommands.ApplyAll(candidate, commands, Profile);
 
         Commit(candidate, Label(commands));
         return Model;

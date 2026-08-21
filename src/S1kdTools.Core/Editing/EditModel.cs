@@ -170,10 +170,10 @@ public sealed class EditBlock
     /// the stylesheet: which elements are offered is a decision about the editor's
     /// vocabulary, and a stylesheet has no business holding it.
     /// </summary>
-    public IReadOnlyList<EditTemplates.InsertOption> InsertSiblings { get; set; } = [];
+    public IReadOnlyList<EditTemplateCatalogue.InsertOption> InsertSiblings { get; set; } = [];
 
     /// <inheritdoc cref="InsertSiblings"/>
-    public IReadOnlyList<EditTemplates.InsertOption> InsertChildren { get; set; } = [];
+    public IReadOnlyList<EditTemplateCatalogue.InsertOption> InsertChildren { get; set; } = [];
 
     /// <summary>The block's text with all runs joined, for search, tests and diffing.</summary>
     public string Text => string.Concat(Runs.Select(r => r.Text));
