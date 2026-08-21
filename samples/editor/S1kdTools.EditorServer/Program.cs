@@ -1,125 +1,45 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Xml;
 using Microsoft.Extensions.FileProviders;
-using S1kdTools.Editing;
-using S1kdTools.EditorServer.Api;
+using S1kdTools.Editor.Server;
 
 // -----------------------------------------------------------------------------
-// A back-end for the S1000D WYSIWYG editor.
+// The editor sample's back-end.
 //
-// The editor is a browser application and S1000D is a server-side problem: the
-// projection is XSLT over a DOM, the page preview is an XSL-FO layout, and the
-// business-rule check is a BREX evaluation. All three are S1kdTools.Core, and none
-// of them belongs in a browser. So the front-end holds no S1000D knowledge at all
-// - it draws blocks and posts commands - and everything that knows what a data
-// module is lives behind these endpoints.
+// Everything the editor does lives in the S1kdTools.Editor.Server package: the
+// CSDB and its open sessions, the edit commands, the check, the page layout and
+// the endpoints. What is left here is what is genuinely this sample's — which
+// folders to read, and serving the front-end beside the API.
 //
-// The document of record is the XML, and every endpoint answers with the whole
-// state projected from it. See Api/Contracts.cs for why that is not a wasteful
-// choice here.
+// That is the shape a real deployment has too. If this file is longer than yours,
+// it is because of the "front-end has not been built yet" page at the bottom.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-    // EditMode reads as "text"/"attr"/"none" on the wire rather than as 0/1/2: the
-    // front-end switches on it, and a number would make its code unreadable and
-    // its meaning positional.
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-});
-
 SampleLayout layout = SampleLayout.Locate(builder.Configuration["csdb"], builder.Configuration["app"]);
 
-builder.Services.AddSingleton(new CsdbLibrary(layout.Csdb, layout.Working));
-builder.Services.AddSingleton(new Presentation(layout.Presentation, layout.Csdb));
-builder.Services.AddSingleton<DocumentCheck>();
+builder.Services.AddS1kdEditor(new EditorOptions
+{
+    CsdbDirectory = layout.Csdb,
+    PresentationDirectory = layout.Presentation,
+
+    // Saving writes beside the repository rather than over the checked-in data
+    // modules, so the sample can be run, edited and saved as often as you like. A
+    // server that owns its CSDB leaves this unset and saves back over it.
+    WorkingDirectory = layout.Working,
+});
 
 WebApplication app = builder.Build();
 
-// -----------------------------------------------------------------------------
-// the API
-// -----------------------------------------------------------------------------
-
-RouteGroupBuilder api = app.MapGroup("/api");
-
-api.MapGet("/documents", (CsdbLibrary library) => library.List());
-
-// What an author can add to a data module, each entry carrying the block it
-// projects as. The preview is built by the same template call an insert command
-// makes and run through the same editing stylesheet, so a palette card is drawn
-// by the front-end's own block renderer and cannot promise a shape that dropping
-// it would not produce.
-api.MapGet("/palette", () => EditPalette.Build());
-
-api.MapGet("/documents/{id}", (string id, CsdbLibrary library) => library.Read(id));
-
-api.MapPost("/documents/{id}/commands", (string id, CommandsRequest request, CsdbLibrary library) =>
-    library.Apply(id, request.Commands));
-
-api.MapPut("/documents/{id}/xml", (string id, XmlRequest request, CsdbLibrary library) =>
-    library.SetXml(id, request.Xml));
-
-api.MapPost("/documents/{id}/undo", (string id, CsdbLibrary library) => library.Undo(id));
-api.MapPost("/documents/{id}/redo", (string id, CsdbLibrary library) => library.Redo(id));
-api.MapPost("/documents/{id}/revert", (string id, CsdbLibrary library) => library.Revert(id));
-api.MapPost("/documents/{id}/save", (string id, CsdbLibrary library) => library.Save(id));
-
-api.MapGet("/documents/{id}/check", (string id, CsdbLibrary library, DocumentCheck check) =>
-{
-    EditorState state = library.Read(id);
-    return check.Check(state.Xml, state.Schema, state.Title);
-});
-
-// The page, laid out from what the editor holds rather than from what is on disk:
-// an author who has just moved a warning wants to see it move.
-//
-// No caching. The preview is of a document being typed into, and the one thing a
-// stale page must never do is look like the current one.
-api.MapGet("/documents/{id}/pdf", (string id, CsdbLibrary library, Presentation presentation) =>
-{
-    EditorState state = library.Read(id);
-    byte[] pdf = presentation.RenderPdf(state.Xml, state.Schema, state.Title);
-    return Results.File(pdf, "application/pdf", $"{state.Code}.pdf");
-});
-
-// -----------------------------------------------------------------------------
-// errors
-// -----------------------------------------------------------------------------
-
-// The messages these produce are the ones the author reads - "Nothing is at
-// /dmodule[1]/…", the parser's line and column - so they are passed through rather
-// than replaced with a status code and a shrug.
-app.UseExceptionHandler(handler => handler.Run(async context =>
-{
-    Exception? error = context.Features
-        .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
-
-    (int status, string message) = error switch
-    {
-        KeyNotFoundException e => (StatusCodes.Status404NotFound, e.Message),
-        EditCommandException e => (StatusCodes.Status400BadRequest, e.Message),
-        XmlException e => (StatusCodes.Status400BadRequest, e.Message),
-        FileNotFoundException e => (StatusCodes.Status404NotFound, e.Message),
-        _ => (StatusCodes.Status500InternalServerError, error?.Message ?? "Unknown error."),
-    };
-
-    context.Response.StatusCode = status;
-    context.Response.ContentType = "application/json";
-    await context.Response.WriteAsJsonAsync(new ErrorResponse(message));
-}));
+app.MapS1kdEditor();
 
 // -----------------------------------------------------------------------------
 // the front-end
 // -----------------------------------------------------------------------------
 
 // Served straight out of the Transpose compiler's output folder rather than copied
-// into this project's: `dotnet build` the front-end and refresh the browser. A
-// copy step between the two would be one more thing to have forgotten when the
-// page does not change.
+// into this project's: `dotnet build` the front-end and refresh the browser. A copy
+// step between the two would be one more thing to have forgotten when the page does
+// not change.
 if (Directory.Exists(layout.App))
 {
     var files = new PhysicalFileProvider(layout.App);

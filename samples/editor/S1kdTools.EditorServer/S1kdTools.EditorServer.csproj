@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\S1kdTools.Core\S1kdTools.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\S1kdTools.Editor.Server\S1kdTools.Editor.Server.csproj" />
   </ItemGroup>
 
   <!--

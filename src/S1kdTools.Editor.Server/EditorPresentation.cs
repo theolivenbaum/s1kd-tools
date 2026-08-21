@@ -4,23 +4,24 @@ using System.Xml;
 using System.Xml.Xsl;
 using S1kdTools.Tools;
 
-namespace S1kdTools.EditorServer.Api;
+namespace S1kdTools.Editor.Server;
 
 /// <summary>
 /// Lays a data module out as the page it will be published as, so the editor can
 /// show the author what they are making rather than only what they are typing.
 ///
-/// The stylesheets live in <c>samples/editor/presentation/</c> and are read from
-/// disk rather than embedded. That is the point of the arrangement: they are a
-/// *house* style, one file per CSDB object type, and the way to change how a
-/// warning box looks in this editor is to edit <c>presentation/common.xsl</c> and
-/// press refresh. Nothing here is rebuilt.
+/// The stylesheets are read from a directory rather than embedded, and this
+/// library ships none of its own. That is deliberate: how a page looks is a
+/// publishing decision, S1000D does not make it, and neither should a NuGet
+/// package. Point <see cref="EditorOptions.PresentationDirectory"/> at yours and
+/// the way to change how a warning box looks is to edit a stylesheet and press
+/// refresh — nothing is rebuilt. The editor sample has a set to start from.
 ///
 /// The FO is rendered in-process by FOP.Sharp through
 /// <see cref="RenderTool"/> — no Java, no external process, so the preview costs
 /// what a transform and a layout cost and nothing else.
 /// </summary>
-public sealed class Presentation
+public sealed class EditorPresentation
 {
     private readonly ConcurrentDictionary<string, XslCompiledTransform> _compiled = new(StringComparer.Ordinal);
     private readonly string _stylesheetDirectory;
@@ -39,7 +40,7 @@ public sealed class Presentation
 
     /// <param name="stylesheetDirectory">The folder holding the presentation stylesheets.</param>
     /// <param name="graphicsDirectory">Where the ICNs live.</param>
-    public Presentation(string stylesheetDirectory, string graphicsDirectory)
+    public EditorPresentation(string stylesheetDirectory, string graphicsDirectory)
     {
         _stylesheetDirectory = Path.GetFullPath(stylesheetDirectory);
         _graphicsDirectory = Path.GetFullPath(graphicsDirectory);

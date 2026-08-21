@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using S1kdTools.Editing;
 
-namespace S1kdTools.EditorServer.Api;
+namespace S1kdTools.Editor.Server;
 
 /// <summary>
 /// The CSDB the sample edits, and the sessions open on it.
@@ -25,12 +25,18 @@ public sealed class CsdbLibrary
     /// <summary>Open the CSDB in <paramref name="directory"/>.</summary>
     /// <param name="directory">The folder holding the CSDB objects and their ICNs.</param>
     /// <param name="workingDirectory">
-    /// Where <c>save</c> writes. Separate from the CSDB so the sample can be run,
-    /// saved and re-run without the checked-in data modules drifting; a real
-    /// server would write back to the CSDB it read from.
+    /// Where <c>save</c> writes. Kept separate from the CSDB so a demonstration can
+    /// be run, saved and re-run without its checked-in objects drifting; a server
+    /// that owns its CSDB passes the same directory twice.
     /// </param>
-    public CsdbLibrary(string directory, string workingDirectory)
+    /// <param name="profile">
+    /// Which dialect every session in this library edits in.
+    /// <see cref="EditProfile.Default"/> when null.
+    /// </param>
+    public CsdbLibrary(string directory, string workingDirectory, EditProfile? profile = null)
     {
+        Profile = profile ?? EditProfile.Default;
+
         Directory = Path.GetFullPath(directory);
         WorkingDirectory = Path.GetFullPath(workingDirectory);
 
@@ -47,7 +53,7 @@ public sealed class CsdbLibrary
                      .OrderBy(f => f, StringComparer.Ordinal))
         {
             string id = Path.GetFileNameWithoutExtension(file);
-            _documents[id] = new DocumentEntry(id, file);
+            _documents[id] = new DocumentEntry(id, file, Profile);
         }
     }
 
@@ -56,6 +62,9 @@ public sealed class CsdbLibrary
 
     /// <summary>Where saved copies are written.</summary>
     public string WorkingDirectory { get; }
+
+    /// <summary>The stylesheet and vocabulary every session here edits in.</summary>
+    public EditProfile Profile { get; }
 
     /// <summary>Every document, with the identifier the API addresses it by.</summary>
     public IReadOnlyList<DocumentSummary> List() =>
@@ -104,7 +113,7 @@ public sealed class CsdbLibrary
         Path.GetExtension(file).Equals(".xml", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>One document and the session open on it.</summary>
-    private sealed class DocumentEntry(string id, string path)
+    private sealed class DocumentEntry(string id, string path, EditProfile profile)
     {
         private readonly Lock _gate = new();
         private EditSession? _session;
@@ -173,7 +182,7 @@ public sealed class CsdbLibrary
             }
         }
 
-        private EditSession Session() => _session ??= EditSession.Open(path);
+        private EditSession Session() => _session ??= EditSession.Open(path, profile);
 
         private EditorState Snapshot(EditSession session)
         {

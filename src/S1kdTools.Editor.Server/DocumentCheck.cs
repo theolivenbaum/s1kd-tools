@@ -1,7 +1,7 @@
 using System.Xml;
 using S1kdTools;
 
-namespace S1kdTools.EditorServer.Api;
+namespace S1kdTools.Editor.Server;
 
 /// <summary>
 /// What is wrong with the document as it stands, reported rather than prevented.
@@ -18,13 +18,14 @@ namespace S1kdTools.EditorServer.Api;
 ///   it.
 /// * <b>Can it be presented?</b> The FO transform is run and its exception, if any,
 ///   reported. An author who cannot see the page needs to know that it is the
-///   module and not the preview.
+///   module and not the preview. Skipped, with a warning, on a server started
+///   without presentation stylesheets.
 ///
 /// Nothing here refuses an edit. A data module halfway through being written is
 /// invalid nearly all the time, and an editor that will not let an author leave a
 /// paragraph until it validates is an editor they will leave instead.
 /// </summary>
-public sealed class DocumentCheck(Presentation presentation)
+public sealed class DocumentCheck(EditorPresentation? presentation)
 {
     /// <summary>Check <paramref name="xml"/> and report everything found.</summary>
     /// <param name="xml">The object, as the editor currently holds it.</param>
@@ -109,6 +110,16 @@ public sealed class DocumentCheck(Presentation presentation)
 
     private void CheckPresentation(string xml, string schema, string title, List<CheckFinding> findings)
     {
+        if (presentation is null)
+        {
+            // A server started without stylesheets. Worth saying once, as a
+            // warning: nothing is wrong with the module, it just has no page.
+            findings.Add(new CheckFinding("warning", "render",
+                "This server has no presentation stylesheets, so this module has no page preview.",
+                null, null));
+            return;
+        }
+
         if (!presentation.CanPresent(schema))
         {
             findings.Add(new CheckFinding("warning", "render",

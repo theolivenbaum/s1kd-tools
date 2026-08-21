@@ -1,6 +1,6 @@
 using S1kdTools.Editing;
 
-namespace S1kdTools.EditorServer.Api;
+namespace S1kdTools.Editor.Server;
 
 /// <summary>
 /// The wire shapes. Every editing endpoint answers with an

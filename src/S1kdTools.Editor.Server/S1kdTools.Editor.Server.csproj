@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>S1kdTools.Editor.Server</RootNamespace>
+  </PropertyGroup>
+
+  <!-- A library over ASP.NET Core, not an application: FrameworkReference rather
+       than the Web SDK, so a host that already targets the shared framework picks
+       this up without a second copy of it. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\S1kdTools.Core\S1kdTools.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>S1kdTools.Editor.Server</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>s1kd-tools contributors</Authors>
+    <Company>s1kd-tools contributors</Company>
+    <Title>s1kd-tools — the S1000D editor's back-end</Title>
+    <Description>The server half of the S1000D WYSIWYG editor, as two calls on an ASP.NET Core application: AddS1kdEditor and MapS1kdEditor. Holds a CSDB and its open editing sessions, applies edit commands through S1kdTools.Core, checks a data module against the default BREX, and lays one out as a PDF. S1kdTools.Editor is the browser half and speaks this protocol.</Description>
+    <PackageTags>s1000d;csdb;technical-publications;editor;wysiwyg;aspnetcore</PackageTags>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/theolivenbaum/s1kd-tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/theolivenbaum/s1kd-tools</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
