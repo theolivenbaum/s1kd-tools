@@ -44,7 +44,23 @@
     <xsl:call-template name="ident-section"/>
     <section key="content" label="Content">
       <blocks>
-        <xsl:apply-templates select="content/* | pmEntry | frontMatter">
+        <!--
+          A data module and a publication module keep their payload under
+          `content`; a data management list keeps it under `dmlContent`, and other
+          object types have their own. So this projects the children of `content`
+          when there is one, and the root's own children otherwise — rather than
+          naming `content` and leaving every object that does not have one showing
+          nothing but its address.
+
+          The address sections are excluded here rather than relied on to suppress
+          themselves, because they are projected as the ident section above and
+          would otherwise appear twice.
+        -->
+        <xsl:apply-templates select="content/* |
+                                     *[not(self::content or
+                                           self::identAndStatusSection or
+                                           self::imfIdentAndStatusSection or
+                                           self::updateIdentAndStatusSection)]">
           <xsl:with-param name="level" select="0"/>
         </xsl:apply-templates>
       </blocks>
