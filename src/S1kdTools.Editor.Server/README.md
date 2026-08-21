@@ -92,11 +92,12 @@ over it. Editing stylesheets take one too — `EditStylesheet.FromStream(…, im
 …)` — and fall back to the ones embedded in `S1kdTools.Core` for anything the
 resolver does not have.
 
-An illustration a resolver can only hand over as bytes is written to a temporary
-file for the length of one layout and deleted with it: the XSL-FO engine resolves
-an `external-graphic` by file path and treats a `data:` URI as a missing image. A
-resolver that already has the file on disk says so through `LocalPath` and nothing
-is copied.
+An illustration a resolver can only hand over as bytes is read once and passed to
+the XSL-FO engine through its own resolver hook, so nothing is written to disk for
+a preview. A resolver that already has the file on disk says so through `LocalPath`
+and the bytes are never read into this process at all.
+
+This needs `FOP.Sharp` 26.8.4328 or later, which is where that hook landed.
 
 ## Speaking your own dialect
 

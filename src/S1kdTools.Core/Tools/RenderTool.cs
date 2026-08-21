@@ -469,8 +469,15 @@ public sealed class RenderTool : ITool
     /// the stream-based entry point backed by FOP.Sharp's stream renderers; the
     /// caller owns both streams. Text formats are written as UTF-8.
     /// </summary>
+    /// <param name="resources">
+    /// Where an image URI the FO names turns into bytes, when it is not a file on this machine.
+    /// Passed straight to FOP.Sharp's own resolver hook, so a URI it does not have falls back to
+    /// the file system exactly as before. Null means "everything is a file", which is what a
+    /// command line renders.
+    /// </param>
     public static void Render(Stream foInput, Stream output, RenderFormat format,
-        IReadOnlyList<string>? fontDirs = null, bool native = false)
+        IReadOnlyList<string>? fontDirs = null, bool native = false,
+        IResourceResolver? resources = null)
     {
         ArgumentNullException.ThrowIfNull(foInput);
         ArgumentNullException.ThrowIfNull(output);
@@ -487,7 +494,7 @@ public sealed class RenderTool : ITool
                 new HtmlRenderer().Convert(foInput, output);
                 break;
             default:
-                FopProcessor processor = CreatePdfProcessor(fontDirs);
+                FopProcessor processor = CreatePdfProcessor(fontDirs, resources);
                 if (native)
                 {
                     processor.ConvertNative(foInput, output);
@@ -506,18 +513,29 @@ public sealed class RenderTool : ITool
     /// stream-based <see cref="Render(Stream, Stream, RenderFormat, IReadOnlyList{string}, bool)"/>.
     /// </summary>
     public static byte[] Render(string foXml, RenderFormat format,
-        IReadOnlyList<string>? fontDirs = null, bool native = false)
+        IReadOnlyList<string>? fontDirs = null, bool native = false,
+        IResourceResolver? resources = null)
     {
         ArgumentNullException.ThrowIfNull(foXml);
         using var input = new MemoryStream(Utf8(foXml));
         using var output = new MemoryStream();
-        Render(input, output, format, fontDirs, native);
+        Render(input, output, format, fontDirs, native, resources);
         return output.ToArray();
     }
 
-    private static FopProcessor CreatePdfProcessor(IReadOnlyList<string>? fontDirs)
+    private static FopProcessor CreatePdfProcessor(IReadOnlyList<string>? fontDirs,
+        IResourceResolver? resources = null)
     {
         var processor = new FopProcessor();
+
+        // FOP.Sharp has the same seam as this library and means the same thing by it, so the two
+        // interfaces are one delegate apart rather than a translation layer.
+        if (resources is not null)
+        {
+            processor.ResourceResolver =
+                Fop.Layout.ResourceResolvers.FromDelegate(resources.Open);
+        }
+
         if (fontDirs != null)
         {
             foreach (string dir in fontDirs)

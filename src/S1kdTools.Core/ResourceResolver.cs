@@ -33,12 +33,11 @@ public interface IResourceResolver
     /// A path on the local file system for <paramref name="name"/>, when there
     /// happens to be one. Null otherwise, which is the default.
     ///
-    /// This exists for one caller: the XSL-FO layout engine resolves an
-    /// <c>external-graphic</c> by file path and by nothing else — it treats a
-    /// <c>data:</c> URI exactly as it treats a missing file — so an illustration
-    /// that has no path has to be written to a temporary one before a page can be
-    /// laid out. A resolver that already has the file on disk says so here and
-    /// saves the copy.
+    /// It is an optimisation, and only that. A resolver that already has the file
+    /// on disk says so here, and its bytes are never read into memory: the name is
+    /// passed on and whatever opens it opens the file. A resolver that answers null
+    /// has its bytes read once and held for as long as the operation needs them,
+    /// which for a page preview is one layout.
     /// </summary>
     string? LocalPath(string name) => null;
 }

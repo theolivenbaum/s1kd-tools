@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml;
 using S1kdTools.Editing;
 using S1kdTools.Editor.Server;
 
@@ -223,16 +224,16 @@ public class ResourceResolverTests
         Assert.True(presentation.CanPresent("descript"));
         Assert.False(presentation.CanPresent("proced"));
 
-        using PresentationFo fo = presentation.TransformToFo(Module, "descript", "Aeralis AE100");
+        XmlDocument fo = presentation.TransformToFo(Module, "descript", "Aeralis AE100");
 
         // common.xsl is the import; it is what writes the page master, so a page
         // sequence at all proves the import resolved.
-        Assert.NotNull(fo.Document.GetElementsByTagName("page-sequence", Fo)[0]);
-        Assert.Contains("Fit the unit.", fo.Document.OuterXml);
+        Assert.NotNull(fo.GetElementsByTagName("page-sequence", Fo)[0]);
+        Assert.Contains("Fit the unit.", fo.OuterXml);
     }
 
     [Fact]
-    public void An_illustration_that_is_only_bytes_is_laid_out_anyway()
+    public void An_illustration_that_is_only_bytes_needs_no_file_of_its_own()
     {
         byte[] png = Png();
         IResourceResolver graphics = ResourceResolvers.FromDelegate(name =>
@@ -240,21 +241,13 @@ public class ResourceResolverTests
 
         var presentation = new EditorPresentation(InMemory(PresentationStylesheets()), graphics);
 
-        string src;
-        using (PresentationFo fo = presentation.TransformToFo(Module, "descript", "Aeralis AE100"))
-        {
-            // The layout engine resolves an external-graphic by file path and by
-            // nothing else — it treats a data: URI exactly as a missing file — so
-            // bytes with no path of their own are written out for the layout.
-            src = fo.Document.GetElementsByTagName("external-graphic", Fo)
-                .OfType<System.Xml.XmlElement>().Single().GetAttribute("src");
+        XmlDocument fo = presentation.TransformToFo(Module, "descript", "Aeralis AE100");
+        string src = fo.GetElementsByTagName("external-graphic", Fo)
+            .OfType<XmlElement>().Single().GetAttribute("src");
 
-            Assert.True(File.Exists(src));
-            Assert.Equal(png, File.ReadAllBytes(src));
-            Assert.EndsWith(".png", src);   // named for what the bytes are, not for the ICN
-        }
-
-        // …and taken away again with the layout that needed them.
+        // A name the layout engine hands back to us, not a path: nothing is written
+        // anywhere for a preview, and there is nothing to clean up afterwards.
+        Assert.Equal("s1kd-icn:ICN-AE100-00001-A-001-01", src);
         Assert.False(File.Exists(src));
     }
 
@@ -269,10 +262,10 @@ public class ResourceResolverTests
             InMemory(PresentationStylesheets()),
             ResourceResolvers.Directory([temp.Path], EditorPresentation.GraphicExtensions));
 
-        using PresentationFo fo = presentation.TransformToFo(Module, "descript", "Aeralis AE100");
+        XmlDocument fo = presentation.TransformToFo(Module, "descript", "Aeralis AE100");
 
-        Assert.Equal(path, fo.Document.GetElementsByTagName("external-graphic", Fo)
-            .OfType<System.Xml.XmlElement>().Single().GetAttribute("src"));
+        Assert.Equal(path, fo.GetElementsByTagName("external-graphic", Fo)
+            .OfType<XmlElement>().Single().GetAttribute("src"));
     }
 
     [Fact]

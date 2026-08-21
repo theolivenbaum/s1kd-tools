@@ -196,11 +196,14 @@ Conventions worth preserving when working here:
   presentation stylesheets and their imports, and illustrations all go through
   `IResourceResolver` (`ResourceResolver.cs`), so a CSDB in a content management
   system, an object store or a zip is a resolver rather than a fork. `LocalPath` is
-  on that interface for one measured reason: FOP.Sharp resolves an
-  `external-graphic` by file path and treats a `data:` URI exactly as a missing
-  file, so bytes with no path are materialized to a temporary file for one layout —
-  which is why `EditorPresentation.TransformToFo` returns a disposable
-  `PresentationFo`. Do not simplify that back to a bare `XmlDocument`.
+  on that interface as an optimisation only: it skips reading a file this process
+  never needs to hold. An illustration that is only bytes is read once and named
+  `s1kd-icn:<ident>` in the FO, and `ResolvedIllustrations` hands it back when
+  FOP.Sharp's own resolver asks — which is why `RenderTool.Render` takes a
+  `resources` argument. That hook is `FOP.Sharp` 26.8.4328 and later; before it,
+  the engine resolved an `external-graphic` by file path and by nothing else (a
+  `data:` URI rendered identically to a missing image), and this code wrote every
+  such illustration to a temporary file. Do not reintroduce that.
 
 The HTTP half is `src/S1kdTools.Editor.Server` — the session store, the check, the
 page layout and the endpoints, as `AddS1kdEditor` / `MapS1kdEditor`. The sample

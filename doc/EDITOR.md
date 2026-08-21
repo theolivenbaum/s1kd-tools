@@ -239,18 +239,29 @@ builder.Services.AddS1kdEditor(new EditorOptions
 });
 ```
 
-`LocalPath` is the one thing on the interface that is not obviously necessary, and
-it is there for a measured reason: the XSL-FO layout engine resolves an
-`external-graphic` by file path and by nothing else — it treats a `data:` URI
-exactly as it treats a missing file. So an illustration that a resolver can only
-hand over as bytes is written to a temporary file for the length of one layout and
-deleted with it, and a resolver that already has the file on disk says so through
-`LocalPath` and nothing is copied. That is also why `TransformToFo` returns a
-disposable `PresentationFo` rather than a bare `XmlDocument`.
+`LocalPath` is the one thing on the interface that is not obviously necessary. It is
+an optimisation and only that: a resolver that already has the file on disk says so,
+the path is passed straight through, and the bytes are never read into this process.
+A resolver that answers `null` has its bytes read once and held for the one layout
+that needs them.
+
+That took a change to the layout engine to be true. FOP.Sharp used to resolve an
+`external-graphic` by file path and by nothing else — a `data:` URI rendered byte
+for byte identically to a missing image — so an illustration with no path had to be
+written to a temporary file and deleted after. It now has the same seam this library
+does ([`IResourceResolver`](https://github.com/theolivenbaum/xmlgraphics-fop-sharp/pull/13),
+in `FOP.Sharp` 26.8.4328 and later), so an illustration that is only bytes is named
+`s1kd-icn:<ident>` in the FO and handed back when the engine reaches the image.
+Nothing is written to disk for a preview.
 
 `tests/S1kdTools.Tests/ResourceResolverTests.cs` runs an editing stylesheet, its
 import, a presentation stylesheet, its import and an illustration entirely out of
 memory, and gets the same editor and the same page back.
+
+One consequence to know about: an illustration that had no path appears in the FO
+from `TransformToFo` as a `s1kd-icn:` URI. Only `RenderPdf` can turn one back into
+an image, because it is what holds the bytes; FO taken from there and laid out
+elsewhere gets the placeholder.
 
 ## Writing back
 
