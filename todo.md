@@ -9,7 +9,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked/ne
 ## Status (all 32 tools ported)
 
 All 32 `s1kd-*` tools are ported, registered (reflection-based), and exercised by
-the test suite (**757 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
+the test suite (**784 xUnit tests passing**, clean build, 0 warnings). The CLI dispatches
 them as `s1kd <tool>` with multi-call (`s1kd-<tool>`) support. Two tools expose
 libs1kd-style library APIs (`Instance`, `BrexCheck`); `Metadata` is a library
 too. The library API also has a parity test suite ported from the C
@@ -206,6 +206,52 @@ Publication:
       the structural diff instead); images are treated as mid-grey blocks;
       only vertical shift is compensated when locating regions; white marks are
       ignored; pages are aligned positionally.
+
+- [x] The WYSIWYG editor — a CSDB object edited in a browser, drawn as the page it
+      will be published as. No C counterpart; the design is in `doc/EDITOR.md`.
+
+      **The projection.** `Resources/editing/edit.xsl` is a sibling of the
+      presentation stylesheets: it reads the same objects and emits an *addressed*
+      tree instead of XSL-FO — every paragraph, step, table cell and metadata field
+      paired with the XPath of the element it came from, plus the number the page
+      will print beside it (the ATA `1.`/`A.`/`(1)`/`(a)` scheme), and inline
+      content split into runs. A run is editable text with at most one emphasis, or
+      an *atomic* element (dmRef, internalRef, acronym, quantity) the author sees as
+      a chip. An element with no template still appears, through a fall-through, so
+      an unfamiliar schema opens rather than failing.
+
+      **The engine.** `S1kdTools.Core/Editing/`: `EditModel` (the model a front-end
+      draws), `EditProjection` (run the stylesheet, read it), `EditCommands`
+      (`setText`/`setAttr`/`insert`/`delete`/`move`), `EditTemplates` (what a new
+      element is made of and what may go where), `EditPalette` (the component
+      catalogue, each entry projected), `EditSession` (one open document, with
+      undo/redo). The XML stays the document of record: a command mutates it and the
+      model is re-projected from the result, so nothing is mirrored and the editor
+      cannot show what the file does not say. Each run carries the position of the
+      element it came from, so an untouched `dmRef` survives an edit to the sentence
+      around it as the same node — with its address items and every attribute this
+      port has never heard of.
+
+      **The browser half.** `src/S1kdTools.Editor` — a Tesserae component library
+      (Transpose C#→JS): the editing surface, a component palette whose cards are
+      real projections and drag into the document, and a page preview
+      (Tesserae.Pdf). It holds no S1000D knowledge at all; the vocabulary it speaks
+      is a stylesheet away from being a different one.
+
+      **The sample.** `samples/editor/` — a Kestrel back-end
+      (`S1kdTools.EditorServer`) over the editing model, a demo front-end with the
+      document as WYSIWYG / Monaco source / rendered page over one session, ten
+      synthetic data modules and the XSL-FO stylesheets from the Airbus technical-
+      data demo. Tested by 26 xUnit tests (`EditingTests.cs`) and 28 Playwright
+      tests (`tests/editor-e2e`) that drive the real server, stylesheet and layout
+      engine.
+
+      Known limits, each deliberate: markup nested inside markup is flattened (bold
+      holding italic comes back as one bold run); validity is reported by the check
+      (well-formedness, BREX, and whether it can be laid out) rather than enforced,
+      because a module being written is invalid most of the time; and the demo
+      server keeps one shared session per data module rather than one per
+      connection, which is the shape a real check-out has.
 
 ## 4. Cross-cutting
 - [x] Common option handling: `--version`, `-h/--help` done per tool; libxml2

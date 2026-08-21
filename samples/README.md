@@ -21,6 +21,11 @@ samples/
     xsl-stylesheets/            ← Smart Avionics sample publication (Issues 4.0/4.2)
     s1kd2db/                    ← a single documentation DM (Issue 4.2)
     pdfdiff-demo/               ← purpose-built: one DM + three stylesheets (Issue 4.2)
+  editor/                       ← the WYSIWYG editor sample (its own README)
+    csdb/                       ← ten synthetic data modules + two ICNs
+    presentation/               ← the XSL-FO stylesheets its page preview uses
+    S1kdTools.EditorServer/     ← the editing endpoints, and the host for the front-end
+    S1kdTools.Editor.App/       ← the front-end (Transpose; built by S1kdTools.Editor.slnx)
   harnesses/                    ← tiny CLI projects that consume the library
     Samples.Common/             ← shared SampleHarness helper (locate data, run a tool, save output)
     Samples.Fossig/             ← one console app per dataset …
