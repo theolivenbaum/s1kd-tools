@@ -93,8 +93,28 @@
     align-items: baseline;
 }
 
+/*
+  An identification field is a row of the section's own two-column grid, and it
+  also has to be a block like any other - hoverable, with commands in the margin.
+
+  `display: contents` did the first and destroyed the second: a box-less element
+  drops out of layout entirely, so `position: relative` above has nothing to
+  apply to and the field's absolutely positioned gutter anchors to the page
+  instead. Every field's commands then landed in one stack at (-34, 0), off the
+  top-left corner of the page, which is to say nowhere.
+
+  A subgrid keeps both. The block is a real box spanning the section's two
+  columns, so it positions its own gutter; its children still line up on the
+  section's columns rather than on a grid of their own, so the labels stay in one
+  straight edge down the page.
+*/
 .s1kd-section-ident > .s1kd-section-body > .s1kd-block {
-    display: contents;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;
+    gap: inherit;
+    margin: 0;
 }
 
 /* ------------------------------------------------------------------ blocks */
@@ -348,14 +368,19 @@
     border-color: var(--tss-primary-background-color, #0078d4);
 }
 
-/* The identification section lays label and value out as grid columns itself, so
-   a field there must not also be a row. */
-.s1kd-section-ident .s1kd-block > .s1kd-body {
-    display: contents;
-}
+/*
+  The value half of an identification field: the second column of the row, and an
+  ordinary box.
 
-.s1kd-section-ident .s1kd-block > .s1kd-body > .s1kd-text {
+  It used to be `display: contents` too, so that the text inside it became the
+  grid cell. That left the body unable to paint anything - and the reveal a check
+  finding lands on, and the line a drop draws, are both painted on the body. A
+  field was reachable from a finding and then showed nothing when you got there.
+  With the block itself a subgrid, the body can simply be the cell.
+*/
+.s1kd-section-ident .s1kd-block > .s1kd-body {
     grid-column: 2;
+    min-width: 0;
 }
 
 .s1kd-section-ident .s1kd-block > .s1kd-label {

@@ -201,6 +201,15 @@ Conventions worth preserving when working here:
   and drop rather than as a schema holding. A refused drop marks the block under the
   pointer (`s1kd-drop-refused`) for the same reason: silence is indistinguishable
   from a bug.
+- **A container the catalogue does not name is offered nothing, not a guess.**
+  `SiblingOptions` used to fall through to `[Para]`, which invited a `<para>` beside
+  a `<techName>` in a `<dmTitle>` — invalid, and unprojectable, so pressing insert
+  appeared to do nothing. Over the sample CSDB that guess was wrong 388 times and
+  right 38. What replaces it is an observation rather than a second guess:
+  `EditInsertOptions` offers `Another(element, kind)` only where the projection
+  shows that element already repeating inside that parent, because a document
+  holding two `<entry>`s in a `<row>` has said a third is allowed and one holding a
+  single `<techName>` has said nothing. Do not restore the fall-through.
 - **Nothing assumes a name is a path.** Editing stylesheets and their imports,
   presentation stylesheets and their imports, and illustrations all go through
   `IResourceResolver` (`ResourceResolver.cs`), so a CSDB in a content management

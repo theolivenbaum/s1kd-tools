@@ -327,6 +327,13 @@ fix that through a second menu. The table it keys on is also what `insertSibling
 and `insertChildren` are computed from, so the gutter menu, the drag-and-drop
 target rules and the component palette are all reading one list.
 
+It is deliberately silent about containers it has never heard of. It used to answer
+"a paragraph" for those, which put a `<para>` beside a `<techName>` — wrong 388
+times in the sample CSDB against 38 right. Where the catalogue is silent,
+`EditInsertOptions` makes an observation instead: a `<row>` already holding two
+`<entry>`s has said a third is allowed, so another entry is offered; a `<dmTitle>`
+holding one `<techName>` has said nothing, so nothing is.
+
 That shared list is also what makes the palette honest about the object in front of
 it: `GET /api/documents/{id}/palette` is the catalogue intersected with what this
 object's blocks accept, so a card on the rail and a drop that succeeds cannot

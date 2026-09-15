@@ -115,8 +115,64 @@ public class EditTemplateCatalogue
             "tbody" or "thead" or "tfoot" => [Row],
             "entry" => [Para],
             "figure" => [Title],
-            _ => [Para],
+
+            // A container this catalogue has never heard of gets nothing, because
+            // the only honest guess is no guess. It used to fall through to [Para],
+            // which offered "insert a paragraph" beside a <techName> in a <dmTitle>,
+            // beside an <entry> in a <row>, beside a <partNumber>. Measured over the
+            // sample CSDB that guess was wrong 388 times and right 38: a paragraph
+            // is simply not what goes next to most things. Taking the offer away
+            // does not make the editor less capable - the element it offered could
+            // not be projected where it landed, so the author pressed insert and
+            // watched nothing happen.
+            //
+            // What replaces it is not another guess but an observation, made by
+            // EditInsertOptions from the projection: where an element already
+            // repeats inside its parent, another of the same is offered.
+            _ => [],
         };
+
+    /// <summary>
+    /// "Another one of these", for an element inside a container this catalogue
+    /// does not name but which is visibly holding more than one of them.
+    ///
+    /// The judgement that it repeats is not made here - this only says what the
+    /// option looks like once <see cref="EditInsertOptions"/> has seen that it
+    /// does. Override to relabel an element your project has a name for.
+    /// </summary>
+    /// <param name="element">The element to offer another of.</param>
+    /// <param name="kind">The block kind it projects as, for the menu's icon.</param>
+    public virtual InsertOption Another(string element, string kind) =>
+        new(element, WordsOf(element), kind.Length == 0 ? "unknown" : kind);
+
+    /// <summary>
+    /// An element name as a menu label: <c>checkListItem</c> reads "Check list
+    /// item". The same rule the editing stylesheet uses for a heading it was given
+    /// no words for, so an element appears under one name throughout.
+    /// </summary>
+    protected static string WordsOf(string element)
+    {
+        if (string.IsNullOrEmpty(element))
+        {
+            return "Item";
+        }
+
+        var words = new System.Text.StringBuilder(element.Length + 8);
+        foreach (char c in element)
+        {
+            if (char.IsUpper(c) && words.Length > 0)
+            {
+                words.Append(' ').Append(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                words.Append(c);
+            }
+        }
+
+        words[0] = char.ToUpperInvariant(words[0]);
+        return words.ToString();
+    }
 
     /// <summary>
     /// What may be inserted as the first content of <paramref name="element"/>,
