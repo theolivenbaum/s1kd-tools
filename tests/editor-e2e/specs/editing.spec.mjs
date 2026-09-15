@@ -128,6 +128,28 @@ test.describe('editing a data module', () => {
             .toContainText('Prepare for the installation');
     });
 
+    test('the gutter can be reached with the pointer, not only teleported to', async ({ page }) => {
+        const editor = await openEditor(page, PROCEDURE);
+        const para = '/dmodule[1]/content[1]/procedure[1]/mainProcedure[1]/proceduralStep[1]' +
+                     '/proceduralStep[1]/para[1]';
+
+        const step = '/dmodule[1]/content[1]/procedure[1]/mainProcedure[1]/proceduralStep[1]';
+
+        // The buttons sit in the margin, outside the block's text. Everything
+        // between them and it has to belong to the block, or the gutter hides
+        // mid-reach and cannot be pressed by hand - which a clicking test cannot
+        // see, because it jumps straight to the button.
+        for (const [path, action] of [[para, 'delete'], [step, 'down']]) {
+            const { opacities, target } = await editor.walkToGutter(path, action);
+            expect(Math.min(...opacities)).toBe(1);
+
+            // Hittable where it stands: no force, no synthetic event. `trial`
+            // checks Playwright's own actionability and presses nothing.
+            await expect(target).toBeVisible();
+            await target.click({ trial: true });
+        }
+    });
+
     test('the insert menu offers what may go there, and builds it complete', async ({ page }) => {
         const editor = await openEditor(page, PROCEDURE);
         const para = '/dmodule[1]/content[1]/procedure[1]/mainProcedure[1]/proceduralStep[1]' +

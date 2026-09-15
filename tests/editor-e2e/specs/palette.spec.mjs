@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openEditor, PROCEDURE } from './_editor.mjs';
+import { openEditor, PROCEDURE, FRONTMATTER } from './_editor.mjs';
 
 /**
  * The component palette: what it offers, what it promises, and what dropping one
@@ -16,16 +16,52 @@ test.describe('the component palette', () => {
     test('offers the components the server derives, not a list of its own', async ({ page }) => {
         await openEditor(page, PROCEDURE);
 
-        const catalogue = await (await page.request.get('/api/palette')).json();
-        expect(catalogue.length).toBeGreaterThan(10);
+        const offered = await (await page.request.get(`/api/documents/${PROCEDURE}/palette`)).json();
+        expect(offered.length).toBeGreaterThan(10);
 
-        await expect(page.locator('.s1kd-palette-card')).toHaveCount(catalogue.length);
+        await expect(page.locator('.s1kd-palette-card')).toHaveCount(offered.length);
 
-        for (const entry of catalogue) {
+        for (const entry of offered) {
             const card = page.locator(`.s1kd-palette-card[data-element="${entry.element}"]`);
             await expect(card).toHaveAttribute('aria-label', `Add ${entry.label}`);
             await expect(card).toContainText(entry.label);
         }
+    });
+
+    test('offers what this object can take, not the whole vocabulary', async ({ page }) => {
+        // What may be inserted is a property of the object, not of the stylesheet.
+        // A procedure takes most of the vocabulary; a front matter module, whose
+        // content the schema fixes, takes almost none of it. A rail that showed the
+        // whole catalogue either way would refuse nearly every drop in the second
+        // without ever saying why, which reads as a broken editor.
+        const whole = await (await page.request.get('/api/palette')).json();
+
+        await openEditor(page, PROCEDURE);
+        const inProcedure = await page.locator('.s1kd-palette-card').evaluateAll(
+            els => els.map(e => e.getAttribute('data-element')));
+
+        await openEditor(page, FRONTMATTER);
+        const inFrontMatter = await page.locator('.s1kd-palette-card').evaluateAll(
+            els => els.map(e => e.getAttribute('data-element')));
+
+        // Both are drawn from the one catalogue, and neither is all of it.
+        expect(inProcedure.length).toBeGreaterThan(inFrontMatter.length);
+        expect(inProcedure.length).toBeLessThan(whole.length);
+        for (const element of [...inProcedure, ...inFrontMatter]) {
+            expect(whole.map(e => e.element)).toContain(element);
+        }
+
+        // And every card on the rail can actually land somewhere in the object it
+        // is shown for - which is the whole claim.
+        const state = await (await page.request.get(`/api/documents/${FRONTMATTER}`)).json();
+        const accepted = new Set();
+        const walk = b => {
+            for (const key of ['insertSiblings', 'insertChildren'])
+                for (const o of b[key] || []) accepted.add(o.element);
+            for (const c of b.blocks || []) walk(c);
+        };
+        for (const section of state.model.sections) section.blocks.forEach(walk);
+        for (const element of inFrontMatter) expect([...accepted]).toContain(element);
     });
 
     test('shows the block a component projects as, drawn by the surface renderer', async ({ page }) => {
@@ -81,15 +117,23 @@ test.describe('the component palette', () => {
     test('refuses a component the schema does not allow there', async ({ page }) => {
         const editor = await openEditor(page, PROCEDURE);
 
-        // A table row belongs in a table body and nowhere else. Dropping one on a
-        // paragraph must do nothing at all — not insert it, not mark the document
-        // dirty, not put a step on the undo stack.
+        // A step belongs in the procedure, not in the common information. It is on
+        // the rail, because it can go elsewhere in this module - so this is the
+        // case that matters: a component the author may legitimately be holding,
+        // over a block that will not take it. Dropping it must do nothing at all -
+        // not insert it, not mark the document dirty, not put a step on the undo
+        // stack.
+        const target = '/dmodule[1]/content[1]/procedure[1]/commonInfo[1]/para[1]';
         const before = await editor.xml();
-        await editor.drag('Table row',
-            '/dmodule[1]/content[1]/procedure[1]/commonInfo[1]/para[1]');
+        await editor.drag('Step', target);
 
         expect(await editor.xml()).toBe(before);
         expect((await editor.state()).undo.depth).toBe(0);
+
+        // Refused, but not in silence: the block the pointer is over says so, or
+        // the author cannot tell "not here" from "this editor is broken".
+        await editor.dragOver('Step', target);
+        await expect(page.locator(`[data-path="${target}"]`)).toHaveClass(/s1kd-drop-refused/);
     });
 
     test('adds a component by click, for anyone not using a mouse', async ({ page }) => {

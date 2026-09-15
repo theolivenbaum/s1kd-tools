@@ -81,15 +81,27 @@ namespace S1kdTools.Editor
         }
 
         /// <summary>
-        /// The catalogue of components an author can add, each with the block it
-        /// projects as.
+        /// The components an author can add to the open document, each with the
+        /// block it projects as.
         ///
-        /// Not per-document: what may be inserted is a property of the editing
-        /// stylesheet, so the palette asks once and keeps the answer.
+        /// <b>Per document, and it has to be.</b> What may be inserted is a property
+        /// of the object, not of the stylesheet: a procedure takes nearly everything
+        /// the vocabulary can build, and a publication module - whose content is
+        /// entries and references - takes almost none of it. Asking once and keeping
+        /// the answer offers an author a rail of components that refuse every drop
+        /// without saying why, which reads as a broken editor rather than as the
+        /// schema doing its job.
+        ///
+        /// With no document open this is the whole catalogue, which is what a
+        /// front-end wanting to show the vocabulary itself asks for.
         /// </summary>
         public async Task<IPaletteEntry[]> PaletteAsync()
         {
-            object parsed = await SendAsync("GET", _baseUrl + "/api/palette", null);
+            string url = DocumentId is null
+                ? _baseUrl + "/api/palette"
+                : _baseUrl + "/api/documents/" + Escape(DocumentId) + "/palette";
+
+            object parsed = await SendAsync("GET", url, null);
             return Script.Write<IPaletteEntry[]>("{0}", parsed);
         }
 

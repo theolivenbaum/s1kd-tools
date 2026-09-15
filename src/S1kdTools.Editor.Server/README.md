@@ -41,7 +41,14 @@ representation that can be right when the file is wrong.
 | `POST …/undo` `…/redo` `…/revert` `…/save` | the session |
 | `GET …/check` | well-formedness, business rules, and whether it can be laid out |
 | `GET …/pdf` | the page, laid out from what the session holds |
-| `GET /api/palette` | the components an author can add, each with the block it projects as |
+| `GET /api/palette` | the whole catalogue of components, each with the block it projects as |
+| `GET /api/documents/{id}/palette` | the same, narrowed to what *this* object can take — what a rail should show |
+
+**The palette is per document.** What may be inserted is a property of the object,
+not of the stylesheet: a procedure takes most of the catalogue, a publication module
+almost none of it. A rail built from `/api/palette` alone offers a publication module
+a warning it can never place, and an author who drags it and sees nothing happen
+concludes the editor is broken rather than that the schema is holding.
 
 **Every editing endpoint answers with the whole state rather than a delta.** A
 block's path is only valid against the revision it was projected from, so a client

@@ -127,8 +127,17 @@ var profile = new EditProfile(
     new HouseCatalogue());
 
 var session = EditSession.Open("DMC-….XML", profile);
-var palette = EditPalette.Build(profile);
+var palette = EditPalette.Build(session.Model, profile);
 ```
+
+**A palette is for an object, not for a schema.** `EditPalette.Build(profile)` is
+the whole catalogue — everything the vocabulary knows how to build. Pass a document
+as well and you get the part of it that can actually land somewhere in that object,
+which is usually what you want to draw. A procedure takes most of the catalogue; a
+publication module, whose content is entries and references, takes almost none of
+it. Offering the whole catalogue either way gives an author a rail whose cards
+refuse every drop without saying why, which reads as a broken editor rather than as
+a schema doing its job.
 
 **A house stylesheet starts from ours.** However it is loaded — a file, a string, a
 stream, a resource — its `xsl:import` hrefs resolve against its own directory first
@@ -317,6 +326,12 @@ an empty one is invalid the moment it is created and the author should not have 
 fix that through a second menu. The table it keys on is also what `insertSiblings`
 and `insertChildren` are computed from, so the gutter menu, the drag-and-drop
 target rules and the component palette are all reading one list.
+
+That shared list is also what makes the palette honest about the object in front of
+it: `GET /api/documents/{id}/palette` is the catalogue intersected with what this
+object's blocks accept, so a card on the rail and a drop that succeeds cannot
+disagree. Dragging one over somewhere it may not go marks that block rather than
+doing nothing — the author needs to be able to tell "not here" from "broken".
 
 ## Using it from C#
 

@@ -370,13 +370,30 @@
   The per-block commands. Absolutely positioned in the start margin so that
   showing them does not move a single word of the page - an author reaching for
   "move this step up" must not have the step move first.
+
+  The buttons are an 18px column at -34px, but the box around them is the full
+  34px and the extra 16px is transparent padding. That padding is load-bearing,
+  not spacing: it is what joins the buttons to the block.
+
+  The gutter shows while the block is hovered, and it is a child of the block, so
+  hovering the buttons keeps them shown. But a pointer travelling from the text to
+  the buttons has to cross whatever lies between, and a bare 18px column at -34px
+  leaves 16px of page there. Crossing it un-hovers the block, which hides the
+  gutter, which sets pointer-events: none - so the buttons are gone before the
+  pointer arrives and cannot be hit even head-on. They were reachable only by
+  teleporting onto them, which is what a synthetic click does and a hand cannot.
+  Widening the box to meet the block's edge closes the gap.
 */
 .s1kd-gutter {
     position: absolute;
     left: -34px;
     top: 0;
+    width: 34px;
+    padding-right: 16px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 1px;
     opacity: 0;
     pointer-events: none;
@@ -620,4 +637,19 @@
     outline: 2px dashed var(--tss-primary-background-color, #0078d4);
     outline-offset: 3px;
     border-radius: 3px;
+}
+
+/*
+  Somewhere this component may not go.
+
+  Drawn at all because the alternative is silence: a page that answers nothing as
+  the author drags across it is indistinguishable from an editor whose drag and
+  drop is broken, and they will conclude the second. Muted rather than red — the
+  author has done nothing wrong, the schema simply does not allow it here.
+*/
+.s1kd-drop-refused > .s1kd-body {
+    outline: 1px dashed var(--tss-default-border-color);
+    outline-offset: 3px;
+    border-radius: 3px;
+    opacity: .55;
 }
