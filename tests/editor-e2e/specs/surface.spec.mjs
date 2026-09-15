@@ -61,6 +61,49 @@ test.describe('the editing surface', () => {
             .toHaveCount(1);
     });
 
+    test('an address field is a block with a box, not just two grid cells', async ({ page }) => {
+        await openEditor(page, PROCEDURE);
+
+        const fields = page.locator('.s1kd-section-ident > .s1kd-section-body > .s1kd-block');
+        const count = await fields.count();
+        expect(count).toBeGreaterThan(3);
+
+        // The section lays its labels and values out as two columns, and a field
+        // used to become `display: contents` to take part in them. That removes the
+        // element from layout altogether: it has no box, so `position: relative`
+        // has nothing to apply to and the field's own gutter anchors to the page
+        // instead - every one of them stacked off the top-left corner at (-34, 0).
+        // The same went for the body, which is what the reveal and the drop line
+        // are painted on, so a check finding could land on a field and show nothing.
+        const labelX = new Set();
+        const valueX = new Set();
+
+        for (let i = 0; i < count; i++) {
+            const field = fields.nth(i);
+            const box = await field.boundingBox();
+            expect(box.width).toBeGreaterThan(0);
+            expect(box.height).toBeGreaterThan(0);
+
+            // Its gutter belongs to its own row, in the margin beside it.
+            const gutter = await field.locator('> .s1kd-gutter').boundingBox();
+            expect(gutter.x).toBeLessThan(box.x);
+            expect(Math.abs(gutter.y - box.y)).toBeLessThan(2);
+
+            // And its body can paint, which is what a reveal needs.
+            const body = await field.locator('> .s1kd-body').boundingBox();
+            expect(body.width).toBeGreaterThan(0);
+            expect(body.height).toBeGreaterThan(0);
+
+            labelX.add(Math.round((await field.locator('> .s1kd-label').boundingBox()).x));
+            valueX.add(Math.round(body.x));
+        }
+
+        // All of which had to happen without losing the two columns: every label
+        // starts on one edge and every value on another.
+        expect([...labelX]).toHaveLength(1);
+        expect([...valueX]).toHaveLength(1);
+    });
+
     test('shows an inline reference as a chip rather than as text', async ({ page }) => {
         const editor = await openEditor(page, PROCEDURE);
 

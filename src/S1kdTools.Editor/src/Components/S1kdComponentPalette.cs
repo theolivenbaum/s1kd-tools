@@ -39,7 +39,10 @@ namespace S1kdTools.Editor
         private readonly Stack _cards;
         private readonly TextBlock _status;
 
-        private bool _loaded;
+        /// <summary>The document the cards on show were built for, or null for none.</summary>
+        private string _loadedFor;
+
+        private bool _loading;
 
         /// <summary>Build a palette that drops into <paramref name="surface"/>.</summary>
         public S1kdComponentPalette(EditorClient client, S1kdEditorSurface surface)
@@ -57,39 +60,63 @@ namespace S1kdTools.Editor
                 TextBlock("Components").Tiny().SemiBold().Secondary().Class("s1kd-palette-head"),
                 VStack().S().ScrollY().Children(_cards),
                 _status.Class("s1kd-palette-status"));
+
+            // What may be added depends on the object that is open, so the rail is
+            // rebuilt when a different one is. Every other state change - a typed
+            // word, an undo - leaves the answer the same and is ignored, because
+            // rebuilding costs a request and a projection per card.
+            _client.StateChanged += _ => LoadAsync().FireAndForget();
         }
 
         /// <inheritdoc/>
         public HTMLElement Render() => _root.Render();
 
         /// <summary>
-        /// Fetch the catalogue and build the cards. Once per page: what may be
-        /// inserted is a property of the stylesheet, not of the open document.
+        /// Fetch what the open document can take and build the cards.
+        ///
+        /// Once per document rather than once per page: a rail is only useful if
+        /// every card on it can actually land somewhere in the object being edited.
+        /// Called again whenever a different one is opened.
         /// </summary>
         public async Task LoadAsync()
         {
-            if (_loaded)
+            string wanted = _client.DocumentId;
+            if (_loading || wanted == _loadedFor)
             {
                 return;
             }
 
-            IPaletteEntry[] entries = await _client.PaletteAsync();
-
-            if (entries is null || entries.Length == 0)
+            _loading = true;
+            try
             {
-                _status.Text = "The server offers no components.";
-                return;
+                IPaletteEntry[] entries = await _client.PaletteAsync();
+
+                _cards.Clear();
+                _loadedFor = wanted;
+
+                if (entries is null || entries.Length == 0)
+                {
+                    // Not an error and not a blank rail: an object whose every part
+                    // is fixed by its schema is a real thing to be editing, and
+                    // saying so is the difference between "nothing fits here" and
+                    // "this is broken".
+                    _status.Text = wanted is null
+                        ? "Open a data module to see what can be added to it."
+                        : "Nothing in the catalogue can be added to this object.";
+                    return;
+                }
+
+                for (var i = 0; i < entries.Length; i++)
+                {
+                    _cards.Add(Card(entries[i]));
+                }
+
+                _status.Text = "Drag a component into the page, or click to add it where you were.";
             }
-
-            _cards.Clear();
-
-            for (var i = 0; i < entries.Length; i++)
+            finally
             {
-                _cards.Add(Card(entries[i]));
+                _loading = false;
             }
-
-            _loaded = true;
-            _status.Text = "Drag a component into the page, or click to add it where you were.";
         }
 
         private IComponent Card(IPaletteEntry entry)

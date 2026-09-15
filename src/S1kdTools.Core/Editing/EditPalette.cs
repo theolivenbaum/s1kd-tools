@@ -72,6 +72,60 @@ public static class EditPalette
     }
 
     /// <summary>
+    /// The catalogue as it applies to one open object: only the components that
+    /// could actually land somewhere in it.
+    ///
+    /// <b>What may be inserted is a property of the document, not of the
+    /// stylesheet.</b> The full catalogue is every element the vocabulary knows
+    /// how to build, and in a procedure most of them fit. In a publication module
+    /// almost none do - its content is entries and references, and a warning has
+    /// nowhere to go. Offering all of them anyway gives an author a rail of cards
+    /// that refuse every drop without saying why, which reads as a broken editor
+    /// rather than as a schema doing its job.
+    ///
+    /// So the answer is the intersection of the catalogue with what the blocks of
+    /// this object actually accept - the same <see cref="EditBlock.InsertSiblings"/>
+    /// and <see cref="EditBlock.InsertChildren"/> the gutter menu and the drop
+    /// target already read, so the rail cannot disagree with them.
+    /// </summary>
+    /// <param name="document">The projected object the palette is for.</param>
+    /// <param name="profile">Which dialect to build the palette for.</param>
+    public static IReadOnlyList<PaletteEntry> Build(EditDocument document, EditProfile? profile = null)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return Offered(Build(profile), document);
+    }
+
+    /// <summary>
+    /// Narrow an already-built catalogue to one object. Separate from
+    /// <see cref="Build(EditDocument, EditProfile)"/> because building costs a
+    /// transform per entry and narrowing costs a walk, so a server holding many
+    /// sessions builds once and narrows per document.
+    /// </summary>
+    public static IReadOnlyList<PaletteEntry> Offered(
+        IEnumerable<PaletteEntry> catalogue, EditDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(catalogue);
+        ArgumentNullException.ThrowIfNull(document);
+
+        var accepted = new HashSet<string>(StringComparer.Ordinal);
+        foreach (EditBlock block in document.AllBlocks())
+        {
+            foreach (EditTemplateCatalogue.InsertOption option in block.InsertSiblings)
+            {
+                accepted.Add(option.Element);
+            }
+
+            foreach (EditTemplateCatalogue.InsertOption option in block.InsertChildren)
+            {
+                accepted.Add(option.Element);
+            }
+        }
+
+        return [.. catalogue.Where(entry => accepted.Contains(entry.Element))];
+    }
+
+    /// <summary>
     /// Create one element and project it in its scaffold, returning the block it
     /// came out as.
     /// </summary>

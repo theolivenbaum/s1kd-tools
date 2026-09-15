@@ -113,6 +113,17 @@ public static class EditorEndpoints
         api.MapGet("/documents/{id}", (string id, CsdbLibrary library) =>
             Guarded(() => library.Read(id)));
 
+        // The same catalogue, narrowed to what this object can actually take.
+        //
+        // The whole catalogue is what the vocabulary knows how to build; in a
+        // procedure nearly all of it fits, and in a publication module almost none
+        // of it does. A rail offering a warning to a publication module is a rail
+        // whose cards refuse every drop without saying why, which an author reads
+        // as a broken editor rather than as the schema doing its job. This is the
+        // one a front-end should ask for once a document is open.
+        api.MapGet("/documents/{id}/palette", (string id, CsdbLibrary library) =>
+            Guarded(() => EditPalette.Build(library.Read(id).Model, library.Profile)));
+
         api.MapPost("/documents/{id}/commands",
             (string id, CommandsRequest request, CsdbLibrary library) =>
                 Guarded(() => library.Apply(id, request.Commands)));

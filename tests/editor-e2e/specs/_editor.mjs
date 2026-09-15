@@ -15,6 +15,9 @@ export const PROCEDURE = 'DMC-AE100-A-27-81-00-00A-720A-A_002-00_EN-GB';
 /** A descriptive module: levelled paragraphs with titles. */
 export const DESCRIPTIVE = 'DMC-AE100-A-27-81-00-00A-042A-A_002-00_EN-GB';
 
+/** Front matter: a list of effective data modules, whose shape the schema fixes. */
+export const FRONTMATTER = 'DMC-AE100-A-00-00-0000-00A-002A-D_001-00_EN-GB';
+
 /** The paragraph that carries the inline dmRef, in the module as it ships. */
 export const REFERENCE_PARAGRAPH_PATH =
     '/dmodule[1]/content[1]/procedure[1]/commonInfo[1]/para[1]';
@@ -134,6 +137,56 @@ export class Editor {
     }
 
     /**
+     * Travel to a gutter button the way a hand does: in small steps, through
+     * whatever lies between the text and the buttons.
+     *
+     * `locator.click()` teleports the pointer onto its target in one move and so
+     * never samples the path. That is the difference between a gutter a person can
+     * press and one only a test can: the gutter hides when the block stops being
+     * hovered, and a hidden gutter is `pointer-events: none`, so a gap anywhere
+     * along the way hides the buttons before the pointer arrives and they cannot
+     * be hit even head-on.
+     *
+     * Returns the CSS opacity sampled at each step, so a test can assert the
+     * buttons stayed up for the whole journey rather than only at its end.
+     */
+    async walkToGutter(path, action) {
+        const block = this.block(path);
+        await block.scrollIntoViewIfNeeded();
+        await this.page.mouse.move(0, 0);
+
+        // Start on the block's *own* area. Only the innermost block under the
+        // pointer offers its commands, so starting anywhere a child covers would
+        // watch the wrong gutter and call a correct editor broken. A block with
+        // text of its own is entered through it; a container whose content is all
+        // children is entered through the label strip at its top-left, which is
+        // the only part of it a pointer can be on and have it be innermost.
+        const own = block.locator('> .s1kd-body > .s1kd-text');
+        const from = (await own.count())
+            ? await own.boundingBox().then(b => ({ x: b.x + Math.min(120, b.width / 2),
+                                                   y: b.y + b.height / 2 }))
+            : await block.boundingBox().then(b => ({ x: b.x + 6, y: b.y + 6 }));
+
+        await this.page.mouse.move(from.x, from.y);
+        await this.page.waitForTimeout(150);
+
+        const gutter = block.locator(`> .s1kd-gutter`);
+        const target = block.locator(`> .s1kd-gutter > .s1kd-gutter-${action}`);
+        const tbox = await target.boundingBox();
+        const to = { x: tbox.x + tbox.width / 2, y: tbox.y + tbox.height / 2 };
+
+        const seen = [];
+        for (let i = 1; i <= 12; i++) {
+            await this.page.mouse.move(from.x + (to.x - from.x) * i / 12,
+                                      from.y + (to.y - from.y) * i / 12);
+            await this.page.waitForTimeout(25);
+            seen.push(Number(await gutter.evaluate(g => getComputedStyle(g).opacity)));
+        }
+
+        return { opacities: seen, target };
+    }
+
+    /**
      * A command-bar button, by its accessible name.
      *
      * A substring rather than a regular expression: Playwright matches a regex
@@ -179,6 +232,50 @@ export class Editor {
             targetPosition: { x: box.width / 2, y: edge === 'top' ? 3 : box.height - 3 },
         });
         await this.page.waitForTimeout(600);
+    }
+
+    /**
+     * Drag a component over a block and leave it hovering there, without dropping.
+     *
+     * `dragTo` completes the gesture, so it cannot be used to look at what the page
+     * says *during* one. This drives the pointer itself and stops over the target,
+     * which is also the only way to see the answer a refused drop gives.
+     */
+    async dragOver(label, path) {
+        const target = this.block(path);
+
+        // Centred, not merely scrolled into view. A drag whose pointer approaches
+        // the edge of the scroller makes it auto-scroll, which moves the target out
+        // from under the pointer mid-gesture and lands it on whatever slid into its
+        // place.
+        await target.evaluate(e => e.scrollIntoView({ block: 'center' }));
+        await this.page.waitForTimeout(250);
+
+        const card = this.card(label);
+        const from = await card.boundingBox();
+        const to = await target.boundingBox();
+        const x = to.x + to.width / 2;
+        const y = to.y + to.height / 2;
+
+        await this.page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+        await this.page.mouse.down();
+
+        // In many small steps. The browser only raises drag events for a pointer it
+        // believes is dragging, and a handful of long jumps produces a handful of
+        // them - too few to be sure the one over the target ever happened.
+        for (let i = 1; i <= 24; i++) {
+            await this.page.mouse.move(from.x + (x - from.x) * i / 24,
+                                       from.y + (y - from.y) * i / 24, { steps: 2 });
+            await this.page.waitForTimeout(20);
+        }
+        await this.page.waitForTimeout(120);
+    }
+
+    /** Let go of whatever `dragOver` is holding, without dropping it on anything. */
+    async abandonDrag() {
+        await this.page.keyboard.press('Escape');
+        await this.page.mouse.up();
+        await this.page.waitForTimeout(150);
     }
 
     /** The whole editor state, for assertions about history and dirtiness. */

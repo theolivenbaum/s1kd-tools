@@ -564,6 +564,13 @@ namespace S1kdTools.Editor
 
             if (drop is null)
             {
+                // Somewhere this component may not go. Saying so is not decoration:
+                // without it the only signal is the browser's no-drop cursor, and an
+                // author who has just dragged across a page that never once answered
+                // concludes the editor is broken rather than that the schema is
+                // holding. The mark is on the block the pointer is over, so the
+                // answer is attached to the question.
+                Refuse(BlockUnder(e as DragEvent));
                 return;
             }
 
@@ -611,6 +618,12 @@ namespace S1kdTools.Editor
             }
         }
 
+        /// <summary>The block element under the pointer, or null when it is off the page.</summary>
+        private static HTMLElement BlockUnder(DragEvent e) =>
+            e is null
+                ? null
+                : Closest(document.elementFromPoint(e.clientX, e.clientY) as HTMLElement, "s1kd-block");
+
         /// <summary>Where the pointer currently is, as a place a component could go.</summary>
         private Drop DropAt(DragEvent e)
         {
@@ -619,8 +632,7 @@ namespace S1kdTools.Editor
                 return null;
             }
 
-            HTMLElement block = Closest(document.elementFromPoint(e.clientX, e.clientY) as HTMLElement,
-                "s1kd-block");
+            HTMLElement block = BlockUnder(e);
 
             IEditBlock target = block is null ? null : FindBlock(block.getAttribute(PathAttribute));
             if (target is null)
@@ -710,13 +722,15 @@ namespace S1kdTools.Editor
         /// </summary>
         private void Highlight(Drop drop)
         {
-            NodeList marked = _page.querySelectorAll(".s1kd-drop-before, .s1kd-drop-after, .s1kd-drop-into");
+            NodeList marked = _page.querySelectorAll(
+                ".s1kd-drop-before, .s1kd-drop-after, .s1kd-drop-into, .s1kd-drop-refused");
             for (uint i = 0; i < marked.length; i++)
             {
                 var element = marked[i] as HTMLElement;
                 element.classList.remove("s1kd-drop-before");
                 element.classList.remove("s1kd-drop-after");
                 element.classList.remove("s1kd-drop-into");
+                element.classList.remove("s1kd-drop-refused");
             }
 
             if (drop is null)
@@ -733,6 +747,15 @@ namespace S1kdTools.Editor
             block.classList.add(
                 drop.Position == EditPositions.Before ? "s1kd-drop-before" :
                 drop.Position == EditPositions.After ? "s1kd-drop-after" : "s1kd-drop-into");
+        }
+
+        /// <summary>Mark a block as somewhere the dragged component may not go.</summary>
+        private static void Refuse(HTMLElement block)
+        {
+            if (block is object)
+            {
+                block.classList.add("s1kd-drop-refused");
+            }
         }
 
         /// <summary>The last block of the content section, for a palette click with no caret.</summary>

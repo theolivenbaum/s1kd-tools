@@ -272,6 +272,171 @@ public class EditProfileTests
         Assert.Equal("warning", hazard.Preview.Kind);
     }
 
+    // ------------------------------------------------------------------------
+    // the palette is a property of the object, not of the stylesheet
+    // ------------------------------------------------------------------------
+
+    /// <summary>
+    /// A publication module: its content is entries and references, and almost
+    /// nothing the vocabulary can build belongs in it.
+    /// </summary>
+    private const string PublicationModule =
+        """
+        <pm>
+          <identAndStatusSection>
+            <pmAddress>
+              <pmAddressItems><pmTitle>Aeralis AE100 maintenance</pmTitle></pmAddressItems>
+            </pmAddress>
+          </identAndStatusSection>
+          <content>
+            <pmEntry>
+              <pmEntryTitle>Slat actuation</pmEntryTitle>
+              <dmRef><dmRefIdent><dmCode modelIdentCode="AE100"/></dmRefIdent></dmRef>
+            </pmEntry>
+          </content>
+        </pm>
+        """;
+
+    [Fact]
+    public void The_palette_for_an_object_is_what_that_object_can_take()
+    {
+        IReadOnlyList<PaletteEntry> whole = EditPalette.Build();
+
+        EditDocument procedure = EditSession.Parse(Module).Model;
+        EditDocument publication = EditSession.Parse(PublicationModule).Model;
+
+        IReadOnlyList<PaletteEntry> inProcedure = EditPalette.Build(procedure);
+        IReadOnlyList<PaletteEntry> inPublication = EditPalette.Build(publication);
+
+        // The catalogue is everything the vocabulary knows how to build. What a
+        // given object accepts is a much smaller thing, and a rail that offered the
+        // whole catalogue to a publication module would refuse nearly every drop
+        // without ever saying why - which an author reads as a broken editor rather
+        // than as the schema doing its job.
+        Assert.True(inProcedure.Count > inPublication.Count,
+            $"a procedure should take more than a publication module: " +
+            $"{inProcedure.Count} vs {inPublication.Count}");
+        Assert.True(inProcedure.Count < whole.Count);
+
+        // Whatever is offered, every entry can land somewhere in the object.
+        foreach ((EditDocument document, IReadOnlyList<PaletteEntry> offered) in
+                 new[] { (procedure, inProcedure), (publication, inPublication) })
+        {
+            HashSet<string> accepted =
+            [
+                .. document.AllBlocks()
+                           .SelectMany(b => b.InsertSiblings.Concat(b.InsertChildren))
+                           .Select(o => o.Element),
+            ];
+
+            Assert.NotEmpty(offered);
+            Assert.All(offered, entry => Assert.Contains(entry.Element, accepted));
+        }
+
+        // Nothing is invented: it is the one catalogue, narrowed.
+        Assert.All(inPublication, entry => Assert.Contains(whole, w => w.Element == entry.Element));
+    }
+
+    [Fact]
+    public void A_house_element_is_offered_only_where_it_fits()
+    {
+        var profile = new EditProfile(EditStylesheet.FromXml(HouseStylesheet), new HouseCatalogue());
+
+        // The house catalogue puts houseHazard beside a proceduralStep and nowhere
+        // else, so the module with steps offers it and the publication module does
+        // not - without either of them being named in the filter.
+        Assert.Contains(EditPalette.Build(EditSession.Parse(Module, profile).Model, profile),
+            e => e.Element == "houseHazard");
+
+        Assert.DoesNotContain(
+            EditPalette.Build(EditSession.Parse(PublicationModule, profile).Model, profile),
+            e => e.Element == "houseHazard");
+    }
+
+    // ------------------------------------------------------------------------
+    // what may go beside something the catalogue has never heard of
+    // ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Two containers S1000D has and this catalogue does not name: one holding a
+    /// single child, one holding several.
+    /// </summary>
+    private const string UnknownContainers =
+        """
+        <dmodule>
+          <identAndStatusSection>
+            <dmAddress>
+              <dmAddressItems>
+                <dmTitle><techName>Actuator</techName></dmTitle>
+              </dmAddressItems>
+            </dmAddress>
+          </identAndStatusSection>
+          <content>
+            <description>
+              <table>
+                <tgroup cols="2">
+                  <tbody>
+                    <row><entry>Torque</entry><entry>12 Nm</entry></row>
+                  </tbody>
+                </tgroup>
+              </table>
+            </description>
+          </content>
+        </dmodule>
+        """;
+
+    [Fact]
+    public void An_unknown_container_holding_one_child_offers_nothing_beside_it()
+    {
+        EditDocument model = EditSession.Parse(UnknownContainers).Model;
+
+        // <dmTitle> is not in the catalogue's table, and this one holds a single
+        // <techName>. The catalogue used to fall through to "Paragraph", so the
+        // author was invited to put a <para> inside a <dmTitle> - which the schema
+        // forbids, and which the projection then could not draw, so pressing insert
+        // appeared to do nothing at all. Measured over the sample CSDB that guess
+        // was wrong 388 times and right 38.
+        EditBlock techName = model.AllBlocks().First(b => b.Element == "techName");
+        Assert.Empty(techName.InsertSiblings);
+    }
+
+    [Fact]
+    public void An_unknown_container_holding_several_offers_another_of_the_same()
+    {
+        EditDocument model = EditSession.Parse(UnknownContainers).Model;
+
+        // <row> is not in the table either, but this one holds two <entry>s, and a
+        // document holding two of something has said what no guess could: that a
+        // third is allowed. So the offer is another entry - not a paragraph.
+        EditBlock entry = model.AllBlocks().First(b => b.Element == "entry");
+        EditTemplateCatalogue.InsertOption option = Assert.Single(entry.InsertSiblings);
+
+        Assert.Equal("entry", option.Element);
+        Assert.Equal("Entry", option.Label);
+    }
+
+    [Fact]
+    public void A_container_the_catalogue_does_name_is_unaffected()
+    {
+        EditDocument model = EditSession.Parse(UnknownContainers).Model;
+
+        // The observation only applies where the catalogue is silent. <tbody> it
+        // knows about, so a row inside one is offered what the vocabulary says
+        // rather than what the document happens to contain.
+        EditBlock row = model.AllBlocks().First(b => b.Element == "row");
+        Assert.Contains(row.InsertSiblings, o => o.Element == "row" && o.Label == "Table row");
+    }
+
+    [Fact]
+    public void An_element_name_becomes_a_label_a_person_can_read()
+    {
+        var catalogue = new EditTemplateCatalogue();
+
+        Assert.Equal("Check list item", catalogue.Another("checkListItem", "unknown").Label);
+        Assert.Equal("Entry", catalogue.Another("entry", "unknown").Label);
+        Assert.Equal("Catalog seq number", catalogue.Another("catalogSeqNumber", "unknown").Label);
+    }
+
     [Fact]
     public void Half_a_profile_is_still_a_profile()
     {

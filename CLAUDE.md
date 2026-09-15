@@ -164,7 +164,7 @@ block back into a change to that element.
 | `EditTemplateCatalogue.cs` | what a new element is made of, and what may go where |
 | `EditStylesheet.cs` | where a projection comes from: assembly, file, string, stream, transform |
 | `EditProfile.cs` | the two together — which S1000D dialect this editor speaks |
-| `EditPalette.cs` | the component catalogue, each entry projected |
+| `EditPalette.cs` | the component catalogue, each entry projected, narrowable to one object |
 | `EditSession.cs` | one open document: apply, undo, redo, serialize |
 | `../ResourceResolver.cs` | `IResourceResolver`: where a name turns into bytes (not editing-only) |
 
@@ -192,6 +192,24 @@ Conventions worth preserving when working here:
   rather than forking. An element with no template still appears through a
   fall-through; measured over `samples/datasets`, 99.9% of authorable text is
   reachable on schemas nobody wrote templates for.
+- **What may be inserted is a property of the object, not of the stylesheet.** The
+  catalogue is everything the vocabulary can build; `EditPalette.Build(document, …)`
+  and `GET /api/documents/{id}/palette` narrow it to what this object's blocks
+  accept, which is what a component rail must show. A procedure takes most of it and
+  a publication module almost none, so a rail built from the whole catalogue refuses
+  nearly every drop in the second without saying why — which reads as broken drag
+  and drop rather than as a schema holding. A refused drop marks the block under the
+  pointer (`s1kd-drop-refused`) for the same reason: silence is indistinguishable
+  from a bug.
+- **A container the catalogue does not name is offered nothing, not a guess.**
+  `SiblingOptions` used to fall through to `[Para]`, which invited a `<para>` beside
+  a `<techName>` in a `<dmTitle>` — invalid, and unprojectable, so pressing insert
+  appeared to do nothing. Over the sample CSDB that guess was wrong 388 times and
+  right 38. What replaces it is an observation rather than a second guess:
+  `EditInsertOptions` offers `Another(element, kind)` only where the projection
+  shows that element already repeating inside that parent, because a document
+  holding two `<entry>`s in a `<row>` has said a third is allowed and one holding a
+  single `<techName>` has said nothing. Do not restore the fall-through.
 - **Nothing assumes a name is a path.** Editing stylesheets and their imports,
   presentation stylesheets and their imports, and illustrations all go through
   `IResourceResolver` (`ResourceResolver.cs`), so a CSDB in a content management
