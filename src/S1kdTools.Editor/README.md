@@ -17,7 +17,44 @@ await editor.OpenAsync("DMC-AE100-A-27-81-00-00A-720A-A_002-00_EN-GB");
 | `EditorClient` | The session: open, apply, undo, redo, save, revert, check, and the page's URL. |
 | `S1kdEditorSurface` | The editing surface — the object drawn as its page, typed into in place. |
 | `S1kdEditor` | The surface plus a command bar: history, save, text formatting, check. |
+| `S1kdComponentPalette` | The components this object can take, as cards to drag into it. |
+| `S1kdSourcePane` | The same document as XML, in Monaco, writing through the same session. |
 | `S1kdPdfPreview` | The same document laid out as the PDF it will be published as. |
+
+The three views are one document, not three. They share one `EditorClient` and so
+one server session: an edit made in any of them is in the other two, and none of
+them knows the others exist.
+
+## Where the back end is, and how it is called
+
+Nothing here spells a URL. Two seams decide it, and most applications need only
+the first:
+
+```csharp
+// the endpoints are somewhere else
+new EditorClient(routes: new EditorRoutes("/editor-api"));
+
+// somewhere else, and on another origin
+new EditorClient(routes: new EditorRoutes("/api", "https://csdb.example.com"));
+
+// the calls are not these calls at all
+new EditorClient(api: new MyEditorApi());
+```
+
+`EditorRoutes` is **where** each operation lives. It must agree with the back end's
+`EditorOptions.RoutePrefix`; both default to `/api`. A back end whose paths are
+shaped differently subclasses it and overrides the members it spells differently.
+
+`IEditorApi` is **how** a call is made — one member per operation. Implement it
+when the calls have to be different: an editing API that is not these endpoints, an
+RPC or socket transport, a host that already has the CSDB in the page, a test
+double. The default is `HttpEditorApi`, fetch over `EditorRoutes`; subclass it and
+override `SendAsync` to put a bearer token, a retry or a trace header around the
+wire without reimplementing anything.
+
+`EditorClient` keeps the session either way — which document is open, what the
+server last said, who to tell, and the revision that makes each re-render a
+different PDF URL — so an `IEditorApi` of your own gets all of that for free.
 
 ## What is and is not in the browser
 

@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using System.Xml;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using S1kdTools.Editing;
@@ -76,6 +75,13 @@ public static class EditorEndpoints
         services.AddSingleton(provider =>
             new DocumentCheck(provider.GetService<EditorPresentation>()));
 
+        // What the endpoints are made of, registered so an application can map its
+        // own instead of - or alongside - the ones MapS1kdEditor defines.
+        services.AddSingleton(provider => new EditorOperations(
+            provider.GetRequiredService<CsdbLibrary>(),
+            provider.GetRequiredService<DocumentCheck>(),
+            provider.GetService<EditorPresentation>()));
+
         // The model's own enums read as words on the wire: a front-end switches on
         // EditMode, and a number would make its code unreadable and its meaning
         // positional.
@@ -101,78 +107,62 @@ public static class EditorEndpoints
         var options = endpoints.ServiceProvider.GetRequiredService<EditorOptions>();
         RouteGroupBuilder api = endpoints.MapGroup(options.RoutePrefix);
 
-        api.MapGet("/documents", (CsdbLibrary library) => library.List());
+        // Every one of these is a single call on EditorOperations and nothing
+        // else. That is deliberate and worth keeping: an application that wants its
+        // editor reached some other way - its own paths, a controller, an
+        // authorization filter per operation - takes that class and maps it, and
+        // there is nothing here for it to have to re-derive.
+        api.MapGet("/documents", (EditorOperations editor) => editor.List());
 
         // What an author can add, each entry carrying the block it projects as. The
         // preview is built by the same template call an insert command makes and run
         // through the same stylesheet, so a palette card is drawn by the front-end's
         // own block renderer and cannot promise a shape that dropping it would not
         // produce.
-        api.MapGet("/palette", (CsdbLibrary library) => EditPalette.Build(library.Profile));
+        api.MapGet("/palette", (EditorOperations editor) => editor.Palette());
 
-        api.MapGet("/documents/{id}", (string id, CsdbLibrary library) =>
-            Guarded(() => library.Read(id)));
+        api.MapGet("/documents/{id}", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Read(id)));
 
-        // The same catalogue, narrowed to what this object can actually take.
-        //
-        // The whole catalogue is what the vocabulary knows how to build; in a
-        // procedure nearly all of it fits, and in a publication module almost none
-        // of it does. A rail offering a warning to a publication module is a rail
-        // whose cards refuse every drop without saying why, which an author reads
-        // as a broken editor rather than as the schema doing its job. This is the
+        // The same catalogue, narrowed to what this object can actually take - the
         // one a front-end should ask for once a document is open.
-        api.MapGet("/documents/{id}/palette", (string id, CsdbLibrary library) =>
-            Guarded(() => EditPalette.Build(library.Read(id).Model, library.Profile)));
+        api.MapGet("/documents/{id}/palette", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Palette(id)));
 
         api.MapPost("/documents/{id}/commands",
-            (string id, CommandsRequest request, CsdbLibrary library) =>
-                Guarded(() => library.Apply(id, request.Commands)));
+            (string id, CommandsRequest request, EditorOperations editor) =>
+                Guarded(() => editor.Apply(id, request.Commands)));
 
-        api.MapPut("/documents/{id}/xml", (string id, XmlRequest request, CsdbLibrary library) =>
-            Guarded(() => library.SetXml(id, request.Xml)));
+        api.MapPut("/documents/{id}/xml", (string id, XmlRequest request, EditorOperations editor) =>
+            Guarded(() => editor.SetXml(id, request.Xml)));
 
-        api.MapPost("/documents/{id}/undo", (string id, CsdbLibrary library) =>
-            Guarded(() => library.Undo(id)));
+        api.MapPost("/documents/{id}/undo", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Undo(id)));
 
-        api.MapPost("/documents/{id}/redo", (string id, CsdbLibrary library) =>
-            Guarded(() => library.Redo(id)));
+        api.MapPost("/documents/{id}/redo", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Redo(id)));
 
-        api.MapPost("/documents/{id}/revert", (string id, CsdbLibrary library) =>
-            Guarded(() => library.Revert(id)));
+        api.MapPost("/documents/{id}/revert", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Revert(id)));
 
-        api.MapPost("/documents/{id}/save", (string id, CsdbLibrary library) =>
-            Guarded(() => library.Save(id)));
+        api.MapPost("/documents/{id}/save", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Save(id)));
 
-        api.MapGet("/documents/{id}/check", (string id, CsdbLibrary library, DocumentCheck check) =>
-            Guarded(() =>
-            {
-                EditorState state = library.Read(id);
-                return check.Check(state.Xml, state.Schema, state.Title);
-            }));
+        api.MapGet("/documents/{id}/check", (string id, EditorOperations editor) =>
+            Guarded(() => editor.Check(id)));
 
         // The page, laid out from what the editor holds rather than from what is on
-        // disk: an author who has just moved a warning wants to see it move.
-        //
-        // No caching. The preview is of a document being typed into, and the one
-        // thing a stale page must never do is look like the current one.
-        // [FromServices] is not decoration. An optional service is not registered
-        // when there is no presentation directory, and minimal APIs infer an
-        // unregistered complex parameter as the request body — so without this the
-        // endpoint is fine on a server that has stylesheets and throws at start-up
-        // on one that does not.
-        api.MapGet("/documents/{id}/pdf", (string id, CsdbLibrary library,
-            [FromServices] EditorPresentation? presentation) => Guarded(() =>
+        // disk. No caching: the preview is of a document being typed into, and the
+        // one thing a stale page must never do is look like the current one.
+        api.MapGet("/documents/{id}/pdf", (string id, EditorOperations editor) => Guarded(() =>
         {
-            if (presentation is null)
-            {
-                return Results.NotFound(new ErrorResponse(
-                    "This server was started without presentation stylesheets, so it " +
-                    "cannot lay a data module out."));
-            }
+            EditorPdf? pdf = editor.RenderPdf(id);
 
-            EditorState state = library.Read(id);
-            byte[] pdf = presentation.RenderPdf(state.Xml, state.Schema, state.Title);
-            return Results.File(pdf, "application/pdf", $"{state.Code}.pdf");
+            return pdf is null
+                ? Results.NotFound(new ErrorResponse(
+                    "This server was started without presentation stylesheets, so it " +
+                    "cannot lay a data module out."))
+                : Results.File(pdf.Content, "application/pdf", pdf.FileName);
         }));
 
         return api;

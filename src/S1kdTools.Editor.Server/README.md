@@ -30,6 +30,25 @@ The XML is the document of record. An edit is a command applied to it, and the
 model the front-end draws is re-projected from the result — so there is no second
 representation that can be right when the file is wrong.
 
+## The features, and the endpoints over them
+
+Everything this package does is `EditorOperations`, and every endpoint below is a
+single call on it:
+
+```csharp
+app.MapGet("/csdb/{id}/edit", (string id, EditorOperations editor) => editor.Read(id));
+```
+
+So `MapS1kdEditor` is a convenience, not the interface. An application that wants
+its editor reached some other way — its own paths, a controller, an authorization
+filter per operation, a queue — takes `EditorOperations` out of DI and maps it,
+with nothing to re-derive. `AddS1kdEditor` registers it whether or not you call
+`MapS1kdEditor`.
+
+`CsdbLibrary` underneath it is the session store; what `EditorOperations` adds is
+the handful of operations that are a composition rather than a call — the palette
+for one object, the check, the page.
+
 ## The endpoints
 
 | | |
@@ -67,7 +86,19 @@ of bug is worth more than that.
 | `PresentationStylesheets` | the same stylesheets, when they are not files — see below |
 | `Graphics` | the same illustrations, when they are not files |
 | `Profile` | which S1000D dialect to speak — see below |
-| `RoutePrefix` | defaults to `/api` |
+| `RoutePrefix` | where the endpoints are mapped; defaults to `/api` |
+
+**`RoutePrefix` is a two-sided setting.** The browser half takes its naming from an
+`EditorRoutes`, which defaults to the same `/api`; move one and pass the other the
+same string:
+
+```csharp
+// server
+AddS1kdEditor(new EditorOptions { CsdbDirectory = csdb, RoutePrefix = "/editor-api" });
+
+// browser
+new EditorClient(routes: new EditorRoutes("/editor-api"));
+```
 
 **No page preview is a supported way to run.** Leave `PresentationDirectory`
 unset and `…/pdf` answers 404 with a message saying why, while the check reports

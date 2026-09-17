@@ -43,7 +43,7 @@ namespace S1kdTools.Editor.App
         private static S1kdEditorSurface _surface;
         private static S1kdComponentPalette _palette;
         private static S1kdEditor _editor;
-        private static SourcePane _source;
+        private static S1kdSourcePane _source;
         private static S1kdPdfPreview _preview;
         private static SegmentedPivot _pivot;
         private static Sidebar _sidebar;
@@ -60,14 +60,23 @@ namespace S1kdTools.Editor.App
             // Served from the same origin as the API, so the base URL is empty. A
             // front-end hosted elsewhere passes the server's origin here and nothing
             // else changes.
+            //
+            // The prefix comes off the query string so that this sample can be run
+            // against a back end that mapped its endpoints somewhere else - which is
+            // the point of EditorRoutes, and worth being able to try:
+            //
+            //     dotnet run --routePrefix /editor-api
+            //     http://localhost:5000/?api=/editor-api
+            //
+            // An application knows its own back end and would write the prefix here.
             _client = new EditorClient(
-                baseUrl: "",
+                routes: new EditorRoutes(RoutePrefix(), baseUrl: ""),
                 onFailed: message => Toast().Error("The server refused that", message));
 
             _surface = new S1kdEditorSurface(_client);
             _editor = new S1kdEditor(_client, _surface);
             _palette = new S1kdComponentPalette(_client, _surface);
-            _source = new SourcePane(_client);
+            _source = new S1kdSourcePane(_client);
             _preview = new S1kdPdfPreview(_client);
 
             _heading = TextBlock("No data module open").SemiBold().Ellipsis();
@@ -112,6 +121,17 @@ namespace S1kdTools.Editor.App
         /// at it differently — and a title that redraws on every tab switch reads as
         /// if it might have.
         /// </summary>
+        /// <summary>
+        /// Where this page was told the editor's endpoints are, defaulting to where
+        /// the back end puts them unless asked.
+        /// </summary>
+        private static string RoutePrefix()
+        {
+            var parameters = new URLSearchParams(window.location.search);
+            string prefix = parameters.get("api");
+            return string.IsNullOrEmpty(prefix) ? "/api" : prefix;
+        }
+
         private static IComponent Workspace()
         {
             return VStack().S().Children(

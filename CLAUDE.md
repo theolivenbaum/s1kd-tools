@@ -223,10 +223,29 @@ Conventions worth preserving when working here:
   `data:` URI rendered identically to a missing image), and this code wrote every
   such illustration to a temporary file. Do not reintroduce that.
 
-The HTTP half is `src/S1kdTools.Editor.Server` — the session store, the check, the
-page layout and the endpoints, as `AddS1kdEditor` / `MapS1kdEditor`. The sample
-host is configuration only; if you are adding server behaviour it almost certainly
-belongs in the package rather than beside it.
+The editor ships as **two packages, and the seam between them is named in neither
+half's source**:
+
+- `src/S1kdTools.Editor.Server` — the features (`EditorOperations` over
+  `CsdbLibrary`, `DocumentCheck`, `EditorPresentation`) and endpoints over them, as
+  `AddS1kdEditor` / `MapS1kdEditor`. Every endpoint is one call on
+  `EditorOperations`, so a host mapping its own paths takes that out of DI and has
+  nothing to re-derive. Keep it that way: logic in an endpoint lambda is logic a
+  consumer cannot reach.
+- `src/S1kdTools.Editor` — the Tesserae components, all of them, including
+  `S1kdSourcePane` (which is why the package depends on Tesserae.Monaco). The
+  editor is three views of one document; shipping two would leave every consumer to
+  rebuild the third.
+
+**No URL is spelled in the front end.** `EditorRoutes` says where each operation
+lives and `IEditorApi` says how a call is made; `EditorClient` keeps the session
+and delegates. The front end used to hard-code `/api` in eight methods while the
+back end had a settable `RoutePrefix`, so moving the prefix answered 404 with
+neither half admitting it had an opinion about the other's naming. `EditorRoutes`
+and `EditorOptions.RoutePrefix` default to the same `/api` and must agree.
+
+The sample host is configuration only; if you are adding server behaviour it almost
+certainly belongs in the package rather than beside it.
 
 See `doc/EDITOR.md` for the user-facing explanation, `src/S1kdTools.Editor/` for
 the browser components, and `samples/editor/` for the running sample.
