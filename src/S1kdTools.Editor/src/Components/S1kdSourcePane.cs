@@ -6,7 +6,7 @@ using Transpose.Core;
 using static Tesserae.UI;
 using static Transpose.Core.dom;
 
-namespace S1kdTools.Editor.App
+namespace S1kdTools.Editor
 {
     /// <summary>
     /// The data module as its source, in Monaco.
@@ -29,7 +29,7 @@ namespace S1kdTools.Editor.App
     /// another pane is the one behaviour that would make this pane untrustworthy.
     /// The Apply button says so instead.
     /// </summary>
-    internal sealed class SourcePane : IComponent
+    public sealed class S1kdSourcePane : IComponent
     {
         private readonly EditorClient _client;
         private readonly CodeEditor _editor;
@@ -43,7 +43,7 @@ namespace S1kdTools.Editor.App
 
         private bool _editing;
 
-        public SourcePane(EditorClient client)
+        public S1kdSourcePane(EditorClient client)
         {
             _client = client;
 

@@ -21,6 +21,12 @@
          no worker path to keep in sync, and no dependence on the browser having a
          PDF plugin (headless Chrome does not - it downloads the file instead). -->
     <PackageReference Include="Tesserae.Pdf" Version="26.8.4319" />
+    <!-- The source pane. The editor is three views of one document and this is the
+         third; shipping two of them would leave every consumer to rebuild the one
+         where an author does what a structured editor is bad at - paste a block
+         from another module, fix what the projection does not offer, read what an
+         element actually says. -->
+    <PackageReference Include="Tesserae.Monaco" Version="26.8.4279" />
   </ItemGroup>
 
   <PropertyGroup>

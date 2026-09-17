@@ -26,6 +26,13 @@ builder.Services.AddS1kdEditor(new EditorOptions
     // modules, so the sample can be run, edited and saved as often as you like. A
     // server that owns its CSDB leaves this unset and saves back over it.
     WorkingDirectory = layout.Working,
+
+    // Where the endpoints are mapped. Settable here so the sample can be run with
+    // them somewhere else - `--routePrefix /editor-api` - which is what proves the
+    // front end follows rather than assuming: open it with `?api=/editor-api` and
+    // the same editor works, because the browser half takes its naming from an
+    // EditorRoutes rather than from eight string literals of its own.
+    RoutePrefix = builder.Configuration["routePrefix"] ?? "/api",
 });
 
 WebApplication app = builder.Build();
