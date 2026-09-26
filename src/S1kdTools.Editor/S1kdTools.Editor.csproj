@@ -6,7 +6,9 @@
     <AssemblyName>S1kdTools.Editor</AssemblyName>
     <RootNamespace>S1kdTools.Editor</RootNamespace>
     <LangVersion>7.2</LangVersion>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- IsPackable, not GeneratePackageOnBuild: with the latter `dotnet pack` skips
+         Build, so the Transpose compiler never runs and pack fails with NU5026. -->
+    <IsPackable>true</IsPackable>
     <DebugType>None</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <MinifyLocalVariables>true</MinifyLocalVariables>

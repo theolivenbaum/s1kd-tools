@@ -1,5 +1,9 @@
 variables:
   solution: './S1kdTools.slnx'
+  # The editor's browser half (S1kdTools.Editor) is compiled to JavaScript by the
+  # Transpose compiler and lives in its own solution, so that S1kdTools.slnx
+  # builds with nothing but the SDK. It has to be built and packed separately.
+  editorSolution: './S1kdTools.Editor.slnx'
   buildConfiguration: 'Release'
   targetVersion: yy.M.$(build.buildId)
 
@@ -34,6 +38,16 @@ steps:
     includePreviewVersions: false
     installationPath: $(Agent.ToolsDirectory)\dotnet
 
+# The Transpose compiler (`tps`) is a global dotnet tool the Transpose SDK
+# shells out to; without it S1kdTools.Editor cannot be built.
+- task: PowerShell@2
+  displayName: 'Install Transpose compiler'
+  inputs:
+    targetType: 'inline'
+    script: |
+      dotnet tool install --global Transpose.Compiler
+      Write-Host "##vso[task.prependpath]$env:USERPROFILE\.dotnet\tools"
+
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
@@ -47,10 +61,10 @@ steps:
     arguments: '-c $(buildConfiguration) /p:Version=$(targetVersion) /p:LangVersion=latest'
   displayName: 'build solution'
 
-# Only the 'S1kdTools.Core' library and the 'S1kdTools.Cli' .NET tool are
-# packable; every other project in the solution (tests + samples) sets
+# Only 'S1kdTools.Core', 'S1kdTools.Editor.Server' and the 'S1kdTools.Cli' .NET
+# tool are packable; every other project in the solution (tests + samples) sets
 # <IsPackable>false</IsPackable>, so packing the whole solution produces exactly
-# those two packages: S1kdTools.Core and S1kdTools.Cli (the `s1kd` dotnet tool).
+# those three packages.
 - task: DotNetCoreCLI@2
   inputs:
     command: 'pack'
@@ -59,6 +73,18 @@ steps:
     configuration: '$(buildConfiguration)'
     buildProperties: 'Version="$(targetVersion)";LangVersion="latest"'
   displayName: 'pack nuget packages'
+
+# The editor's front-end components. Packing builds them (the Transpose compiler
+# runs as part of Build), and the demo app in the same solution is not packable,
+# so this produces exactly one package: S1kdTools.Editor.
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'pack'
+    packagesToPack: '$(editorSolution)'
+    versioningScheme: 'off'
+    configuration: '$(buildConfiguration)'
+    buildProperties: 'Version="$(targetVersion)"'
+  displayName: 'pack editor front-end nuget package'
 
 - task: NuGetCommand@2
   inputs:
